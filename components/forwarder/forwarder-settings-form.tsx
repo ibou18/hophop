@@ -1,0 +1,292 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import type { Country } from "@/app/generated/prisma/enums";
+import { COUNTRY_OPTIONS } from "@/lib/country-label-fr";
+import { Button } from "@/components/ui/button";
+
+export type ForwarderProfileDTO = {
+  id: string;
+  code5: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  country: Country;
+  city: string;
+  address: string | null;
+  logoUrl: string | null;
+  description: string | null;
+  paymentEnabled: boolean;
+  stripeAccountId: string | null;
+  updatedAt: string;
+};
+
+export function ForwarderSettingsForm({
+  profile,
+}: {
+  profile: ForwarderProfileDTO;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const [name, setName] = useState(profile.name);
+  const [phone, setPhone] = useState(profile.phone ?? "");
+  const [country, setCountry] = useState<Country>(profile.country);
+  const [city, setCity] = useState(profile.city);
+  const [address, setAddress] = useState(profile.address ?? "");
+  const [logoUrl, setLogoUrl] = useState(profile.logoUrl ?? "");
+  const [description, setDescription] = useState(profile.description ?? "");
+  const [paymentEnabled, setPaymentEnabled] = useState(profile.paymentEnabled);
+  const [stripeAccountId, setStripeAccountId] = useState(
+    profile.stripeAccountId ?? "",
+  );
+
+  function submit(e: React.FormEvent): void {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+    startTransition(async () => {
+      const payload: Record<string, unknown> = {
+        name: name.trim(),
+        city: city.trim(),
+        country,
+        paymentEnabled,
+        phone: phone.trim() === "" ? null : phone.trim(),
+        address: address.trim() === "" ? null : address.trim(),
+        description: description.trim() === "" ? null : description.trim(),
+        logoUrl: logoUrl.trim() === "" ? null : logoUrl.trim(),
+        stripeAccountId:
+          stripeAccountId.trim() === "" ? null : stripeAccountId.trim(),
+      };
+
+      const res = await fetch(`/api/forwarders/${profile.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      if (!res.ok) {
+        setError(json?.error ?? `Enregistrement impossible (${res.status})`);
+        return;
+      }
+      setSaved(true);
+      router.refresh();
+    });
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="space-y-8"
+      key={profile.updatedAt}
+    >
+      <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-6 shadow-sm">
+        <h2 className="text-[15px] font-medium text-hh-earth-dk">
+          Identité & connexion
+        </h2>
+        <p className="mt-1 text-[13px] text-hh-muted">
+          Le code à 5 chiffres sert aux clients pour se connecter avec leur
+          compte. L’e-mail sert à ta connexion transitaire.
+        </p>
+        <dl className="mt-4 grid gap-3 text-[14px] sm:grid-cols-2">
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+              Code client (code5)
+            </dt>
+            <dd className="mt-1 font-mono text-[18px] font-semibold text-hh-earth-dk">
+              {profile.code5}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+              E-mail connexion
+            </dt>
+            <dd className="mt-1 text-hh-earth-dk">{profile.email}</dd>
+            <p className="mt-1 text-[12px] text-hh-muted">
+              Modification non disponible ici (contact support ou migration
+              compte).
+            </p>
+          </div>
+        </dl>
+      </section>
+
+      <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-6 shadow-sm">
+        <h2 className="text-[15px] font-medium text-hh-earth-dk">
+          Profil entreprise
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <label
+              htmlFor="fwd-name"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              Nom affiché
+            </label>
+            <input
+              id="fwd-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={pending}
+              className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label
+              htmlFor="fwd-phone"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              Téléphone
+            </label>
+            <input
+              id="fwd-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={pending}
+              className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label
+              htmlFor="fwd-country"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              Pays
+            </label>
+            <select
+              id="fwd-country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value as Country)}
+              disabled={pending}
+              className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            >
+              {COUNTRY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label
+              htmlFor="fwd-city"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              Ville
+            </label>
+            <input
+              id="fwd-city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              required
+              disabled={pending}
+              className="h-10 w-full max-w-md rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label
+              htmlFor="fwd-address"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              Adresse
+            </label>
+            <textarea
+              id="fwd-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              disabled={pending}
+              rows={2}
+              className="w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 py-2 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label
+              htmlFor="fwd-logo"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              URL du logo (HTTPS)
+            </label>
+            <input
+              id="fwd-logo"
+              type="url"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              disabled={pending}
+              placeholder="https://…"
+              className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label
+              htmlFor="fwd-desc"
+              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+            >
+              Description
+            </label>
+            <textarea
+              id="fwd-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={pending}
+              rows={3}
+              className="w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 py-2 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-6 shadow-sm">
+        <h2 className="text-[15px] font-medium text-hh-earth-dk">Paiement</h2>
+        <p className="mt-1 text-[13px] text-hh-muted">
+          Paiement en ligne (Stripe Connect). Active uniquement si ton compte est
+          prêt côté Stripe.
+        </p>
+        <label className="mt-4 flex cursor-pointer items-center gap-2 text-[14px] text-hh-earth-dk">
+          <input
+            type="checkbox"
+            checked={paymentEnabled}
+            onChange={(e) => setPaymentEnabled(e.target.checked)}
+            disabled={pending}
+            className="size-4 rounded border-hh-sand-dk/50"
+          />
+          Activer le paiement en ligne
+        </label>
+        <div className="mt-4 space-y-1.5">
+          <label
+            htmlFor="fwd-stripe"
+            className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+          >
+            ID compte Stripe Connect
+          </label>
+          <input
+            id="fwd-stripe"
+            value={stripeAccountId}
+            onChange={(e) => setStripeAccountId(e.target.value)}
+            disabled={pending}
+            placeholder="acct_…"
+            className="h-10 w-full max-w-lg rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 font-mono text-[13px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+          />
+        </div>
+      </section>
+
+      {error ? <p className="text-[13px] text-hh-kola">{error}</p> : null}
+      {saved ? (
+        <p className="text-[13px] text-hh-savane-dk">Modifications enregistrées.</p>
+      ) : null}
+
+      <Button
+        type="submit"
+        disabled={pending}
+        className="bg-hh-saffron text-white hover:bg-hh-saffron-dk"
+      >
+        {pending ? "Enregistrement…" : "Enregistrer les paramètres"}
+      </Button>
+    </form>
+  );
+}

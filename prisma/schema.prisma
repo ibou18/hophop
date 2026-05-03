@@ -1,0 +1,464 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../app/generated/prisma"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AuthMethod {
+  EMAIL
+  PHONE
+}
+
+enum Country {
+  CA // Canada
+  FR // France
+  GN // Guinée
+  SN // Sénégal
+  CI // Côte d'Ivoire
+  CM // Cameroun
+  // Ajouter d'autres pays ici sans toucher à la structure
+}
+
+enum ShipmentStatus {
+  DRAFT // En préparation
+  CONFIRMED // Validé, en attente de départ
+  IN_TRANSIT // Parti, en route
+  ARRIVED // Arrivé au pays de destination
+  CLOSED // Livraisons terminées
+}
+
+enum ParcelStatus {
+  DECLARED // Déclaré par le client
+  COLLECTED // Récupéré par le transitaire
+  IN_TRANSIT // Dans l'envoi en cours
+  ARRIVED // Arrivé à destination
+  READY // Prêt à être récupéré
+  DELIVERED // Remis au destinataire
+  ISSUE // Problème signalé
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  ONLINE // Stripe
+  CASH
+  TRANSFER
+  OTHER
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum NotificationType {
+  PARCEL_REGISTERED // Colis enregistré
+  SHIPMENT_DEPARTURE // Envoi parti
+  SHIPMENT_ARRIVED // Envoi arrivé
+  PARCEL_READY // Prêt à récupérer
+  PARCEL_DELIVERED // Remis au destinataire
+  PAYMENT_CONFIRMED // Paiement confirmé
+  SHIPMENT_REQUEST_ACCEPTED // Demande acceptée
+  SHIPMENT_REQUEST_REJECTED // Demande refusée
+}
+
+enum ShipmentRequestStatus {
+  PENDING  // En attente de validation par le transitaire
+  ACCEPTED // Accepté — colis intégré à l'envoi
+  REJECTED // Refusé
+  MOVED    // Déplacé vers un autre envoi par le transitaire
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum TrackingEventType {
+  // Côté client
+  PARCEL_DECLARED
+  PARCEL_LABEL_PRINTED
+
+  // Côté transitaire (origine)
+  PARCEL_COLLECTED
+  PARCEL_CHECKED
+  PARCEL_ASSIGNED
+  PARCEL_UNASSIGNED
+
+  // Envoi / Transit
+  SHIPMENT_DEPARTED
+  CUSTOMS_ORIGIN
+  CUSTOMS_DESTINATION
+  IN_TRANSIT
+  SHIPMENT_ARRIVED
+
+  // Côté transitaire (destination)
+  PARCEL_RECEIVED
+  PARCEL_READY
+  PARCEL_DELIVERED
+
+  // Événements exceptionnels
+  PARCEL_ISSUE
+  PARCEL_ISSUE_RESOLVED
+  PARCEL_RETURNED
+
+  // Paiement
+  PAYMENT_RECEIVED
+}
+
+enum TrackingActor {
+  CLIENT
+  FORWARDER
+  SYSTEM
+}
+
+enum ItemCategory {
+  CLOTHING
+  ELECTRONICS
+  FOOD
+  COSMETICS
+  DOCUMENTS
+  OTHER
+}
+
+// ─────────────────────────────────────────────
+// FORWARDER — Tenant principal (le transitaire/pro)
+// ─────────────────────────────────────────────
+
+model Forwarder {
+  id String @id @default(uuid())
+
+  // Code à 5 chiffres unique pour être retrouvé facilement depuis l'app
+  code5 String @unique @db.Char(5)
+
+  name        String
+  email       String  @unique
+  phone       String?
+  country     Country
+  city        String
+  address     String?
+  logoUrl     String?
+  description String?
+
+  // Paiement en ligne activé ou non (optionnel par tenant)
+  paymentEnabled  Boolean @default(false)
+  stripeAccountId String? // Stripe Connect account ID
+
+  // Auth
+  passwordHash String
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  clients   Client[]
+  shipments Shipment[]
+
+  @@map("forwarders")
+}
+
+// ─────────────────────────────────────────────
+// CLIENT — Expéditeur (côté Canada ou France)
+// ─────────────────────────────────────────────
+
+model Client {
+  id          String @id @default(uuid())
+  forwarderId String
+
+  firstName String
+  lastName  String
+  email     String?
+  phone     String? // Obligatoire si authMethod = PHONE
+  address   String?
+  city      String?
+  country   Country // ex: CA, FR, GN...
+
+  authMethod   AuthMethod @default(EMAIL)
+  passwordHash String?
+  otpSecret    String? // Pour auth par téléphone (OTP)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  forwarder        Forwarder         @relation(fields: [forwarderId], references: [id])
+  recipients       Recipient[]
+  parcels          Parcel[]
+  payments         Payment[]
+  notifications    Notification[]
+  shipmentRequests ShipmentRequest[]
+
+  // Un email ou phone doit être unique par transitaire
+  @@unique([forwarderId, email])
+  @@unique([forwarderId, phone])
+  @@map("clients")
+}
+
+// ─────────────────────────────────────────────
+// RECIPIENT — Destinataire (proche côté Afrique)
+// ─────────────────────────────────────────────
+
+model Recipient {
+  id       String @id @default(uuid())
+  clientId String
+
+  firstName String
+  lastName  String
+  phone     String
+  address   String?
+  city      String
+  country   Country
+
+  isDefault Boolean  @default(false) // Destinataire par défaut du client
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client  Client   @relation(fields: [clientId], references: [id])
+  parcels Parcel[]
+
+  @@map("recipients")
+}
+
+// ─────────────────────────────────────────────
+// SHIPMENT — Lot d'envoi (regroupe plusieurs colis)
+// ─────────────────────────────────────────────
+
+model Shipment {
+  id          String @id @default(uuid())
+  forwarderId String
+
+  reference String // ex: "ENV-2024-001" — généré automatiquement
+  status    ShipmentStatus @default(DRAFT)
+
+  originCountry      Country
+  destinationCountry Country
+  destinationCity    String?
+
+  departureDate DateTime?
+  arrivalDate   DateTime?
+
+  notes      String?
+  isNotified Boolean @default(false) // Notifications de départ envoyées
+
+  // Publié = visible par les clients pour faire une demande d'intégration
+  isPublished Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  forwarder        Forwarder        @relation(fields: [forwarderId], references: [id])
+  parcels          Parcel[]
+  trackingEvents   TrackingEvent[]
+  requests         ShipmentRequest[] @relation("RequestedShipment")
+  movedRequests    ShipmentRequest[] @relation("MovedToShipment")
+
+  @@map("shipments")
+}
+
+// ─────────────────────────────────────────────
+// PARCEL — Colis individuel
+// Un colis appartient à un client, est destiné à un recipient,
+// et est rattaché à un envoi (shipment)
+// ─────────────────────────────────────────────
+
+model Parcel {
+  id          String  @id @default(uuid())
+  clientId    String
+  recipientId String
+  shipmentId  String? // Null jusqu'à l'affectation à un envoi
+
+  // Code de tracking — affiché en QR code + format humain lisible
+  // ex: "TRS-A3F9K2" — généré à la création
+  trackingCode String @unique
+
+  status ParcelStatus @default(DECLARED)
+
+  // Dimensions
+  weightKg Float?
+  lengthCm Float?
+  widthCm  Float?
+  heightCm Float?
+
+  description String? // Description libre du contenu
+  notes       String? // Notes internes du transitaire
+
+  // Paiement
+  isPaid        Boolean        @default(false)
+  paymentMethod PaymentMethod?
+  declaredValue Float? // Valeur déclarée du contenu (pour la douane)
+  price         Float? // Prix facturé par le transitaire
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client          Client           @relation(fields: [clientId], references: [id])
+  recipient       Recipient        @relation(fields: [recipientId], references: [id])
+  shipment        Shipment?        @relation(fields: [shipmentId], references: [id])
+  items           ParcelItem[]
+  payment         Payment?
+  trackingEvents  TrackingEvent[]
+  notifications   Notification[]
+  shipmentRequest ShipmentRequest?
+
+  @@map("parcels")
+}
+
+// ─────────────────────────────────────────────
+// PARCEL ITEM — Contenu/contenant d'un colis
+// ─────────────────────────────────────────────
+
+model ParcelItem {
+  id       String @id @default(uuid())
+  parcelId String
+
+  name     String
+  quantity Int          @default(1)
+  category ItemCategory @default(OTHER)
+  weightKg Float?
+  notes    String?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+
+  @@map("parcel_items")
+}
+
+// ─────────────────────────────────────────────
+// PAYMENT — Paiement en ligne (Stripe, optionnel)
+// ─────────────────────────────────────────────
+
+model Payment {
+  id       String @id @default(uuid())
+  parcelId String @unique
+  clientId String
+
+  stripePaymentIntentId String?       @unique
+  amount                Float
+  currency              String        @default("CAD") // CAD | EUR | GNF | XOF | XAF
+  status                PaymentStatus @default(PENDING)
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// TRACKING EVENT — Historique de suivi d'un colis
+// Mis à jour par scan du pro ou automatiquement
+// ─────────────────────────────────────────────
+
+model TrackingEvent {
+  id       String @id @default(uuid())
+  parcelId String
+
+  // Type d'événement typé — source de vérité du statut colis
+  type TrackingEventType
+
+  // Qui a déclenché l'événement
+  actor   TrackingActor @default(SYSTEM)
+  actorId String? // forwarderId ou clientId selon l'actor
+
+  // Localisation et contexte
+  location     String? // ex: "Montréal", "Aéroport CDG", "Conakry"
+  country      Country? // Pays de l'étape
+  note         String? // Note libre visible par le client
+  internalNote String? // Note interne visible uniquement par le pro
+
+  // Métadonnées optionnelles selon le type
+  shipmentId  String? // Renseigné pour les events liés à un envoi
+  scannedCode String? // trackingCode scanné (pour PARCEL_DELIVERED)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  parcel   Parcel    @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  shipment Shipment? @relation(fields: [shipmentId], references: [id])
+
+  @@map("tracking_events")
+}
+
+// ─────────────────────────────────────────────
+// SHIPMENT REQUEST — Demande client pour rejoindre un envoi publié
+// Le transitaire valide, refuse ou déplace sur un autre envoi
+// ─────────────────────────────────────────────
+
+model ShipmentRequest {
+  id         String                @id @default(uuid())
+  shipmentId String                // Envoi demandé par le client
+  parcelId   String                @unique // Un colis = une seule demande active
+  clientId   String
+
+  status ShipmentRequestStatus @default(PENDING)
+
+  note          String? // Message optionnel du client
+  forwarderNote String? // Réponse/note du transitaire
+
+  // Renseigné si le transitaire déplace le colis sur un autre envoi
+  movedToShipmentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  shipment        Shipment  @relation("RequestedShipment", fields: [shipmentId], references: [id])
+  parcel          Parcel    @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  client          Client    @relation(fields: [clientId], references: [id])
+  movedToShipment Shipment? @relation("MovedToShipment", fields: [movedToShipmentId], references: [id])
+
+  @@map("shipment_requests")
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATION — Emails et SMS envoyés
+// ─────────────────────────────────────────────
+
+model Notification {
+  id       String @id @default(uuid())
+  parcelId String
+  clientId String
+
+  channel NotificationChannel
+  type    NotificationType
+  status  NotificationStatus  @default(PENDING)
+
+  // Metadata (provider ID pour le suivi : Resend, Twilio, etc.)
+  externalId String?
+  error      String?
+
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  // Relations
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@map("notifications")
+}
