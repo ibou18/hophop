@@ -71,9 +71,42 @@ export async function getClientParcelDetail(clientId: string, parcelId: string) 
         },
       },
       payment: true,
+      shipmentRequest: {
+        select: {
+          id: true,
+          status: true,
+          note: true,
+          forwarderNote: true,
+          shipmentId: true,
+          movedToShipmentId: true,
+          movedToShipment: { select: { id: true, reference: true } },
+          createdAt: true,
+        },
+      },
     },
   });
 }
+
+export async function getAvailableShipments(forwarderId: string) {
+  return prisma.shipment.findMany({
+    where: {
+      forwarderId,
+      isPublished: true,
+      status: { in: ["DRAFT", "CONFIRMED"] },
+    },
+    orderBy: { departureDate: "asc" },
+    select: {
+      id: true,
+      reference: true,
+      destinationCountry: true,
+      destinationCity: true,
+      departureDate: true,
+      status: true,
+    },
+  });
+}
+
+export type AvailableShipmentRow = Awaited<ReturnType<typeof getAvailableShipments>>[number];
 
 export async function getClientRecipients(clientId: string) {
   return prisma.recipient.findMany({

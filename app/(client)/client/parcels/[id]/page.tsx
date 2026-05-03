@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ArrowLeft, Package, Printer } from "lucide-react";
-import { getClientParcelDetail } from "@/lib/client-data";
+import { getClientParcelDetail, getAvailableShipments } from "@/lib/client-data";
 import { ParcelStatusBadge } from "@/components/client/parcel-status-badge";
 import { TrackingTimeline } from "@/components/client/tracking-timeline";
 import { ParcelQrCode } from "@/components/client/parcel-qr-code";
+import { JoinShipmentPanel } from "@/components/client/join-shipment-panel";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -19,11 +20,15 @@ export default async function ClientParcelDetailPage({ params }: Props) {
   const { id } = await params;
   const session = await auth();
   const clientId = session?.user?.clientId;
-  if (!session?.user || session.user.role !== "CLIENT" || !clientId) {
+  const forwarderId = session?.user?.forwarderId;
+  if (!session?.user || session.user.role !== "CLIENT" || !clientId || !forwarderId) {
     redirect("/login");
   }
 
-  const parcel = await getClientParcelDetail(clientId, id);
+  const [parcel, availableShipments] = await Promise.all([
+    getClientParcelDetail(clientId, id),
+    getAvailableShipments(forwarderId),
+  ]);
   if (!parcel) notFound();
 
   return (
@@ -138,6 +143,15 @@ export default async function ClientParcelDetailPage({ params }: Props) {
           <TrackingTimeline events={parcel.trackingEvents} />
         )}
       </div>
+
+      {/* Join shipment — only when parcel is not yet assigned */}
+      {!parcel.shipmentId && (
+        <JoinShipmentPanel
+          parcelId={parcel.id}
+          shipmentRequest={parcel.shipmentRequest ?? null}
+          availableShipments={availableShipments}
+        />
+      )}
     </div>
   );
 }

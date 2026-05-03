@@ -77,10 +77,10 @@ enum NotificationType {
 }
 
 enum ShipmentRequestStatus {
-  PENDING  // En attente de validation par le transitaire
+  PENDING // En attente de validation par le transitaire
   ACCEPTED // Accepté — colis intégré à l'envoi
   REJECTED // Refusé
-  MOVED    // Déplacé vers un autre envoi par le transitaire
+  MOVED // Déplacé vers un autre envoi par le transitaire
 }
 
 enum NotificationStatus {
@@ -265,11 +265,11 @@ model Shipment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  forwarder        Forwarder        @relation(fields: [forwarderId], references: [id])
-  parcels          Parcel[]
-  trackingEvents   TrackingEvent[]
-  requests         ShipmentRequest[] @relation("RequestedShipment")
-  movedRequests    ShipmentRequest[] @relation("MovedToShipment")
+  forwarder      Forwarder         @relation(fields: [forwarderId], references: [id])
+  parcels        Parcel[]
+  trackingEvents TrackingEvent[]
+  requests       ShipmentRequest[] @relation("RequestedShipment")
+  movedRequests  ShipmentRequest[] @relation("MovedToShipment")
 
   @@map("shipments")
 }
@@ -411,9 +411,9 @@ model TrackingEvent {
 // ─────────────────────────────────────────────
 
 model ShipmentRequest {
-  id         String                @id @default(uuid())
-  shipmentId String                // Envoi demandé par le client
-  parcelId   String                @unique // Un colis = une seule demande active
+  id         String @id @default(uuid())
+  shipmentId String // Envoi demandé par le client
+  parcelId   String @unique // Un colis = une seule demande active
   clientId   String
 
   status ShipmentRequestStatus @default(PENDING)

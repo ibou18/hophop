@@ -6,6 +6,8 @@ import { auth } from "@/auth";
 import {
   getAssignableParcels,
   getForwarderShipmentById,
+  getShipmentRequests,
+  getOtherShipments,
   isShipmentEditable,
 } from "@/lib/forwarder-shipment-data";
 import { shipmentStatusLabelFr } from "@/lib/shipment-status-fr";
@@ -13,6 +15,8 @@ import { countryLabelFr } from "@/lib/country-label-fr";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import { ShipmentDetailActions } from "@/components/forwarder/shipment-detail-actions";
 import { ShipmentParcelsAssignment } from "@/components/forwarder/shipment-parcels-assignment";
+import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
+import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ id: string }> };
@@ -30,10 +34,13 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
   }
 
   const { id } = await params;
-  const [shipment, assignableParcels] = await Promise.all([
-    getForwarderShipmentById(forwarderId, id),
-    getAssignableParcels(forwarderId),
-  ]);
+  const [shipment, assignableParcels, requests, otherShipments] =
+    await Promise.all([
+      getForwarderShipmentById(forwarderId, id),
+      getAssignableParcels(forwarderId),
+      getShipmentRequests(forwarderId, id),
+      getOtherShipments(forwarderId, id),
+    ]);
 
   if (!shipment) notFound();
 
@@ -99,6 +106,12 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
             </p>
           </>
         ) : null}
+        <div className="mt-4 border-t border-hh-sand-dk/15 pt-4">
+          <ShipmentPublishToggle
+            shipmentId={shipment.id}
+            isPublished={shipment.isPublished}
+          />
+        </div>
       </section>
 
       <ShipmentDetailActions
@@ -114,6 +127,14 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         assignableParcels={assignableParcels}
         inShipmentParcels={inShipmentRows}
       />
+
+      {requests != null && (
+        <ShipmentRequestsPanel
+          shipmentId={shipment.id}
+          requests={requests}
+          otherShipments={otherShipments}
+        />
+      )}
 
       <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
         <h2 className="text-[15px] font-medium text-hh-earth-dk">

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma/client";
-import { ParcelStatus, ShipmentStatus } from "@/app/generated/prisma/enums";
+import { Country, ParcelStatus, ShipmentStatus } from "@/app/generated/prisma/enums";
 
 const shipmentListInclude = {
   _count: { select: { parcels: true } },
@@ -20,6 +20,7 @@ const shipmentDetailInclude = {
       recipient: { select: { city: true, country: true } },
     },
   },
+  _count: { select: { requests: true } },
 } satisfies Prisma.ShipmentInclude;
 
 export type ForwarderShipmentDetail = Prisma.ShipmentGetPayload<{
@@ -85,4 +86,51 @@ export async function getAssignableParcels(
 
 export function isShipmentEditable(status: ShipmentStatus): boolean {
   return status === ShipmentStatus.DRAFT || status === ShipmentStatus.CONFIRMED;
+}
+
+const shipmentRequestInclude = {
+  parcel: {
+    include: {
+      items: { select: { name: true, quantity: true, category: true } },
+      recipient: {
+        select: { firstName: true, lastName: true, city: true, country: true },
+      },
+    },
+  },
+  client: { select: { id: true, firstName: true, lastName: true } },
+  movedToShipment: { select: { id: true, reference: true } },
+} satisfies Prisma.ShipmentRequestInclude;
+
+export type ShipmentRequestRow = Prisma.ShipmentRequestGetPayload<{
+  include: typeof shipmentRequestInclude;
+}>;
+
+export async function getShipmentRequests(
+  forwarderId: string,
+  shipmentId: string,
+): Promise<ShipmentRequestRow[] | null> {
+  const shipment = await prisma.shipment.findFirst({
+    where: { id: shipmentId, forwarderId },
+  });
+  if (!shipment) return null;
+  return prisma.shipmentRequest.findMany({
+    where: { shipmentId },
+    orderBy: { createdAt: "desc" },
+    include: shipmentRequestInclude,
+  });
+}
+
+export async function getOtherShipments(
+  forwarderId: string,
+  excludeId: string,
+): Promise<{ id: string; reference: string; destinationCountry: Country; departureDate: Date | null }[]> {
+  return prisma.shipment.findMany({
+    where: {
+      forwarderId,
+      id: { not: excludeId },
+      status: { in: [ShipmentStatus.DRAFT, ShipmentStatus.CONFIRMED] },
+    },
+    orderBy: { departureDate: "asc" },
+    select: { id: true, reference: true, destinationCountry: true, departureDate: true },
+  });
 }
