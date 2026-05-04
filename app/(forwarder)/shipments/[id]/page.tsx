@@ -155,6 +155,10 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         <h2 className="text-[15px] font-medium text-hh-earth-dk">
           Colis du lot ({shipment.parcels.length})
         </h2>
+        <p className="mt-1 text-[13px] text-hh-muted">
+          Clique sur une ligne pour ouvrir la fiche complète (contenu, photos,
+          contacts, historique).
+        </p>
         {shipment.parcels.length === 0 ? (
           <p className="mt-3 text-[14px] text-hh-muted">
             Aucun colis pour l’instant. Utilise la section ci-dessus pour en
@@ -163,26 +167,33 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         ) : (
           <ul className="mt-4 divide-y divide-hh-sand-dk/15">
             {shipment.parcels.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-col gap-1 py-3 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <Link
-                    href={`/parcels/${p.id}`}
-                    className="font-mono text-[14px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
-                  >
-                    {p.trackingCode}
-                  </Link>
-                  <p className="text-[13px] text-hh-muted">
-                    {p.client.firstName} {p.client.lastName}
-                    {" · "}
-                    {p.recipient.city}, {p.recipient.country}
-                  </p>
-                </div>
-                <span className="text-[12px] font-medium text-hh-earth-dk">
-                  {parcelStatusLabelFr(p.status)}
-                </span>
+              <li key={p.id} className="py-2 first:pt-0">
+                <Link
+                  href={`/parcels/${p.id}?fromShipment=${shipment.id}`}
+                  className="group flex flex-col gap-1 rounded-[var(--hh-radius-md)] px-2 py-2 transition-colors hover:bg-hh-sand/50 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <span className="font-mono text-[14px] font-medium text-hh-saffron-dk group-hover:underline">
+                      {p.trackingCode}
+                    </span>
+                    <p className="text-[13px] text-hh-muted">
+                      {p.client.firstName} {p.client.lastName}
+                      {" · "}
+                      {p.recipient.city}, {p.recipient.country}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-hh-saffron-dk/80 opacity-0 transition-opacity group-hover:opacity-100 sm:hidden">
+                      Ouvrir la fiche colis →
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-[12px] font-medium text-hh-earth-dk">
+                      {parcelStatusLabelFr(p.status)}
+                    </span>
+                    <span className="hidden text-[12px] font-medium text-hh-saffron-dk group-hover:underline sm:inline">
+                      Fiche →
+                    </span>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>

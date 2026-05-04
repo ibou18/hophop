@@ -42,11 +42,16 @@ export async function POST(req: Request) {
     });
   }
   const data = parsed.data;
-  const forwarder = await prisma.forwarder.findUnique({
-    where: { code5: data.code5 },
-  });
-  if (!forwarder?.isActive) {
-    return jsonError("Code transitaire invalide", 404);
+  let forwarderId: string | null = null;
+  if (data.code5) {
+    const forwarder = await prisma.forwarder.findUnique({
+      where: { code5: data.code5 },
+      select: { id: true, isActive: true },
+    });
+    if (!forwarder?.isActive) {
+      return jsonError("Code transitaire invalide", 404);
+    }
+    forwarderId = forwarder.id;
   }
   const passwordHash = await hash(data.password, 12);
   try {
@@ -74,9 +79,11 @@ export async function POST(req: Request) {
           createdAt: true,
         },
       });
-      await tx.clientForwarder.create({
-        data: { clientId: c.id, forwarderId: forwarder.id },
-      });
+      if (forwarderId) {
+        await tx.clientForwarder.create({
+          data: { clientId: c.id, forwarderId },
+        });
+      }
       return c;
     });
     return jsonOk(client, 201);

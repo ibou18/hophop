@@ -28,6 +28,10 @@ import {
 import { cn } from "@/lib/utils";
 import { GooglePlacesAddressField } from "@/components/maps/google-places-address";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
+import {
+  messageFromZodFlatten,
+  type ZodFlattenPayload,
+} from "@/lib/zod-api-error";
 
 const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -36,7 +40,6 @@ export function RegisterClientForm() {
   const [apiError, setApiError] = useState<string | null>(null);
   const form = useForm<ClientRegistrationFormInput>({
     defaultValues: {
-      code5: "",
       firstName: "",
       lastName: "",
       email: "",
@@ -80,15 +83,34 @@ export function RegisterClientForm() {
     const res = await fetch("/api/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify({
-        ...values,
+        ...(values.code5 ? { code5: values.code5 } : {}),
+        firstName: values.firstName,
+        lastName: values.lastName,
         email: values.email,
         phone: values.phone,
+        country: values.country,
+        authMethod: values.authMethod,
+        password: values.password,
+        ...(values.address?.trim()
+          ? { address: values.address.trim() }
+          : {}),
+        ...(values.city?.trim() ? { city: values.city.trim() } : {}),
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    const payload = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      issues?: ZodFlattenPayload;
+    };
     if (!res.ok) {
-      setApiError(data.error ?? "Inscription impossible.");
+      const detail =
+        res.status === 422 && payload.issues
+          ? messageFromZodFlatten(payload.issues)
+          : null;
+      setApiError(
+        detail ?? payload.error ?? `Inscription impossible (${res.status}).`,
+      );
       return;
     }
     const signInRes = await signIn("client-credentials", {
@@ -103,8 +125,7 @@ export function RegisterClientForm() {
       router.push("/login?registered=1");
       return;
     }
-    router.push("/client/dashboard");
-    router.refresh();
+    window.location.assign("/client/dashboard");
   }
 
   return (
@@ -114,39 +135,16 @@ export function RegisterClientForm() {
           Compte expéditeur
         </CardTitle>
         <CardDescription className="text-[14px] leading-relaxed text-hh-muted">
-          Rattache-toi à ton transitaire avec son code à 5 chiffres.
+          Tu pourras lier un transitaire plus tard depuis ton espace (code à 5
+          chiffres).
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-8">
         <form
+          noValidate
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-4"
         >
-          {/* <div className="space-y-2">
-            <Label
-              htmlFor="code5"
-              className="text-[13px] font-medium text-hh-muted"
-            >
-              Code transitaire
-            </Label>
-            <Input
-              id="code5"
-              inputMode="numeric"
-              pattern="\d{5}"
-              maxLength={5}
-              placeholder="5 chiffres"
-              className={cn(
-                authInputClass,
-                "font-mono text-[13px] font-medium text-hh-saffron-dk",
-              )}
-              {...form.register("code5")}
-            />
-            {form.formState.errors.code5 ? (
-              <p className="text-[11px] text-hh-kola">
-                {form.formState.errors.code5.message}
-              </p>
-            ) : null}
-          </div> */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label
@@ -257,13 +255,13 @@ export function RegisterClientForm() {
                 htmlFor="password"
                 className="text-[13px] font-medium text-hh-muted"
               >
-                Mot de passe
+                Mot de passe (5 à 72 caractères)
               </Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                maxLength={12}
+                maxLength={72}
                 className={cn(authInputClass)}
                 {...form.register("password")}
               />

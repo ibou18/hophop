@@ -62,11 +62,26 @@ export async function getClientParcels(clientId: string) {
   });
 }
 
+const clientParcelDetailForwarderSelect = {
+  id: true,
+  name: true,
+  code5: true,
+  city: true,
+  country: true,
+  phone: true,
+  email: true,
+  logoUrl: true,
+  description: true,
+  address: true,
+  addressFormatted: true,
+} satisfies Prisma.ForwarderSelect;
+
 export async function getClientParcelDetail(clientId: string, parcelId: string) {
   return prisma.parcel.findFirst({
     where: { id: parcelId, clientId },
     include: {
       ...parcelInclude,
+      forwarder: { select: clientParcelDetailForwarderSelect },
       trackingEvents: {
         orderBy: { createdAt: "asc" },
         select: {

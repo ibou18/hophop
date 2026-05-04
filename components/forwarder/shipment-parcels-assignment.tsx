@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { AssignableParcelRow } from "@/lib/forwarder-shipment-data";
@@ -100,7 +101,10 @@ export function ShipmentParcelsAssignment({
           </p>
           <ul className="mt-4 max-h-56 space-y-2 overflow-y-auto rounded-[var(--hh-radius-md)] border border-hh-sand-dk/20 p-3">
             {assignableParcels.map((p) => (
-              <li key={p.id} className="flex items-start gap-2 text-[14px]">
+              <li
+                key={p.id}
+                className="flex items-start gap-2 text-[14px]"
+              >
                 <input
                   type="checkbox"
                   id={`assign-${p.id}`}
@@ -109,16 +113,25 @@ export function ShipmentParcelsAssignment({
                   onChange={() => toggle(setAssignIds, p.id)}
                   className="mt-1"
                 />
-                <label htmlFor={`assign-${p.id}`} className="cursor-pointer">
-                  <span className="font-mono font-medium text-hh-saffron-dk">
-                    {p.trackingCode}
-                  </span>
-                  <span className="text-hh-muted">
-                    {" "}
-                    — {p.client.firstName} {p.client.lastName} ·{" "}
-                    {p.recipient.city}
-                  </span>
-                </label>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
+                  <label htmlFor={`assign-${p.id}`} className="cursor-pointer">
+                    <span className="font-mono font-medium text-hh-saffron-dk">
+                      {p.trackingCode}
+                    </span>
+                    <span className="text-hh-muted">
+                      {" "}
+                      — {p.client.firstName} {p.client.lastName} ·{" "}
+                      {p.recipient.city}
+                    </span>
+                  </label>
+                  <Link
+                    href={`/parcels/${p.id}?fromShipment=${shipmentId}`}
+                    className="shrink-0 text-[12px] font-medium text-hh-saffron-dk hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Fiche colis
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
@@ -143,7 +156,10 @@ export function ShipmentParcelsAssignment({
           </p>
           <ul className="mt-4 max-h-56 space-y-2 overflow-y-auto rounded-[var(--hh-radius-md)] border border-hh-sand-dk/20 p-3">
             {inShipmentParcels.map((p) => (
-              <li key={p.id} className="flex items-start gap-2 text-[14px]">
+              <li
+                key={p.id}
+                className="flex items-start gap-2 text-[14px]"
+              >
                 <input
                   type="checkbox"
                   id={`unassign-${p.id}`}
@@ -152,9 +168,20 @@ export function ShipmentParcelsAssignment({
                   onChange={() => toggle(setUnassignIds, p.id)}
                   className="mt-1"
                 />
-                <label htmlFor={`unassign-${p.id}`} className="cursor-pointer font-mono font-medium text-hh-earth-dk">
-                  {p.trackingCode}
-                </label>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
+                  <label
+                    htmlFor={`unassign-${p.id}`}
+                    className="cursor-pointer font-mono font-medium text-hh-earth-dk"
+                  >
+                    {p.trackingCode}
+                  </label>
+                  <Link
+                    href={`/parcels/${p.id}?fromShipment=${shipmentId}`}
+                    className="shrink-0 text-[12px] font-medium text-hh-saffron-dk hover:underline"
+                  >
+                    Fiche colis
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

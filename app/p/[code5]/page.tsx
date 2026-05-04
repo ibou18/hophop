@@ -8,6 +8,7 @@ import { HopLogo } from "@/components/auth/hop-logo";
 import { ForwarderProfileHero } from "@/components/public/forwarder-profile-hero";
 import { ForwarderShipmentsGrid } from "@/components/public/forwarder-shipments-grid";
 import type { ShipmentCardData } from "@/components/public/forwarder-shipments-grid";
+import { TrackingSearch } from "@/components/landing/tracking-search";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { publicVitrineShipmentWhere } from "@/lib/shipment-public-visibility";
 
@@ -167,6 +168,25 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
 
       {/* ── Shipments ── */}
       <main className="mx-auto max-w-5xl px-5 py-14">
+        <section
+          className="mb-10 rounded-[var(--hh-radius-lg)] bg-white p-5 shadow-sm ring-1 ring-hh-sand-dk/20 sm:p-6"
+          aria-labelledby="suivi-colis-heading"
+        >
+          <h2
+            id="suivi-colis-heading"
+            className="text-lg font-semibold text-hh-nuit"
+          >
+            Suivre un colis
+          </h2>
+          <p className="mt-1 text-sm text-hh-muted">
+            Entre le code de suivi indiqué sur ton étiquette ou dans les messages
+            (format HOP-…).
+          </p>
+          <div className="mt-4 max-w-xl">
+            <TrackingSearch />
+          </div>
+        </section>
+
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-hh-nuit">Départs à venir</h2>

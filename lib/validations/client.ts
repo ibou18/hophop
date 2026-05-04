@@ -8,10 +8,17 @@ const emptyToUndefined = (v: unknown) =>
 
 /** Champs formulaire inscription client (téléphone = saisie nationale affichée). */
 export const clientRegistrationFieldsSchema = z.object({
-  code5: z
-    .string()
-    .length(5)
-    .regex(/^\d{5}$/),
+  /** Si renseigné, rattache le client à ce transitaire actif. */
+  code5: z.preprocess(
+    emptyToUndefined,
+    z.union([
+      z.undefined(),
+      z
+        .string()
+        .length(5, { message: "Code transitaire : exactement 5 chiffres" })
+        .regex(/^\d{5}$/, { message: "5 chiffres numériques uniquement" }),
+    ]),
+  ).optional(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.preprocess(

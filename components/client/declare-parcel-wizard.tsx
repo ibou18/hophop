@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
@@ -17,6 +17,8 @@ import type { ForwarderTariff, Recipient } from "@/app/generated/prisma/client";
 import type { Country, TransportMode } from "@/app/generated/prisma/enums";
 import type { ClientForwarderRow } from "@/lib/client-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
+import { PhoneCountryField } from "@/components/forms/phone-country-field";
+import { toE164 } from "@/lib/phone-e164";
 import { uploadParcelImagesViaApi } from "@/lib/client/parcel-image-upload";
 import {
   normalizeImageContentType,
@@ -33,7 +35,13 @@ import { TRANSPORT_MODE_LABEL } from "@/lib/transport-mode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Category = "CLOTHING" | "ELECTRONICS" | "FOOD" | "COSMETICS" | "DOCUMENTS" | "OTHER";
+type Category =
+  | "CLOTHING"
+  | "ELECTRONICS"
+  | "FOOD"
+  | "COSMETICS"
+  | "DOCUMENTS"
+  | "OTHER";
 
 type ParcelItem = {
   name: string;
@@ -62,20 +70,15 @@ type WizardState = {
 };
 
 const CATEGORIES: { value: Category; icon: string; label: string }[] = [
-  { value: "CLOTHING",    icon: "👕", label: "Vêtements"   },
+  { value: "CLOTHING", icon: "👕", label: "Vêtements" },
   { value: "ELECTRONICS", icon: "📱", label: "Électronique" },
-  { value: "COSMETICS",   icon: "🧴", label: "Cosmétiques"  },
-  { value: "FOOD",        icon: "🍱", label: "Alimentaire"  },
-  { value: "DOCUMENTS",   icon: "📄", label: "Documents"    },
-  { value: "OTHER",       icon: "📦", label: "Autre"        },
+  { value: "COSMETICS", icon: "🧴", label: "Cosmétiques" },
+  { value: "FOOD", icon: "🍱", label: "Alimentaire" },
+  { value: "DOCUMENTS", icon: "📄", label: "Documents" },
+  { value: "OTHER", icon: "📦", label: "Autre" },
 ];
 
-const STEPS = [
-  "Destinataire",
-  "Contenu",
-  "Dimensions",
-  "Récapitulatif",
-];
+const STEPS = ["Destinataire", "Contenu", "Dimensions", "Récapitulatif"];
 
 const inputClass =
   "h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 bg-white px-3 text-[15px] placeholder:text-hh-muted focus:border-hh-saffron focus:outline-none focus:ring-2 focus:ring-hh-saffron/20";
@@ -130,8 +133,13 @@ function ParcelPriceEstimateBlock({
   view: PriceEstimateView;
   transportModeLabel: string;
 }) {
-  const { hasTariffRows, noRuleForDestination, result, missingHint, needsRecipient } =
-    view;
+  const {
+    hasTariffRows,
+    noRuleForDestination,
+    result,
+    missingHint,
+    needsRecipient,
+  } = view;
 
   if (!hasTariffRows) {
     return (
@@ -153,7 +161,8 @@ function ParcelPriceEstimateBlock({
           Tarif indicatif
         </p>
         <p className="mt-1.5 text-[12px] text-hh-muted">
-          Choisissez un destinataire (étape 1) pour estimer le tarif selon le pays de livraison.
+          Choisissez un destinataire (étape 1) pour estimer le tarif selon le
+          pays de livraison.
         </p>
       </div>
     );
@@ -166,8 +175,8 @@ function ParcelPriceEstimateBlock({
           Tarif indicatif
         </p>
         <p className="mt-1.5 text-[12px] text-hh-muted">
-          Aucun tarif publié pour ce pays ou pour le mode « {transportModeLabel} ». Vous pouvez
-          contacter le transitaire.
+          Aucun tarif publié pour ce pays ou pour le mode « {transportModeLabel}{" "}
+          ». Vous pouvez contacter le transitaire.
         </p>
       </div>
     );
@@ -185,7 +194,8 @@ function ParcelPriceEstimateBlock({
           <span className="text-[16px] font-medium text-hh-muted">{sym}</span>
         </p>
         <p className="mt-1 text-[11px] text-hh-muted">
-          {PRICING_TYPE_LABEL[result.pricingType]} · mode {transportModeLabel} · non contractuel
+          {PRICING_TYPE_LABEL[result.pricingType]} · mode {transportModeLabel} ·
+          non contractuel
         </p>
       </div>
     );
@@ -236,10 +246,9 @@ export function DeclareParcelWizard({
   const defaultRecipient = recipients.find((r) => r.isDefault);
 
   const defaultForwarderId =
-    initialForwarderId &&
-    forwarders.some((f) => f.id === initialForwarderId)
+    initialForwarderId && forwarders.some((f) => f.id === initialForwarderId)
       ? initialForwarderId
-      : forwarders[0]?.id ?? "";
+      : (forwarders[0]?.id ?? "");
 
   const [state, setState] = useState<WizardState>({
     forwarderId: defaultForwarderId,
@@ -267,6 +276,10 @@ export function DeclareParcelWizard({
   const transportMode: TransportMode =
     targetShipmentSummary?.transportMode ?? "AIR";
   const transportModeLabel = TRANSPORT_MODE_LABEL[transportMode];
+
+  /** Contexte envoi depuis la page transitaire (`?envoi=`) : transitaire déjà choisi. */
+  const showForwarderPicker =
+    forwarders.length > 1 && targetShipmentSummary == null;
 
   const destinationCountry = useMemo((): Country | null => {
     if (addingNew && state.newRecipient?.country) {
@@ -297,7 +310,11 @@ export function DeclareParcelWizard({
         needsRecipient: true,
       };
     }
-    const tariff = resolveTariff(selectedTariffs, destinationCountry, transportMode);
+    const tariff = resolveTariff(
+      selectedTariffs,
+      destinationCountry,
+      transportMode,
+    );
     if (!tariff) {
       return {
         hasTariffRows: true,
@@ -364,12 +381,37 @@ export function DeclareParcelWizard({
     setState((s) => ({ ...s, ...patch }));
   }
 
+  const patchNewRecipient = useCallback(
+    (patch: Partial<NonNullable<WizardState["newRecipient"]>>) => {
+      setState((s) => {
+        const base = s.newRecipient ?? {
+          firstName: "",
+          lastName: "",
+          phone: "",
+          city: "",
+          country: "FR",
+        };
+        return { ...s, newRecipient: { ...base, ...patch } };
+      });
+    },
+    [],
+  );
+
   function canAdvance(): boolean {
     if (step === 0) {
       if (!state.forwarderId) return false;
       if (addingNew) {
         const r = state.newRecipient;
-        return !!(r?.firstName && r?.lastName && r?.phone && r?.city && r?.country);
+        if (
+          !r?.firstName?.trim() ||
+          !r?.lastName?.trim() ||
+          !r?.city?.trim() ||
+          !r?.country
+        ) {
+          return false;
+        }
+        const e164 = toE164(r.country as Country, r.phone ?? "");
+        return !!e164;
       }
       return !!state.recipientId;
     }
@@ -385,10 +427,21 @@ export function DeclareParcelWizard({
       let recipientId = state.recipientId;
 
       if (addingNew && state.newRecipient) {
+        const nr = state.newRecipient;
+        const e164 = toE164(nr.country as Country, nr.phone);
+        if (!e164) {
+          setError("Numéro de téléphone invalide pour le pays choisi.");
+          setSubmitting(false);
+          return;
+        }
         const res = await fetch("/api/recipients", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...state.newRecipient, isDefault: recipients.length === 0 }),
+          body: JSON.stringify({
+            ...nr,
+            phone: e164,
+            isDefault: recipients.length === 0,
+          }),
         });
         const data = (await res.json()) as { id?: string; error?: string };
         if (!res.ok || !data.id) {
@@ -452,15 +505,18 @@ export function DeclareParcelWizard({
 
       if (targetShipmentId) {
         setSubmitLabel("Demande pour l'envoi…");
-        const reqRes = await fetch(`/api/shipments/${targetShipmentId}/requests`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ parcelId }),
-        });
+        const reqRes = await fetch(
+          `/api/shipments/${targetShipmentId}/requests`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ parcelId }),
+          },
+        );
         if (!reqRes.ok) {
           setError(
-            "Colis enregistré. La demande pour cet envoi n'a pas pu être envoyée — ouvrez la fiche colis pour réessayer."
+            "Colis enregistré. La demande pour cet envoi n'a pas pu être envoyée — ouvrez la fiche colis pour réessayer.",
           );
         }
       }
@@ -512,20 +568,21 @@ export function DeclareParcelWizard({
               </p>
               {targetShipmentId ? (
                 <span className="mt-2 block text-[13px] text-hh-muted">
-                  Après la déclaration, une demande pour intégrer ce colis à cet envoi sera
-                  envoyée au transitaire.
+                  Après la déclaration, une demande pour intégrer ce colis à cet
+                  envoi sera envoyée au transitaire.
                 </span>
               ) : (
                 <span className="mt-2 block text-[13px] text-amber-800">
-                  Cet envoi n&apos;accepte plus de nouvelles demandes automatiques — vous pouvez
-                  quand même déclarer votre colis et contacter le transitaire si besoin.
+                  Cet envoi n&apos;accepte plus de nouvelles demandes
+                  automatiques — vous pouvez quand même déclarer votre colis et
+                  contacter le transitaire si besoin.
                 </span>
               )}
             </>
           ) : (
             <span>
-              Transitaire présélectionné depuis la page publique — vous pouvez le changer à
-              l&apos;étape 1 si besoin.
+              Transitaire présélectionné depuis la page publique — vous pouvez
+              le changer à l&apos;étape 1 si besoin.
             </span>
           )}
         </div>
@@ -541,8 +598,8 @@ export function DeclareParcelWizard({
                 i < step
                   ? "bg-hh-savane text-white"
                   : i === step
-                  ? "bg-hh-saffron text-white"
-                  : "bg-hh-sand-dk/40 text-hh-muted"
+                    ? "bg-hh-saffron text-white"
+                    : "bg-hh-sand-dk/40 text-hh-muted",
               )}
             >
               {i < step ? <Check size={13} strokeWidth={2.5} /> : i + 1}
@@ -550,7 +607,7 @@ export function DeclareParcelWizard({
             <span
               className={cn(
                 "hidden text-[10px] sm:block",
-                i === step ? "font-medium text-hh-saffron-dk" : "text-hh-muted"
+                i === step ? "font-medium text-hh-saffron-dk" : "text-hh-muted",
               )}
             >
               {label}
@@ -565,14 +622,19 @@ export function DeclareParcelWizard({
           <StepRecipient
             recipients={recipients}
             forwarders={forwarders}
+            showForwarderPicker={showForwarderPicker}
             state={state}
             update={update}
+            patchNewRecipient={patchNewRecipient}
             addingNew={addingNew}
             setAddingNew={setAddingNew}
           />
         )}
         {step === 1 && (
-          <StepContent items={state.items} setItems={(items) => update({ items })} />
+          <StepContent
+            items={state.items}
+            setItems={(items) => update({ items })}
+          />
         )}
         {step === 2 && (
           <StepDimensions
@@ -600,7 +662,9 @@ export function DeclareParcelWizard({
       </div>
 
       {error && (
-        <p className="text-[13px] text-hh-kola" role="alert">{error}</p>
+        <p className="text-[13px] text-hh-kola" role="alert">
+          {error}
+        </p>
       )}
 
       {/* Navigation */}
@@ -613,7 +677,7 @@ export function DeclareParcelWizard({
             "flex items-center gap-2 rounded-[var(--hh-radius-md)] px-4 py-2.5 text-[14px] font-medium transition-colors",
             step === 0
               ? "pointer-events-none opacity-0"
-              : "text-hh-earth-dk hover:bg-hh-earth-lt"
+              : "text-hh-earth-dk hover:bg-hh-earth-lt",
           )}
         >
           <ArrowLeft size={16} strokeWidth={1.5} />
@@ -651,15 +715,22 @@ export function DeclareParcelWizard({
 function StepRecipient({
   recipients,
   forwarders,
+  showForwarderPicker,
   state,
   update,
+  patchNewRecipient,
   addingNew,
   setAddingNew,
 }: {
   recipients: Recipient[];
   forwarders: ClientForwarderRow[];
+  /** Faux si arrivée depuis une page envoi transitaire (transitaire déjà implicite). */
+  showForwarderPicker: boolean;
   state: WizardState;
   update: (p: Partial<WizardState>) => void;
+  patchNewRecipient: (
+    p: Partial<NonNullable<WizardState["newRecipient"]>>,
+  ) => void;
   addingNew: boolean;
   setAddingNew: (v: boolean) => void;
 }) {
@@ -672,15 +743,26 @@ function StepRecipient({
   };
 
   function updateNr(patch: Partial<typeof nr>) {
-    update({ newRecipient: { ...nr, ...patch } });
+    patchNewRecipient(patch);
   }
+
+  const onPhoneNationalChange = useCallback(
+    (v: string) => {
+      patchNewRecipient({ phone: v });
+    },
+    [patchNewRecipient],
+  );
+
+  const recipientCountry = nr.country as Country;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Forwarder selector — only shown when client has multiple forwarders */}
-      {forwarders.length > 1 && (
+      {/* Transitaire implicite si ?envoi= (page envoi) — sinon choix si plusieurs liens. */}
+      {showForwarderPicker && (
         <div className="flex flex-col gap-2">
-          <p className="text-[13px] font-medium text-hh-muted">Via quel transitaire ?</p>
+          <p className="text-[13px] font-medium text-hh-muted">
+            Via quel transitaire ?
+          </p>
           <div className="flex flex-col gap-1.5">
             {forwarders.map((f) => (
               <button
@@ -691,15 +773,21 @@ function StepRecipient({
                   "flex items-center justify-between rounded-[var(--hh-radius-md)] border-2 px-3 py-2.5 text-left transition-colors",
                   state.forwarderId === f.id
                     ? "border-hh-saffron bg-hh-saffron-lt"
-                    : "border-transparent bg-hh-sand hover:border-hh-sand-dk"
+                    : "border-transparent bg-hh-sand hover:border-hh-sand-dk",
                 )}
               >
                 <div>
-                  <p className="text-[14px] font-medium text-hh-earth-dk">{f.name}</p>
+                  <p className="text-[14px] font-medium text-hh-earth-dk">
+                    {f.name}
+                  </p>
                   <p className="text-[12px] text-hh-muted">{f.city}</p>
                 </div>
                 {state.forwarderId === f.id && (
-                  <Check size={15} strokeWidth={2} className="shrink-0 text-hh-saffron" />
+                  <Check
+                    size={15}
+                    strokeWidth={2}
+                    className="shrink-0 text-hh-saffron"
+                  />
                 )}
               </button>
             ))}
@@ -708,7 +796,9 @@ function StepRecipient({
       )}
 
       <div>
-        <h2 className="text-[17px] font-medium text-hh-earth-dk">Destinataire</h2>
+        <h2 className="text-[17px] font-medium text-hh-earth-dk">
+          Destinataire
+        </h2>
         <p className="mt-0.5 text-[13px] text-hh-muted">
           Qui recevra ce colis ?
         </p>
@@ -726,7 +816,7 @@ function StepRecipient({
                   "flex items-center justify-between rounded-[var(--hh-radius-md)] border-2 px-4 py-3 text-left transition-colors",
                   state.recipientId === r.id
                     ? "border-hh-saffron bg-hh-saffron-lt"
-                    : "border-transparent bg-hh-sand hover:border-hh-sand-dk"
+                    : "border-transparent bg-hh-sand hover:border-hh-sand-dk",
                 )}
               >
                 <div>
@@ -743,7 +833,11 @@ function StepRecipient({
                   </p>
                 </div>
                 {state.recipientId === r.id && (
-                  <Check size={16} strokeWidth={2} className="text-hh-saffron" />
+                  <Check
+                    size={16}
+                    strokeWidth={2}
+                    className="text-hh-saffron"
+                  />
                 )}
               </button>
             ))}
@@ -773,56 +867,83 @@ function StepRecipient({
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-hh-muted">Prénom *</label>
+              <label className="text-[12px] font-medium text-hh-muted">
+                Prénom *
+              </label>
               <input
                 className={inputClass}
                 value={nr.firstName}
                 onChange={(e) => updateNr({ firstName: e.target.value })}
-                placeholder="Mamadou"
+                placeholder=""
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-hh-muted">Nom *</label>
+              <label className="text-[12px] font-medium text-hh-muted">
+                Nom *
+              </label>
               <input
                 className={inputClass}
                 value={nr.lastName}
                 onChange={(e) => updateNr({ lastName: e.target.value })}
-                placeholder="Diallo"
+                placeholder=""
               />
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-medium text-hh-muted">Téléphone *</label>
-            <input
+            <label
+              className="text-[12px] font-medium text-hh-muted"
+              htmlFor="nr-country"
+            >
+              Pays *
+            </label>
+            <select
+              id="nr-country"
               className={inputClass}
-              type="tel"
-              value={nr.phone}
-              onChange={(e) => updateNr({ phone: e.target.value })}
-              placeholder="+224 6XX XXX XXX"
-            />
+              value={nr.country}
+              onChange={(e) => updateNr({ country: e.target.value })}
+            >
+              {COUNTRY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-hh-muted">
+              Indicatif du téléphone aligné sur ce pays (pays de livraison).
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-hh-muted">Pays *</label>
-              <select
-                className={inputClass}
-                value={nr.country}
-                onChange={(e) => updateNr({ country: e.target.value })}
-              >
-                {COUNTRY_OPTIONS.map((c) => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-medium text-hh-muted">Ville *</label>
-              <input
-                className={inputClass}
-                value={nr.city}
-                onChange={(e) => updateNr({ city: e.target.value })}
-                placeholder="Conakry"
-              />
-            </div>
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-[12px] font-medium text-hh-muted"
+              htmlFor="nr-phone"
+            >
+              Téléphone *
+            </label>
+            <PhoneCountryField
+              id="nr-phone"
+              country={recipientCountry}
+              nationalFormatted={nr.phone}
+              onNationalChange={onPhoneNationalChange}
+              inputClassName={inputClass}
+            />
+            <p className="text-[11px] text-hh-muted">
+              Saisie limitée (14 chiffres côté numéro national, hors indicatif).
+            </p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label
+              className="text-[12px] font-medium text-hh-muted"
+              htmlFor="nr-city"
+            >
+              Ville *
+            </label>
+            <input
+              id="nr-city"
+              className={inputClass}
+              value={nr.city}
+              onChange={(e) => updateNr({ city: e.target.value })}
+              placeholder="Conakry"
+            />
           </div>
         </div>
       )}
@@ -846,7 +967,11 @@ function StepContent({
     } else {
       setItems([
         ...items,
-        { category: cat, name: CATEGORIES.find((c) => c.value === cat)!.label, quantity: 1 },
+        {
+          category: cat,
+          name: CATEGORIES.find((c) => c.value === cat)!.label,
+          quantity: 1,
+        },
       ]);
     }
   }
@@ -856,15 +981,17 @@ function StepContent({
       items.map((item) =>
         item.category === cat
           ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
+          : item,
+      ),
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-[17px] font-medium text-hh-earth-dk">Contenu du colis</h2>
+        <h2 className="text-[17px] font-medium text-hh-earth-dk">
+          Contenu du colis
+        </h2>
         <p className="mt-0.5 text-[13px] text-hh-muted">
           Sélectionne les catégories (plusieurs possibles).
         </p>
@@ -882,14 +1009,14 @@ function StepContent({
                 "flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-colors",
                 selected
                   ? "border-hh-saffron bg-hh-saffron-lt"
-                  : "border-transparent bg-hh-sand hover:border-hh-sand-dk"
+                  : "border-transparent bg-hh-sand hover:border-hh-sand-dk",
               )}
             >
               <span style={{ fontSize: 24 }}>{cat.icon}</span>
               <span
                 className={cn(
                   "text-[12px]",
-                  selected ? "font-medium text-hh-saffron-dk" : "text-hh-muted"
+                  selected ? "font-medium text-hh-saffron-dk" : "text-hh-muted",
                 )}
               >
                 {cat.label}
@@ -1087,7 +1214,8 @@ function StepDimensions({
           Choisir des photos
         </button>
         <p className="text-[11px] text-hh-muted">
-          Les fichiers sont enregistrés sur ton appareil jusqu’à la déclaration ; l’upload vers ton S3 se fait ensuite automatiquement.
+          Les fichiers sont enregistrés sur ton appareil jusqu’à la déclaration
+          ; l’upload vers ton S3 se fait ensuite automatiquement.
         </p>
         {photoUploadErr ? (
           <p className="text-[12px] text-hh-kola" role="alert">
@@ -1166,7 +1294,9 @@ function StepSummary({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-[17px] font-medium text-hh-earth-dk">Récapitulatif</h2>
+        <h2 className="text-[17px] font-medium text-hh-earth-dk">
+          Récapitulatif
+        </h2>
         <p className="mt-0.5 text-[13px] text-hh-muted">
           Vérifie les informations avant de déclarer.
         </p>
@@ -1178,7 +1308,9 @@ function StepSummary({
             <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
               Transitaire
             </p>
-            <p className="mt-1 text-[14px] font-medium text-hh-earth-dk">{forwarder.name}</p>
+            <p className="mt-1 text-[14px] font-medium text-hh-earth-dk">
+              {forwarder.name}
+            </p>
           </div>
         )}
         <div className="rounded-[var(--hh-radius-md)] bg-hh-sand px-4 py-3">
@@ -1198,7 +1330,9 @@ function StepSummary({
               )}
             </>
           ) : (
-            <p className="mt-1 text-[13px] text-hh-kola">Destinataire manquant</p>
+            <p className="mt-1 text-[13px] text-hh-kola">
+              Destinataire manquant
+            </p>
           )}
         </div>
 
@@ -1238,9 +1372,11 @@ function StepSummary({
               <p className="mt-1 text-[13px] text-hh-earth-dk">
                 Dimensions (L × l × H) :{" "}
                 <span className="font-medium">
-                  {[state.lengthCm || "—", state.widthCm || "—", state.heightCm || "—"].join(
-                    " × ",
-                  )}{" "}
+                  {[
+                    state.lengthCm || "—",
+                    state.widthCm || "—",
+                    state.heightCm || "—",
+                  ].join(" × ")}{" "}
                   cm
                 </span>
               </p>
@@ -1282,7 +1418,8 @@ function StepSummary({
             </p>
           </div>
           <p className="mt-1 text-[12px] text-hh-muted">
-            Au clic sur « Déclarer », le colis est créé puis les photos sont envoyées vers ton stockage et liées au colis dans l’ordre.
+            Au clic sur « Déclarer », le colis est créé puis les photos sont
+            envoyées vers ton stockage et liées au colis dans l’ordre.
           </p>
         </div>
       </div>

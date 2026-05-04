@@ -18,11 +18,11 @@ export function digitsOnly(s: string): string {
   return s.replace(/\D/g, "");
 }
 
-/** Limite prudente pour la partie nationale (indicatif affiché à part). Aligné E.164 (~15 chiffres au total). */
-export const PHONE_NATIONAL_DIGITS_MAX = 10;
+/** Limite prudente pour la partie nationale (hors indicatif affiché). */
+export const PHONE_NATIONAL_DIGITS_MAX = 14;
 
 /** Longueur max du champ formaté (espaces inclus). */
-export const PHONE_INPUT_CHAR_MAX = 14;
+export const PHONE_INPUT_CHAR_MAX = 22;
 
 /** Saisie progressive (format national affiché). */
 export function formatPhoneAsYouType(

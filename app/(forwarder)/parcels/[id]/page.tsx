@@ -1,8 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { getForwarderParcelById } from "@/lib/forwarder-dashboard-data";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import { countryLabelFr } from "@/lib/country-label-fr";
@@ -13,14 +15,23 @@ import { ParcelStatusUpdater } from "@/components/forwarder/parcel-status-update
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 
-type Props = { params: Promise<{ id: string }> };
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ fromShipment?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   return { title: `Colis · ${id.slice(0, 8)}…` };
 }
 
-export default async function ForwarderParcelDetailPage({ params }: Props) {
+export default async function ForwarderParcelDetailPage({
+  params,
+  searchParams,
+}: Props) {
   const session = await auth();
   const forwarderId = session?.user?.forwarderId;
   if (!session?.user || session.user.role !== "FORWARDER" || !forwarderId) {
@@ -28,18 +39,39 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
   }
 
   const { id } = await params;
+  const sp = await searchParams;
+  const fromShipmentParam =
+    typeof sp.fromShipment === "string" ? sp.fromShipment.trim() : "";
+  let backToShipment: { id: string; reference: string } | null = null;
+  if (fromShipmentParam && UUID_RE.test(fromShipmentParam)) {
+    const s = await prisma.shipment.findFirst({
+      where: { id: fromShipmentParam, forwarderId },
+      select: { id: true, reference: true },
+    });
+    if (s) backToShipment = s;
+  }
+
   const parcel = await getForwarderParcelById(forwarderId, id);
   if (!parcel) notFound();
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <div>
-        <Link
-          href="/parcels"
-          className="text-[13px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
-        >
-          ← Colis
-        </Link>
+        {backToShipment ? (
+          <Link
+            href={`/shipments/${backToShipment.id}`}
+            className="text-[13px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
+          >
+            ← Envoi {backToShipment.reference}
+          </Link>
+        ) : (
+          <Link
+            href="/parcels"
+            className="text-[13px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
+          >
+            ← Colis
+          </Link>
+        )}
         <h1 className="mt-3 font-mono text-[26px] font-medium tracking-tight text-hh-earth-dk">
           {parcel.trackingCode}
         </h1>
@@ -118,6 +150,21 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
               <dd className="text-hh-earth-dk">{parcel.weightKg} kg</dd>
             </>
           ) : null}
+          {(parcel.lengthCm != null ||
+            parcel.widthCm != null ||
+            parcel.heightCm != null) && (
+            <>
+              <dt className="text-hh-muted">Dimensions (L × l × H)</dt>
+              <dd className="text-hh-earth-dk">
+                {[
+                  parcel.lengthCm ?? "—",
+                  parcel.widthCm ?? "—",
+                  parcel.heightCm ?? "—",
+                ].join(" × ")}{" "}
+                cm
+              </dd>
+            </>
+          )}
           {parcel.description ? (
             <>
               <dt className="text-hh-muted sm:col-span-1">Description</dt>
@@ -154,6 +201,43 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
           </>
         ) : null}
       </section>
+
+      {parcel.notes ? (
+        <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
+          <h2 className="text-[13px] font-medium uppercase tracking-wide text-hh-muted">
+            Notes internes
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap text-[14px] text-hh-earth-dk">
+            {parcel.notes}
+          </p>
+        </section>
+      ) : null}
+
+      {parcel.images.length > 0 ? (
+        <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
+          <h2 className="text-[15px] font-medium text-hh-earth-dk">Photos</h2>
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {parcel.images.map((im) => (
+              <a
+                key={im.id}
+                href={im.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-hh-sand-dk/20"
+              >
+                <Image
+                  src={im.url}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 33vw, 180px"
+                  unoptimized
+                />
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {parcel.trackingEvents.length > 0 ? (
         <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">

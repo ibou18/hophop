@@ -119,6 +119,10 @@ const parcelDetailInclude = {
       country: true,
     },
   },
+  images: {
+    orderBy: { sortOrder: "asc" as const },
+    select: { id: true, url: true, sortOrder: true },
+  },
   shipment: true,
   trackingEvents: {
     orderBy: { createdAt: "desc" as const },

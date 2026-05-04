@@ -22,6 +22,7 @@ type PlaceResolved = {
 
 type MapsNs = {
   maps: {
+    event: { clearInstanceListeners: (obj: object) => void };
     places: {
       Autocomplete: new (
         input: HTMLInputElement,
@@ -143,9 +144,19 @@ export function GooglePlacesAddressField({
   const [ready, setReady] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
+  /** Ne pas utiliser value= contrôlé avec Places Autocomplete : React réécrit le DOM et casse les clics / suggestions. */
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || !apiKey) return;
+    if (el.value !== value) el.value = value;
+  }, [apiKey, value]);
+
   useEffect(() => {
     if (!apiKey || !inputRef.current) return;
     let cancelled = false;
+    const w0 = window as Window & { google?: MapsNs };
+    let acInstance: InstanceType<MapsNs["maps"]["places"]["Autocomplete"]> | null =
+      null;
     loadMapsScript(apiKey)
       .then(() => {
         if (cancelled || !inputRef.current) return;
@@ -167,6 +178,7 @@ export function GooglePlacesAddressField({
           };
         }
         const ac = new Places.Autocomplete(inputRef.current, acOpts);
+        acInstance = ac;
         ac.addListener("place_changed", () => {
           const place = ac.getPlace();
           const parsed = parsePlace(place);
@@ -178,6 +190,14 @@ export function GooglePlacesAddressField({
 
     return () => {
       cancelled = true;
+      const ev = w0.google?.maps?.event;
+      if (acInstance && ev) {
+        try {
+          ev.clearInstanceListeners(acInstance);
+        } catch {
+          /* ignore */
+        }
+      }
     };
   }, [apiKey, restrictCountry]);
 
@@ -200,7 +220,7 @@ export function GooglePlacesAddressField({
       <input
         ref={inputRef}
         type="text"
-        value={value}
+        defaultValue={value}
         onChange={(e) => onChangeText(e.target.value)}
         disabled={disabled}
         placeholder={placeholder}
@@ -210,9 +230,16 @@ export function GooglePlacesAddressField({
       {loadErr ? (
         <p className="text-[12px] text-hh-kola">{loadErr}</p>
       ) : ready ? (
-        <p className="text-[11px] text-hh-muted">
-          Choisis une suggestion pour enregistrer la position GPS sur la carte.
-        </p>
+        <>
+          <p className="text-[11px] text-hh-muted">
+            Choisis une suggestion pour enregistrer la position GPS sur la carte.
+          </p>
+          <p className="text-[11px] text-hh-muted/90">
+            Si rien ne s’affiche au clic, un bloqueur peut bloquer Google Maps (
+            <code className="rounded bg-hh-sand px-1 text-[10px]">gen_204</code>
+            ) — désactive-le pour ce site ou saisis l’adresse à la main.
+          </p>
+        </>
       ) : (
         <p className="text-[11px] text-hh-muted">Chargement de la recherche d’adresse…</p>
       )}

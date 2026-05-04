@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,12 @@ function RequestRow({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-mono text-[13px] font-medium text-hh-earth-dk">
-            {request.parcel.trackingCode}
+            <Link
+              href={`/parcels/${request.parcel.id}?fromShipment=${shipmentId}`}
+              className="text-hh-saffron-dk underline-offset-2 hover:underline"
+            >
+              {request.parcel.trackingCode}
+            </Link>
           </p>
           <p className="mt-0.5 text-[12px] text-hh-muted">
             {request.client.firstName} {request.client.lastName}

@@ -10,19 +10,16 @@ export function startOfUtcDay(d: Date = new Date()): Date {
 
 /**
  * Filtre les envois encore « à venir » pour la vitrine publique et le catalogue client :
- * publiés, statuts habituels, et date d’envoi définie **≥** début du jour UTC courant.
- * Passé minuit (UTC) après le jour J, l’envoi disparaît des listes publiques.
+ * publiés, statuts **DRAFT ou CONFIRMED** seulement (pas encore partis), date d’envoi **≥** début du jour UTC.
+ * Les envois au statut **parti** (`IN_TRANSIT`) ne sont plus listés publiquement.
+ * Passé minuit (UTC) après le jour J, l’envoi disparaît aussi des listes publiques.
  */
 export function publicVitrineShipmentWhere(): Prisma.ShipmentWhereInput {
   const dayStart = startOfUtcDay();
   return {
     isPublished: true,
     status: {
-      in: [
-        ShipmentStatus.DRAFT,
-        ShipmentStatus.CONFIRMED,
-        ShipmentStatus.IN_TRANSIT,
-      ],
+      in: [ShipmentStatus.DRAFT, ShipmentStatus.CONFIRMED],
     },
     departureDate: { not: null, gte: dayStart },
   };

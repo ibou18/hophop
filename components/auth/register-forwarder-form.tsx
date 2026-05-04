@@ -28,6 +28,10 @@ import {
 import { cn } from "@/lib/utils";
 import { GooglePlacesAddressField } from "@/components/maps/google-places-address";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
+import {
+  messageFromZodFlatten,
+  type ZodFlattenPayload,
+} from "@/lib/zod-api-error";
 
 const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -74,14 +78,21 @@ export function RegisterForwarderForm() {
     const res = await fetch("/api/forwarders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify(values),
     });
-    const data = (await res.json().catch(() => ({}))) as {
+    const payload = (await res.json().catch(() => ({}))) as {
       error?: string;
-      issues?: unknown;
+      issues?: ZodFlattenPayload;
     };
     if (!res.ok) {
-      setApiError(data.error ?? "Inscription impossible.");
+      const detail =
+        res.status === 422 && payload.issues
+          ? messageFromZodFlatten(payload.issues)
+          : null;
+      setApiError(
+        detail ?? payload.error ?? `Inscription impossible (${res.status}).`,
+      );
       return;
     }
     const signInRes = await signIn("forwarder-credentials", {
@@ -96,8 +107,7 @@ export function RegisterForwarderForm() {
       router.push("/login?registered=1");
       return;
     }
-    router.push("/dashboard");
-    router.refresh();
+    window.location.assign("/dashboard");
   }
 
   return (
@@ -201,13 +211,13 @@ export function RegisterForwarderForm() {
               htmlFor="password"
               className="text-[13px] font-medium text-hh-muted"
             >
-              Mot de passe
+              Mot de passe (5 à 72 caractères)
             </Label>
             <Input
               id="password"
               type="password"
               autoComplete="new-password"
-              maxLength={15}
+              maxLength={72}
               className={cn(authInputClass)}
               {...form.register("password")}
             />
