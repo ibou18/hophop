@@ -33,7 +33,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export default async function ForwarderProfilePage({ params, searchParams }: Props) {
+export default async function ForwarderProfilePage({
+  params,
+  searchParams,
+}: Props) {
   const { code5 } = await params;
   const sp = (await searchParams) ?? {};
 
@@ -65,7 +68,8 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
 
   if (!forwarder) notFound();
 
-  const clientId = session?.user?.role === "CLIENT" ? session.user.clientId : null;
+  const clientId =
+    session?.user?.role === "CLIENT" ? session.user.clientId : null;
   const isAuthenticated = !!clientId;
 
   let isLinked = false;
@@ -120,7 +124,10 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
               </Link>
             ) : (
               <>
-                <Link href="/login" className="text-sm text-white/60 transition hover:text-white">
+                <Link
+                  href="/login"
+                  className="text-sm text-white/60 transition hover:text-white"
+                >
                   Connexion
                 </Link>
                 <Link
@@ -142,12 +149,19 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
             backgroundSize: "32px 32px",
           }}
         />
-        <div aria-hidden className="pointer-events-none absolute -right-64 -top-64 h-[600px] w-[600px] rounded-full bg-hh-saffron/10 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-hh-earth/10 blur-3xl" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-64 -top-64 h-[600px] w-[600px] rounded-full bg-hh-saffron/10 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-hh-earth/10 blur-3xl"
+        />
 
         <ForwarderProfileHero
           name={forwarder.name}
@@ -179,8 +193,8 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
             Suivre un colis
           </h2>
           <p className="mt-1 text-sm text-hh-muted">
-            Entre le code de suivi indiqué sur ton étiquette ou dans les messages
-            (format HOP-…).
+            Entre le code de suivi indiqué sur ton étiquette ou dans les
+            messages (format HOP-…).
           </p>
           <div className="mt-4 max-w-xl">
             <TrackingSearch />
@@ -189,7 +203,9 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
 
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-hh-nuit">Départs à venir</h2>
+            <h2 className="text-xl font-semibold text-hh-nuit">
+              Départs à venir
+            </h2>
             <p className="mt-0.5 text-sm text-hh-muted">
               Envois publiés — rejoignez pour associer vos colis
             </p>
@@ -209,7 +225,9 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
       {(forwarder.address ?? forwarder.addressFormatted) && (
         <section className="border-t border-hh-sand-dk bg-white px-5 py-12">
           <div className="mx-auto max-w-5xl">
-            <h3 className="mb-6 text-lg font-semibold text-hh-nuit">Nous trouver</h3>
+            <h3 className="mb-6 text-lg font-semibold text-hh-nuit">
+              Nous trouver
+            </h3>
             <div className="flex flex-wrap gap-6">
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-hh-saffron-lt">
@@ -235,7 +253,8 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
           <HopLogo href="/" variant="wide" height={32} />
           <p className="text-xs text-hh-muted">
-            Page partageable — code <span className="font-mono">{forwarder.code5}</span>
+            Page partageable — code{" "}
+            <span className="font-mono">{forwarder.code5}</span>
           </p>
         </div>
       </footer>
