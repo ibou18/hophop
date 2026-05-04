@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { motion, useInView } from "motion/react";
 import { Calendar, Package, Plane, Ship, Truck, ArrowRight } from "lucide-react";
 import { countryLabelFr } from "@/lib/country-label-fr";
@@ -107,13 +108,22 @@ function formatDate(d: string | null): string {
 
 interface Props {
   shipments: ShipmentCardData[];
-  isLinked: boolean;
+  /** Code transitaire 5 chiffres — liens vers déclaration avec envoi */
+  forwarderCode5: string;
+  isAuthenticated: boolean;
   highlightShipmentId?: string;
+}
+
+function declareUrl(forwarderCode5: string, shipmentId: string, isAuthenticated: boolean) {
+  const path = `/client/declare?forwarder=${encodeURIComponent(forwarderCode5)}&envoi=${encodeURIComponent(shipmentId)}`;
+  if (isAuthenticated) return path;
+  return `/login?callbackUrl=${encodeURIComponent(path)}`;
 }
 
 export function ForwarderShipmentsGrid({
   shipments,
-  isLinked,
+  forwarderCode5,
+  isAuthenticated,
   highlightShipmentId,
 }: Props) {
   const ref = useRef(null);
@@ -156,21 +166,27 @@ export function ForwarderShipmentsGrid({
         const tc = TRANSPORT_CONFIG[s.transportMode];
         const Icon = tc.Icon;
 
+        const href = declareUrl(forwarderCode5, s.id, isAuthenticated);
+
         return (
-          <motion.div
+          <Link
             id={`shipment-card-${s.id}`}
             key={s.id}
-            initial={{ opacity: 0, y: 28 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.55, delay: i * 0.07, ease: EASE }}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            href={href}
+            scroll={false}
             className={cn(
-              "group relative overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg",
-              // Accent coloré en haut selon le mode
+              "group relative block overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-saffron",
               `border-t-2 ${tc.cardAccent} border-x-hh-sand-dk/60 border-b-hh-sand-dk/60`,
               highlightShipmentId === s.id &&
                 "ring-2 ring-hh-saffron shadow-lg ring-offset-2 ring-offset-hh-sand",
             )}
+          >
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.55, delay: i * 0.07, ease: EASE }}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            className="h-full"
           >
             {/* Header : statut + mode + référence */}
             <div className="flex items-center justify-between px-5 pt-4 pb-3">
@@ -279,21 +295,24 @@ export function ForwarderShipmentsGrid({
               </span>
             </div>
 
-            {/* CTA rejoindre si pas lié */}
-            {!isLinked && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={inView ? { opacity: 1 } : {}}
-                transition={{ delay: i * 0.07 + 0.3 }}
-                className="border-t border-hh-sand-dk/20 px-5 py-2.5"
-              >
-                <div className="flex items-center justify-between rounded-xl bg-hh-saffron-lt px-3 py-2 text-xs">
-                  <span className="text-hh-saffron-dk font-medium">Rejoignez pour participer</span>
-                  <ArrowRight size={12} className="text-hh-saffron" />
-                </div>
-              </motion.div>
-            )}
+            {/* CTA */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={inView ? { opacity: 1 } : {}}
+              transition={{ delay: i * 0.07 + 0.3 }}
+              className="border-t border-hh-sand-dk/20 px-5 py-2.5"
+            >
+              <div className="flex items-center justify-between rounded-xl bg-hh-saffron-lt px-3 py-2 text-xs">
+                <span className="font-medium text-hh-saffron-dk">
+                  {isAuthenticated
+                    ? "Déclarer un colis sur cet envoi"
+                    : "Connectez-vous pour déclarer un colis"}
+                </span>
+                <ArrowRight size={12} className="text-hh-saffron" />
+              </div>
+            </motion.div>
           </motion.div>
+          </Link>
         );
       })}
     </div>

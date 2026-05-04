@@ -4,7 +4,10 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ArrowLeft, Package, Printer } from "lucide-react";
-import { getClientParcelDetail, getParcelShipmentJoinData } from "@/lib/client-data";
+import {
+  getClientParcelDetail,
+  getParcelShipmentJoinData,
+} from "@/lib/client-data";
 import { ParcelStatusBadge } from "@/components/client/parcel-status-badge";
 import { TrackingTimeline } from "@/components/client/tracking-timeline";
 import { ParcelQrCode } from "@/components/client/parcel-qr-code";
@@ -32,7 +35,7 @@ export default async function ClientParcelDetailPage({ params }: Props) {
   if (!parcel) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       {/* Back */}
       <Link
         href="/client/parcels"
@@ -50,7 +53,8 @@ export default async function ClientParcelDetailPage({ params }: Props) {
               {parcel.trackingCode}
             </span>
             <h1 className="mt-1 text-[20px] font-medium text-hh-earth-dk">
-              Colis pour {parcel.recipient.firstName} {parcel.recipient.lastName}
+              Colis pour {parcel.recipient.firstName}{" "}
+              {parcel.recipient.lastName}
             </h1>
             <p className="mt-0.5 text-[13px] text-hh-muted">
               {parcel.recipient.city && `${parcel.recipient.city}, `}
@@ -118,9 +122,11 @@ export default async function ClientParcelDetailPage({ params }: Props) {
             <>
               <span className="text-hh-muted">Dimensions (L × l × H)</span>
               <span className="text-hh-earth-dk">
-                {[parcel.lengthCm ?? "—", parcel.widthCm ?? "—", parcel.heightCm ?? "—"].join(
-                  " × ",
-                )}{" "}
+                {[
+                  parcel.lengthCm ?? "—",
+                  parcel.widthCm ?? "—",
+                  parcel.heightCm ?? "—",
+                ].join(" × ")}{" "}
                 cm
               </span>
             </>

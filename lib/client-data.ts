@@ -197,6 +197,30 @@ export type PublishedShipmentCatalogRow = Awaited<
   ReturnType<typeof getPublishedShipmentsCatalog>
 >[number];
 
+/**
+ * Crée le lien client ↔ transitaire si besoin (ex. arrivée depuis la page publique `/p/[code5]`).
+ */
+export async function ensureClientForwarderByCode5(
+  clientId: string,
+  code5: string
+): Promise<{ forwarderId: string } | null> {
+  const trimmed = code5.trim();
+  if (!/^\d{5}$/.test(trimmed)) return null;
+  const fw = await prisma.forwarder.findUnique({
+    where: { code5: trimmed, isActive: true },
+    select: { id: true },
+  });
+  if (!fw) return null;
+  await prisma.clientForwarder.upsert({
+    where: {
+      clientId_forwarderId: { clientId, forwarderId: fw.id },
+    },
+    create: { clientId, forwarderId: fw.id },
+    update: {},
+  });
+  return { forwarderId: fw.id };
+}
+
 export async function getClientForwarders(clientId: string) {
   const links = await prisma.clientForwarder.findMany({
     where: { clientId },

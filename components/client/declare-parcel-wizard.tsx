@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
@@ -13,13 +13,23 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import type { Recipient } from "@/app/generated/prisma/client";
+import type { ForwarderTariff, Recipient } from "@/app/generated/prisma/client";
+import type { Country, TransportMode } from "@/app/generated/prisma/enums";
 import type { ClientForwarderRow } from "@/lib/client-data";
+import { countryLabelFr } from "@/lib/country-label-fr";
 import { uploadParcelImagesViaApi } from "@/lib/client/parcel-image-upload";
 import {
   normalizeImageContentType,
   PARCEL_IMAGE_MAX_BYTES,
 } from "@/lib/image-file-types";
+import {
+  calculatePrice,
+  CURRENCY_SYMBOL,
+  PRICING_TYPE_LABEL,
+  resolveTariff,
+  type PricingResult,
+} from "@/lib/pricing";
+import { TRANSPORT_MODE_LABEL } from "@/lib/transport-mode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,14 +80,151 @@ const STEPS = [
 const inputClass =
   "h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 bg-white px-3 text-[15px] placeholder:text-hh-muted focus:border-hh-saffron focus:outline-none focus:ring-2 focus:ring-hh-saffron/20";
 
+function formatDateInfo(iso: string | null): string {
+  if (!iso) return "date à confirmer";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(iso));
+}
+
+function formatMoney(n: number): string {
+  return new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+function parseOptionalPositiveFloat(raw: string): number | undefined {
+  const t = raw.trim();
+  if (!t) return undefined;
+  const n = parseFloat(t.replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return n;
+}
+
+type PriceEstimateView = {
+  hasTariffRows: boolean;
+  noRuleForDestination: boolean;
+  result: PricingResult | null;
+  missingHint: string | null;
+  needsRecipient: boolean;
+};
+
+export type TargetShipmentSummary = {
+  reference: string;
+  originCountry: Country;
+  destinationCountry: Country;
+  destinationCity: string | null;
+  departureDate: string | null;
+  arrivalDate: string | null;
+  /** Mode de l’envoi lié (pour cohérence avec la grille tarifaire) */
+  transportMode?: TransportMode;
+};
+
+function ParcelPriceEstimateBlock({
+  view,
+  transportModeLabel,
+}: {
+  view: PriceEstimateView;
+  transportModeLabel: string;
+}) {
+  const { hasTariffRows, noRuleForDestination, result, missingHint, needsRecipient } =
+    view;
+
+  if (!hasTariffRows) {
+    return (
+      <div className="rounded-[var(--hh-radius-md)] border border-dashed border-hh-sand-dk/35 bg-hh-sand/40 px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+          Tarif indicatif
+        </p>
+        <p className="mt-1.5 text-[12px] text-hh-muted">
+          Ce transitaire n’a pas encore publié de grille tarifaire.
+        </p>
+      </div>
+    );
+  }
+
+  if (needsRecipient) {
+    return (
+      <div className="rounded-[var(--hh-radius-md)] border border-hh-sand-dk/25 bg-hh-sand/50 px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+          Tarif indicatif
+        </p>
+        <p className="mt-1.5 text-[12px] text-hh-muted">
+          Choisissez un destinataire (étape 1) pour estimer le tarif selon le pays de livraison.
+        </p>
+      </div>
+    );
+  }
+
+  if (noRuleForDestination) {
+    return (
+      <div className="rounded-[var(--hh-radius-md)] border border-hh-sand-dk/25 bg-hh-sand/50 px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+          Tarif indicatif
+        </p>
+        <p className="mt-1.5 text-[12px] text-hh-muted">
+          Aucun tarif publié pour ce pays ou pour le mode « {transportModeLabel} ». Vous pouvez
+          contacter le transitaire.
+        </p>
+      </div>
+    );
+  }
+
+  if (result) {
+    const sym = CURRENCY_SYMBOL[result.currency];
+    return (
+      <div className="rounded-[var(--hh-radius-md)] border border-hh-saffron/30 bg-hh-saffron-lt/50 px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+          Estimation indicative
+        </p>
+        <p className="mt-1 text-[22px] font-semibold tabular-nums text-hh-earth-dk">
+          {formatMoney(result.calculatedPrice)}{" "}
+          <span className="text-[16px] font-medium text-hh-muted">{sym}</span>
+        </p>
+        <p className="mt-1 text-[11px] text-hh-muted">
+          {PRICING_TYPE_LABEL[result.pricingType]} · mode {transportModeLabel} · non contractuel
+        </p>
+      </div>
+    );
+  }
+
+  if (missingHint) {
+    return (
+      <div className="rounded-[var(--hh-radius-md)] border border-hh-sand-dk/25 bg-hh-sand/50 px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+          Estimation indicative
+        </p>
+        <p className="mt-1.5 text-[12px] text-hh-muted">{missingHint}</p>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 // ─── Main wizard ──────────────────────────────────────────────────────────────
 
 export function DeclareParcelWizard({
   recipients,
   forwarders,
+  initialForwarderId,
+  targetShipmentId,
+  targetShipmentSummary,
+  tariffsByForwarderId,
 }: {
   recipients: Recipient[];
   forwarders: ClientForwarderRow[];
+  /** Prérempli depuis `/client/declare?forwarder=CODE5` */
+  initialForwarderId?: string;
+  /** Envoi visé — après création du colis, demande d'intégration automatique (si l'envoi accepte encore les demandes) */
+  targetShipmentId?: string;
+  /** Détails de l’envoi (route, dates) depuis la page transitaire */
+  targetShipmentSummary?: TargetShipmentSummary;
+  /** Grilles tarifaires actives par transitaire (pour estimation côté client) */
+  tariffsByForwarderId: Record<string, ForwarderTariff[]>;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -88,8 +235,14 @@ export function DeclareParcelWizard({
 
   const defaultRecipient = recipients.find((r) => r.isDefault);
 
+  const defaultForwarderId =
+    initialForwarderId &&
+    forwarders.some((f) => f.id === initialForwarderId)
+      ? initialForwarderId
+      : forwarders[0]?.id ?? "";
+
   const [state, setState] = useState<WizardState>({
-    forwarderId: forwarders[0]?.id ?? "",
+    forwarderId: defaultForwarderId,
     recipientId: defaultRecipient?.id ?? recipients[0]?.id ?? "",
     newRecipient: null,
     items: [],
@@ -110,6 +263,102 @@ export function DeclareParcelWizard({
       imageEntriesRef.current.forEach((e) => URL.revokeObjectURL(e.previewUrl));
     };
   }, []);
+
+  const transportMode: TransportMode =
+    targetShipmentSummary?.transportMode ?? "AIR";
+  const transportModeLabel = TRANSPORT_MODE_LABEL[transportMode];
+
+  const destinationCountry = useMemo((): Country | null => {
+    if (addingNew && state.newRecipient?.country) {
+      return state.newRecipient.country as Country;
+    }
+    const r = recipients.find((x) => x.id === state.recipientId);
+    return r?.country ?? null;
+  }, [addingNew, state.newRecipient, state.recipientId, recipients]);
+
+  const priceEstimateView = useMemo((): PriceEstimateView => {
+    const selectedTariffs = tariffsByForwarderId[state.forwarderId] ?? [];
+    const hasTariffRows = selectedTariffs.length > 0;
+    if (!hasTariffRows) {
+      return {
+        hasTariffRows: false,
+        noRuleForDestination: false,
+        result: null,
+        missingHint: null,
+        needsRecipient: false,
+      };
+    }
+    if (!destinationCountry) {
+      return {
+        hasTariffRows: true,
+        noRuleForDestination: false,
+        result: null,
+        missingHint: null,
+        needsRecipient: true,
+      };
+    }
+    const tariff = resolveTariff(selectedTariffs, destinationCountry, transportMode);
+    if (!tariff) {
+      return {
+        hasTariffRows: true,
+        noRuleForDestination: true,
+        result: null,
+        missingHint: null,
+        needsRecipient: false,
+      };
+    }
+    const w = parseOptionalPositiveFloat(state.weightKg);
+    const L = parseOptionalPositiveFloat(state.lengthCm);
+    const W = parseOptionalPositiveFloat(state.widthCm);
+    const H = parseOptionalPositiveFloat(state.heightCm);
+    const result = calculatePrice(tariff, {
+      destinationCountry,
+      transportMode,
+      weightKg: w,
+      lengthCm: L,
+      widthCm: W,
+      heightCm: H,
+    });
+    if (result) {
+      return {
+        hasTariffRows: true,
+        noRuleForDestination: false,
+        result,
+        missingHint: null,
+        needsRecipient: false,
+      };
+    }
+    let missingHint: string | null = null;
+    switch (tariff.pricingType) {
+      case "WEIGHT_KG":
+        missingHint =
+          "Indiquez le poids estimé (kg) pour afficher une estimation.";
+        break;
+      case "VOLUMETRIC":
+        missingHint =
+          "Indiquez longueur, largeur et hauteur (cm) pour une estimation volumétrique.";
+        break;
+      default:
+        missingHint =
+          "Les données du tarif sont incomplètes — contactez le transitaire.";
+    }
+    return {
+      hasTariffRows: true,
+      noRuleForDestination: false,
+      result: null,
+      missingHint,
+      needsRecipient: false,
+    };
+  }, [
+    tariffsByForwarderId,
+    state.forwarderId,
+    state.weightKg,
+    state.lengthCm,
+    state.widthCm,
+    state.heightCm,
+    destinationCountry,
+    transportMode,
+  ]);
 
   function update(patch: Partial<WizardState>) {
     setState((s) => ({ ...s, ...patch }));
@@ -201,6 +450,21 @@ export function DeclareParcelWizard({
         }
       }
 
+      if (targetShipmentId) {
+        setSubmitLabel("Demande pour l'envoi…");
+        const reqRes = await fetch(`/api/shipments/${targetShipmentId}/requests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ parcelId }),
+        });
+        if (!reqRes.ok) {
+          setError(
+            "Colis enregistré. La demande pour cet envoi n'a pas pu être envoyée — ouvrez la fiche colis pour réessayer."
+          );
+        }
+      }
+
       router.push(`/client/parcels/${parcelId}`);
     } catch {
       setError("Une erreur réseau est survenue.");
@@ -212,6 +476,61 @@ export function DeclareParcelWizard({
 
   return (
     <div className="flex flex-col gap-6">
+      {(targetShipmentSummary || initialForwarderId) && (
+        <div className="rounded-[var(--hh-radius-lg)] border border-hh-saffron/25 bg-hh-saffron-lt/60 px-4 py-3 text-sm text-hh-nuit">
+          {targetShipmentSummary ? (
+            <>
+              <p className="font-medium text-hh-earth-dk">Envoi concerné</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]">
+                <span className="font-semibold text-hh-nuit">
+                  {countryLabelFr(targetShipmentSummary.originCountry)}
+                </span>
+                <span className="text-hh-muted" aria-hidden>
+                  →
+                </span>
+                <span className="font-semibold text-hh-nuit">
+                  {targetShipmentSummary.destinationCity
+                    ? `${targetShipmentSummary.destinationCity}, `
+                    : ""}
+                  {countryLabelFr(targetShipmentSummary.destinationCountry)}
+                </span>
+              </div>
+              <ul className="mt-2 space-y-1 text-[13px] text-hh-muted">
+                <li>
+                  <span className="text-hh-nuit/80">Départ prévu : </span>
+                  {formatDateInfo(targetShipmentSummary.departureDate)}
+                </li>
+                {targetShipmentSummary.arrivalDate ? (
+                  <li>
+                    <span className="text-hh-nuit/80">Arrivée estimée : </span>
+                    {formatDateInfo(targetShipmentSummary.arrivalDate)}
+                  </li>
+                ) : null}
+              </ul>
+              <p className="mt-2 border-t border-hh-saffron/20 pt-2 font-mono text-[11px] text-hh-muted">
+                Réf. interne : {targetShipmentSummary.reference}
+              </p>
+              {targetShipmentId ? (
+                <span className="mt-2 block text-[13px] text-hh-muted">
+                  Après la déclaration, une demande pour intégrer ce colis à cet envoi sera
+                  envoyée au transitaire.
+                </span>
+              ) : (
+                <span className="mt-2 block text-[13px] text-amber-800">
+                  Cet envoi n&apos;accepte plus de nouvelles demandes automatiques — vous pouvez
+                  quand même déclarer votre colis et contacter le transitaire si besoin.
+                </span>
+              )}
+            </>
+          ) : (
+            <span>
+              Transitaire présélectionné depuis la page publique — vous pouvez le changer à
+              l&apos;étape 1 si besoin.
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Progress */}
       <div className="flex items-center gap-1.5">
         {STEPS.map((label, i) => (
@@ -264,6 +583,8 @@ export function DeclareParcelWizard({
             description={state.description}
             imageEntries={state.imageEntries}
             update={update}
+            priceEstimateView={priceEstimateView}
+            transportModeLabel={transportModeLabel}
           />
         )}
         {step === 3 && (
@@ -272,6 +593,8 @@ export function DeclareParcelWizard({
             recipients={recipients}
             forwarders={forwarders}
             addingNew={addingNew}
+            priceEstimateView={priceEstimateView}
+            transportModeLabel={transportModeLabel}
           />
         )}
       </div>
@@ -622,6 +945,8 @@ function StepDimensions({
   description,
   imageEntries,
   update,
+  priceEstimateView,
+  transportModeLabel,
 }: {
   weightKg: string;
   lengthCm: string;
@@ -630,6 +955,8 @@ function StepDimensions({
   description: string;
   imageEntries: { file: File; previewUrl: string }[];
   update: (p: Partial<WizardState>) => void;
+  priceEstimateView: PriceEstimateView;
+  transportModeLabel: string;
 }) {
   const [photoUploadErr, setPhotoUploadErr] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -732,6 +1059,11 @@ function StepDimensions({
         </div>
       </div>
 
+      <ParcelPriceEstimateBlock
+        view={priceEstimateView}
+        transportModeLabel={transportModeLabel}
+      />
+
       <div className="flex flex-col gap-2">
         <label className="text-[12px] font-medium text-hh-muted">
           Photos du colis (optionnel, max 8 — envoyées après création du colis)
@@ -816,11 +1148,15 @@ function StepSummary({
   recipients,
   forwarders,
   addingNew,
+  priceEstimateView,
+  transportModeLabel,
 }: {
   state: WizardState;
   recipients: Recipient[];
   forwarders: ClientForwarderRow[];
   addingNew: boolean;
+  priceEstimateView: PriceEstimateView;
+  transportModeLabel: string;
 }) {
   const recipient = addingNew
     ? state.newRecipient
@@ -932,6 +1268,11 @@ function StepSummary({
             )}
           </div>
         )}
+
+        <ParcelPriceEstimateBlock
+          view={priceEstimateView}
+          transportModeLabel={transportModeLabel}
+        />
 
         <div className="rounded-[var(--hh-radius-md)] bg-hh-saffron-lt px-4 py-3">
           <div className="flex items-center gap-2">

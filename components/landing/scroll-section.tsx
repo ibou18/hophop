@@ -4,7 +4,15 @@ import { useRef } from "react";
 import { motion, useInView } from "motion/react";
 
 import Link from "next/link";
-import { Package, MapPin, Truck, Users, ShieldCheck, FileText, ArrowRight } from "lucide-react";
+import {
+  Package,
+  MapPin,
+  Truck,
+  Users,
+  ShieldCheck,
+  FileText,
+  ArrowRight,
+} from "lucide-react";
 
 const FEATURES = [
   {
@@ -52,12 +60,30 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: "01", title: "Inscrivez-vous", body: "Créez votre compte et liez-le à votre transitaire via son code à 5 chiffres." },
-  { n: "02", title: "Déclarez votre colis", body: "Renseignez le contenu, le poids et le destinataire. Un code de suivi est généré." },
-  { n: "03", title: "Suivez l'expédition", body: "Recevez les mises à jour à chaque étape jusqu'à la livraison finale." },
+  {
+    n: "01",
+    title: "Inscrivez-vous",
+    body: "Créez votre compte et liez-le à votre transitaire via son code à 5 chiffres.",
+  },
+  {
+    n: "02",
+    title: "Déclarez votre colis",
+    body: "Renseignez le contenu, le poids et le destinataire. Un code de suivi est généré.",
+  },
+  {
+    n: "03",
+    title: "Suivez l'expédition",
+    body: "Recevez les mises à jour à chaque étape jusqu'à la livraison finale.",
+  },
 ];
 
-function AnimatedSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function AnimatedSection({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
   return (
@@ -65,7 +91,10 @@ function AnimatedSection({ children, className = "" }: { children: React.ReactNo
       ref={ref}
       initial={{ opacity: 0, y: 40 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+      transition={{
+        duration: 0.7,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+      }}
       className={className}
     >
       {children}
@@ -83,7 +112,11 @@ function StaggeredGrid({ children }: { children: React.ReactNode[] }) {
           key={i}
           initial={{ opacity: 0, y: 32 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+          transition={{
+            duration: 0.6,
+            delay: i * 0.08,
+            ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+          }}
         >
           {child}
         </motion.div>
@@ -100,13 +133,32 @@ export function ScrollSections() {
         <div className="mx-auto max-w-5xl px-5">
           <StaggeredGrid>
             {[
-              { value: "100%", label: "Suivi transparent", sub: "De la collecte à la livraison" },
-              { value: "6+", label: "Pays couverts", sub: "CA · FR · GN · SN · CI · CM" },
-              { value: "24/7", label: "Accès au statut", sub: "Sans connexion requise" },
+              {
+                value: "100%",
+                label: "Suivi transparent",
+                sub: "De la collecte à la livraison",
+              },
+              {
+                value: "6+",
+                label: "Pays couverts",
+                sub: "CA · FR · GN · SN · CI · CM",
+              },
+              {
+                value: "24/7",
+                label: "Accès au statut",
+                sub: "Sans connexion requise",
+              },
             ].map((s) => (
-              <div key={s.label} className="flex flex-col gap-1 border-r border-hh-sand-dk px-6 py-8 last:border-0">
-                <span className="text-3xl font-semibold text-hh-saffron-dk">{s.value}</span>
-                <span className="text-sm font-medium text-hh-nuit">{s.label}</span>
+              <div
+                key={s.label}
+                className="flex flex-col gap-1 border-r border-hh-sand-dk px-6 py-8 last:border-0"
+              >
+                <span className="text-3xl font-semibold text-hh-saffron-dk">
+                  {s.value}
+                </span>
+                <span className="text-sm font-medium text-hh-nuit">
+                  {s.label}
+                </span>
                 <span className="text-xs text-hh-muted">{s.sub}</span>
               </div>
             ))}
@@ -143,8 +195,12 @@ export function ScrollSections() {
                   >
                     <Icon size={18} style={{ color: f.color }} />
                   </div>
-                  <h3 className="mb-1.5 text-sm font-semibold text-hh-nuit">{f.title}</h3>
-                  <p className="text-sm leading-relaxed text-hh-muted">{f.body}</p>
+                  <h3 className="mb-1.5 text-sm font-semibold text-hh-nuit">
+                    {f.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-hh-muted">
+                    {f.body}
+                  </p>
                 </div>
               );
             })}
@@ -173,9 +229,15 @@ export function ScrollSections() {
                     className="absolute right-0 top-5 hidden h-px w-1/2 border-t border-dashed border-white/15 sm:block"
                   />
                 )}
-                <span className="text-4xl font-bold text-hh-saffron/25">{s.n}</span>
-                <h3 className="text-base font-semibold text-white">{s.title}</h3>
-                <p className="text-sm leading-relaxed text-white/45">{s.body}</p>
+                <span className="text-4xl font-bold text-hh-saffron/25">
+                  {s.n}
+                </span>
+                <h3 className="text-base font-semibold text-white">
+                  {s.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-white/45">
+                  {s.body}
+                </p>
               </div>
             ))}
           </StaggeredGrid>
@@ -184,20 +246,24 @@ export function ScrollSections() {
 
       {/* ── CTA ── */}
       <section className="px-5 py-24">
-        <AnimatedSection className="mx-auto max-w-2xl">
+        <AnimatedSection className="mx-auto max-w-3xl">
           <div className="relative overflow-hidden rounded-3xl bg-hh-nuit px-8 py-14 text-center shadow-2xl">
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 opacity-[0.05]"
               style={{
-                backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+                backgroundImage:
+                  "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
                 backgroundSize: "24px 24px",
               }}
             />
             <div
               aria-hidden
               className="pointer-events-none absolute left-1/2 top-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full"
-              style={{ background: "radial-gradient(circle, rgba(232,130,12,0.2) 0%, transparent 70%)" }}
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(232,130,12,0.2) 0%, transparent 70%)",
+              }}
             />
             <p className="relative mb-2 text-xs font-medium uppercase tracking-widest text-hh-saffron">
               Commencez maintenant

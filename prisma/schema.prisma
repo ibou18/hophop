@@ -195,12 +195,12 @@ model Forwarder {
   updatedAt DateTime @updatedAt
 
   // Relations
-  clients   ClientForwarder[]
-  shipments     Shipment[]
-  parcels       Parcel[]
-  tariffs         ForwarderTariff[]
-  notifications   Notification[]
-  expoPushTokens  ExpoPushToken[]
+  clients        ClientForwarder[]
+  shipments      Shipment[]
+  parcels        Parcel[]
+  tariffs        ForwarderTariff[]
+  notifications  Notification[]
+  expoPushTokens ExpoPushToken[]
 
   @@map("forwarders")
 }
@@ -587,7 +587,7 @@ model Notification {
   parcelId String
 
   /// Destinataire client (la plupart des notifs)
-  clientId String?
+  clientId    String?
   /// Destinataire transitaire (ex. nouveau colis déclaré)
   forwarderId String?
 

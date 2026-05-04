@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -29,7 +29,25 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
-  const [tab, setTab] = useState<"forwarder" | "client">("forwarder");
+
+  const safeCallbackUrl = useMemo(() => {
+    const raw = searchParams.get("callbackUrl")?.trim();
+    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+    return raw;
+  }, [searchParams]);
+
+  const [tab, setTab] = useState<"forwarder" | "client">(() => {
+    const raw = searchParams.get("callbackUrl")?.trim();
+    if (
+      raw &&
+      raw.startsWith("/") &&
+      !raw.startsWith("//") &&
+      raw.startsWith("/client/")
+    ) {
+      return "client";
+    }
+    return "forwarder";
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +99,7 @@ export function LoginForm() {
       setError("Identifiants incorrects ou compte inactif.");
       return;
     }
-    router.push("/client/dashboard");
+    router.push(safeCallbackUrl ?? "/client/dashboard");
     router.refresh();
   }
 

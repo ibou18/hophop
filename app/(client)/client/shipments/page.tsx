@@ -24,20 +24,23 @@ export default async function ClientShipmentsCatalogPage() {
   const rows = await getPublishedShipmentsCatalog();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div>
         <h1 className="text-[28px] font-medium leading-tight text-hh-earth-dk">
           Envois publics
         </h1>
         <p className="mt-1.5 text-[15px] text-hh-muted">
-          Tous les départs ouverts publiés par les transitaires. Ouvre une fiche pour rejoindre un
-          transitaire ou associer un colis à un envoi.
+          Tous les départs ouverts publiés par les transitaires. Ouvre une fiche
+          pour rejoindre un transitaire ou associer un colis à un envoi.
         </p>
       </div>
 
       {rows.length === 0 ? (
         <div className="rounded-[var(--hh-radius-lg)] border border-dashed border-hh-sand-dk/40 bg-white px-5 py-12 text-center">
-          <Plane className="mx-auto mb-3 size-8 text-hh-sand-dk" strokeWidth={1.25} />
+          <Plane
+            className="mx-auto mb-3 size-8 text-hh-sand-dk"
+            strokeWidth={1.25}
+          />
           <p className="text-[14px] font-medium text-hh-earth-dk">
             Aucun envoi ouvert pour le moment
           </p>
@@ -62,7 +65,9 @@ export default async function ClientShipmentsCatalogPage() {
                         {row.forwarder.code5}
                       </span>
                     </p>
-                    <p className="mt-1 font-mono text-[14px] text-hh-saffron-dk">{row.reference}</p>
+                    <p className="mt-1 font-mono text-[14px] text-hh-saffron-dk">
+                      {row.reference}
+                    </p>
                   </div>
                   <span className="rounded-[var(--hh-radius-md)] bg-hh-sand px-2 py-0.5 text-[11px] text-hh-earth-dk">
                     {shipmentStatusLabelFr(row.status)}

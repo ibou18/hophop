@@ -35,7 +35,6 @@ export function ForwarderAuthModal({
   const [tab, setTab] = useState<Tab>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   async function linkForwarder() {
     await fetch("/api/client/forwarders", {
@@ -63,10 +62,10 @@ export function ForwarderAuthModal({
       return setError("Identifiants incorrects.");
     }
     await linkForwarder();
-    setSuccess(true);
     setLoading(false);
+    onClose();
+    router.push(`/client/declare?forwarder=${code5}`);
     router.refresh();
-    setTimeout(onClose, 1200);
   }
 
   async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
@@ -108,10 +107,10 @@ export function ForwarderAuthModal({
       setLoading(false);
       return setError("Compte créé, mais connexion échouée. Réessayez.");
     }
-    setSuccess(true);
     setLoading(false);
+    onClose();
+    router.push(`/client/declare?forwarder=${code5}`);
     router.refresh();
-    setTimeout(onClose, 1200);
   }
 
   function switchTab(t: Tab) {
@@ -163,17 +162,7 @@ export function ForwarderAuthModal({
         </div>
 
         <div className="px-7 py-6">
-          {success ? (
-            <div className="flex flex-col items-center gap-3 py-4 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-hh-savane-lt">
-                <span className="text-2xl">✓</span>
-              </div>
-              <p className="font-medium text-hh-nuit">Vous êtes lié·e !</p>
-              <p className="text-sm text-hh-muted">
-                Vous pouvez maintenant consulter les envois de {forwarderName}.
-              </p>
-            </div>
-          ) : tab === "login" ? (
+          {tab === "login" ? (
             <form onSubmit={handleLogin} className="flex flex-col gap-4">
               <div>
                 <label className={labelClass}>Email</label>

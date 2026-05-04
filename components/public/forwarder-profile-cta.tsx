@@ -47,6 +47,15 @@ export function ForwarderProfileCta({
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
+        {isAuthenticated && (
+          <Link
+            href={`/client/declare?forwarder=${code5}`}
+            className="flex items-center gap-2 rounded-xl bg-hh-saffron px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-hh-saffron/90"
+          >
+            Déclarer un colis →
+          </Link>
+        )}
+
         {linked ? (
           <div className="flex items-center gap-2 rounded-xl bg-hh-savane-lt px-5 py-2.5 text-sm font-medium text-hh-savane-dk">
             <Check size={15} />
@@ -54,37 +63,39 @@ export function ForwarderProfileCta({
           </div>
         ) : isAuthenticated ? (
           <button
+            type="button"
             onClick={handleLink}
             disabled={linking}
-            className="flex items-center gap-2 rounded-xl bg-hh-saffron px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-hh-saffron/90 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl border border-hh-saffron/40 bg-white px-5 py-2.5 text-sm font-medium text-hh-saffron-dk transition hover:bg-hh-saffron/5 disabled:opacity-60"
           >
             {linking ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <UserPlus size={15} />
             )}
-            Rejoindre ce transitaire
+            Rejoindre (optionnel)
           </button>
         ) : (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-hh-saffron px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-hh-saffron/90"
-          >
-            <UserPlus size={15} />
-            Rejoindre ce transitaire
-          </button>
-        )}
-
-        {linked && (
-          <Link
-            href="/client/declare"
-            className="rounded-xl border border-hh-saffron/30 bg-hh-saffron-lt px-5 py-2.5 text-sm font-medium text-hh-saffron-dk transition hover:bg-hh-saffron/10"
-          >
-            Déclarer un colis →
-          </Link>
+          <>
+            <Link
+              href={`/login?callbackUrl=${encodeURIComponent(`/client/declare?forwarder=${code5}`)}`}
+              className="flex items-center gap-2 rounded-xl bg-hh-saffron px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-hh-saffron/90"
+            >
+              Déclarer un colis →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-hh-saffron/40 bg-white px-5 py-2.5 text-sm font-medium text-hh-saffron-dk transition hover:bg-hh-saffron/5"
+            >
+              <UserPlus size={15} />
+              S&apos;inscrire
+            </button>
+          </>
         )}
 
         <button
+          type="button"
           onClick={handleShare}
           className="flex items-center gap-2 rounded-xl border border-hh-sand-dk bg-white px-4 py-2.5 text-sm text-hh-muted transition hover:border-hh-saffron/30 hover:text-hh-nuit"
         >

@@ -30,14 +30,22 @@ export default async function ClientParcelsPage() {
   const parcels = await getClientParcels(clientId);
 
   const active = parcels.filter((p) =>
-    (["DECLARED", "COLLECTED", "IN_TRANSIT", "ARRIVED", "READY"] as ParcelStatus[]).includes(p.status)
+    (
+      [
+        "DECLARED",
+        "COLLECTED",
+        "IN_TRANSIT",
+        "ARRIVED",
+        "READY",
+      ] as ParcelStatus[]
+    ).includes(p.status),
   );
   const closed = parcels.filter((p) =>
-    (["DELIVERED", "ISSUE"] as ParcelStatus[]).includes(p.status)
+    (["DELIVERED", "ISSUE"] as ParcelStatus[]).includes(p.status),
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[28px] font-medium leading-tight text-hh-earth-dk">
@@ -57,7 +65,11 @@ export default async function ClientParcelsPage() {
 
       {parcels.length === 0 ? (
         <div className="rounded-[var(--hh-radius-lg)] border border-dashed border-hh-sand-dk/40 bg-white px-5 py-14 text-center">
-          <Package size={36} strokeWidth={1} className="mx-auto mb-3 text-hh-sand-dk" />
+          <Package
+            size={36}
+            strokeWidth={1}
+            className="mx-auto mb-3 text-hh-sand-dk"
+          />
           <p className="text-[15px] font-medium text-hh-earth-dk">
             Aucun colis encore
           </p>

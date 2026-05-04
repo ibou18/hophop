@@ -126,7 +126,7 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
                   href="/register"
                   className="rounded-lg bg-hh-saffron px-4 py-1.5 text-sm font-medium text-white transition hover:bg-hh-saffron/90"
                 >
-                  S'inscrire
+                  S&apos;inscrire
                 </Link>
               </>
             )}
@@ -179,7 +179,8 @@ export default async function ForwarderProfilePage({ params, searchParams }: Pro
 
         <ForwarderShipmentsGrid
           shipments={shipmentCards}
-          isLinked={isLinked}
+          forwarderCode5={forwarder.code5}
+          isAuthenticated={isAuthenticated}
           highlightShipmentId={highlightShipmentId}
         />
       </main>

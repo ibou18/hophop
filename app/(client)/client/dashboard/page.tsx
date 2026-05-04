@@ -22,7 +22,7 @@ export default async function ClientDashboardPage() {
   const firstName = session.user.name?.split(" ")[0] ?? "client";
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       {/* Hero greeting */}
       <div>
         <h1 className="text-[28px] font-medium leading-tight text-hh-earth-dk">
@@ -40,13 +40,19 @@ export default async function ClientDashboardPage() {
         <div className="flex items-center gap-3">
           <Truck size={22} strokeWidth={1.5} className="text-hh-saffron-dk" />
           <div>
-            <p className="text-[15px] font-medium text-hh-earth-dk">Voir les envois publics</p>
+            <p className="text-[15px] font-medium text-hh-earth-dk">
+              Voir les envois publics
+            </p>
             <p className="text-[12px] text-hh-muted">
               Départs publiés par les transitaires
             </p>
           </div>
         </div>
-        <ArrowRight size={18} strokeWidth={1.5} className="text-hh-saffron-dk" />
+        <ArrowRight
+          size={18}
+          strokeWidth={1.5}
+          className="text-hh-saffron-dk"
+        />
       </Link>
 
       {/* Quick action */}
@@ -149,9 +155,7 @@ export default async function ClientDashboardPage() {
                     <span className="font-medium">
                       {parcel.recipient.firstName} {parcel.recipient.lastName}
                     </span>
-                    {parcel.recipient.city
-                      ? ` · ${parcel.recipient.city}`
-                      : ""}
+                    {parcel.recipient.city ? ` · ${parcel.recipient.city}` : ""}
                     {", "}
                     {countryLabelFr(parcel.recipient.country)}
                   </p>

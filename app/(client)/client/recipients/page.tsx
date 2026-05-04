@@ -18,14 +18,15 @@ export default async function RecipientsPage() {
   const recipients = await getClientRecipients(clientId);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[28px] font-medium leading-tight text-hh-earth-dk">
             Mes proches
           </h1>
           <p className="mt-1 text-[14px] text-hh-muted">
-            {recipients.length} destinataire{recipients.length !== 1 ? "s" : ""} enregistré{recipients.length !== 1 ? "s" : ""}
+            {recipients.length} destinataire{recipients.length !== 1 ? "s" : ""}{" "}
+            enregistré{recipients.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
@@ -39,7 +40,11 @@ export default async function RecipientsPage() {
 
       {recipients.length === 0 ? (
         <div className="rounded-[var(--hh-radius-lg)] border border-dashed border-hh-sand-dk/40 bg-white px-5 py-14 text-center">
-          <Users size={36} strokeWidth={1} className="mx-auto mb-3 text-hh-sand-dk" />
+          <Users
+            size={36}
+            strokeWidth={1}
+            className="mx-auto mb-3 text-hh-sand-dk"
+          />
           <p className="text-[15px] font-medium text-hh-earth-dk">
             Aucun proche enregistré
           </p>
@@ -79,7 +84,9 @@ export default async function RecipientsPage() {
                 </p>
                 <p className="mt-0.5 text-[13px] text-hh-muted">{r.phone}</p>
                 {r.address && (
-                  <p className="mt-0.5 text-[12px] text-hh-muted">{r.address}</p>
+                  <p className="mt-0.5 text-[12px] text-hh-muted">
+                    {r.address}
+                  </p>
                 )}
               </div>
               <Link
