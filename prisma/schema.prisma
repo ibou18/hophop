@@ -146,14 +146,19 @@ model Forwarder {
   // Code à 5 chiffres unique pour être retrouvé facilement depuis l'app
   code5 String @unique @db.Char(5)
 
-  name        String
-  email       String  @unique
-  phone       String?
-  country     Country
-  city        String
-  address     String?
-  logoUrl     String?
-  description String?
+  name             String
+  email            String  @unique
+  phone            String?
+  country          Country
+  city             String
+  address          String?
+  /// Adresse formatée (ex. Places API)
+  addressFormatted String?
+  /// Coordonnées GPS du siège / point affiché sur carte
+  latitude         Float?
+  longitude        Float?
+  logoUrl          String?
+  description      String?
 
   // Paiement en ligne activé ou non (optionnel par tenant)
   paymentEnabled  Boolean @default(false)
@@ -167,24 +172,25 @@ model Forwarder {
   updatedAt DateTime @updatedAt
 
   // Relations
-  clients   Client[]
+  clients   ClientForwarder[]
   shipments Shipment[]
+  parcels   Parcel[]
 
   @@map("forwarders")
 }
 
 // ─────────────────────────────────────────────
 // CLIENT — Expéditeur (côté Canada ou France)
+// Un client peut travailler avec plusieurs transitaires
 // ─────────────────────────────────────────────
 
 model Client {
-  id          String @id @default(uuid())
-  forwarderId String
+  id String @id @default(uuid())
 
   firstName String
   lastName  String
-  email     String?
-  phone     String? // Obligatoire si authMethod = PHONE
+  email     String? @unique // Unique globalement
+  phone     String? @unique // Unique globalement
   address   String?
   city      String?
   country   Country // ex: CA, FR, GN...
@@ -198,17 +204,32 @@ model Client {
   updatedAt DateTime @updatedAt
 
   // Relations
-  forwarder        Forwarder         @relation(fields: [forwarderId], references: [id])
+  forwarders       ClientForwarder[]
   recipients       Recipient[]
   parcels          Parcel[]
   payments         Payment[]
   notifications    Notification[]
   shipmentRequests ShipmentRequest[]
 
-  // Un email ou phone doit être unique par transitaire
-  @@unique([forwarderId, email])
-  @@unique([forwarderId, phone])
   @@map("clients")
+}
+
+// ─────────────────────────────────────────────
+// CLIENT FORWARDER — Table de jonction many-to-many
+// Un client peut travailler avec plusieurs transitaires
+// ─────────────────────────────────────────────
+
+model ClientForwarder {
+  clientId    String
+  forwarderId String
+
+  createdAt DateTime @default(now())
+
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  forwarder Forwarder @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, forwarderId])
+  @@map("client_forwarders")
 }
 
 // ─────────────────────────────────────────────
@@ -283,6 +304,7 @@ model Shipment {
 model Parcel {
   id          String  @id @default(uuid())
   clientId    String
+  forwarderId String // Transitaire qui gère ce colis — défini à la déclaration
   recipientId String
   shipmentId  String? // Null jusqu'à l'affectation à un envoi
 
@@ -312,15 +334,35 @@ model Parcel {
 
   // Relations
   client          Client           @relation(fields: [clientId], references: [id])
+  forwarder       Forwarder        @relation(fields: [forwarderId], references: [id])
   recipient       Recipient        @relation(fields: [recipientId], references: [id])
   shipment        Shipment?        @relation(fields: [shipmentId], references: [id])
   items           ParcelItem[]
+  images          ParcelImage[]
   payment         Payment?
   trackingEvents  TrackingEvent[]
   notifications   Notification[]
   shipmentRequest ShipmentRequest?
 
   @@map("parcels")
+}
+
+// ─────────────────────────────────────────────
+// PARCEL IMAGE — Photos du colis (client / transitaire)
+// ─────────────────────────────────────────────
+
+model ParcelImage {
+  id        String @id @default(uuid())
+  parcelId  String
+  url       String
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+
+  @@index([parcelId])
+  @@map("parcel_images")
 }
 
 // ─────────────────────────────────────────────

@@ -20,7 +20,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const parcel = await prisma.parcel.findFirst({
     where:
       auth.role === "FORWARDER"
-        ? { id, client: { forwarderId: auth.forwarderId } }
+        ? { id, forwarderId: auth.forwarderId }
         : { id, clientId: auth.clientId },
     include: {
       recipient: true,
@@ -29,7 +29,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   });
   if (!parcel) return jsonError("Introuvable", 404);
   const fwd = await prisma.forwarder.findUnique({
-    where: { id: parcel.client.forwarderId },
+    where: { id: parcel.forwarderId },
     select: { name: true, code5: true },
   });
   const qr = await QRCode.toDataURL(parcel.trackingCode, { width: 200, margin: 1 });

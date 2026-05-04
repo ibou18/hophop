@@ -41,7 +41,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const parcel = await prisma.parcel.findFirst({
     where:
       auth.role === "FORWARDER"
-        ? { id, client: { forwarderId: auth.forwarderId } }
+        ? { id, forwarderId: auth.forwarderId }
         : { id, clientId: auth.clientId },
     include: {
       items: true,
@@ -91,7 +91,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     });
   }
   const existing = await prisma.parcel.findFirst({
-    where: { id, client: { forwarderId: auth.forwarderId } },
+    where: { id, forwarderId: auth.forwarderId },
   });
   if (!existing) return jsonError("Introuvable", 404);
   const data = parsed.data;

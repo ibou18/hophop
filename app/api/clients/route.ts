@@ -8,7 +8,10 @@ export async function GET() {
   const auth = await requireForwarder();
   if (auth instanceof Response) return auth;
   const clients = await prisma.client.findMany({
-    where: { forwarderId: auth.forwarderId, isActive: true },
+    where: {
+      forwarders: { some: { forwarderId: auth.forwarderId } },
+      isActive: true,
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -53,30 +56,34 @@ export async function POST(req: Request) {
   }
   const passwordHash = await hash(data.password, 12);
   try {
-    const client = await prisma.client.create({
-      data: {
-        forwarderId: forwarder.id,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email?.toLowerCase() ?? null,
-        phone: data.phone ?? null,
-        address: data.address ?? null,
-        city: data.city ?? null,
-        country: data.country,
-        authMethod: data.authMethod,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        forwarderId: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        country: true,
-        authMethod: true,
-        createdAt: true,
-      },
+    const client = await prisma.$transaction(async (tx) => {
+      const c = await tx.client.create({
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email?.toLowerCase() ?? null,
+          phone: data.phone ?? null,
+          address: data.address ?? null,
+          city: data.city ?? null,
+          country: data.country,
+          authMethod: data.authMethod,
+          passwordHash,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          country: true,
+          authMethod: true,
+          createdAt: true,
+        },
+      });
+      await tx.clientForwarder.create({
+        data: { clientId: c.id, forwarderId: forwarder.id },
+      });
+      return c;
     });
     return jsonOk(client, 201);
   } catch (e: unknown) {
@@ -85,7 +92,7 @@ export async function POST(req: Request) {
         ? String((e as { code?: string }).code)
         : "";
     if (code === "P2002") {
-      return jsonError("Email ou téléphone déjà utilisé pour ce transitaire", 409);
+      return jsonError("Email ou téléphone déjà utilisé", 409);
     }
     throw e;
   }

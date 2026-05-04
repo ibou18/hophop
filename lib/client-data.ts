@@ -15,6 +15,10 @@ const parcelInclude = {
   },
   shipment: { select: { id: true, reference: true, status: true, destinationCountry: true } },
   items: { select: { id: true, name: true, quantity: true, category: true } },
+  images: {
+    orderBy: { sortOrder: "asc" as const },
+    select: { id: true, url: true, sortOrder: true },
+  },
 } satisfies Prisma.ParcelInclude;
 
 export type ClientParcelRow = Prisma.ParcelGetPayload<{
@@ -87,12 +91,14 @@ export async function getClientParcelDetail(clientId: string, parcelId: string) 
   });
 }
 
-export async function getAvailableShipments(forwarderId: string) {
+export async function getAvailableShipments(clientId: string) {
   return prisma.shipment.findMany({
     where: {
-      forwarderId,
       isPublished: true,
       status: { in: ["DRAFT", "CONFIRMED"] },
+      forwarder: {
+        clients: { some: { clientId } },
+      },
     },
     orderBy: { departureDate: "asc" },
     select: {
@@ -107,6 +113,21 @@ export async function getAvailableShipments(forwarderId: string) {
 }
 
 export type AvailableShipmentRow = Awaited<ReturnType<typeof getAvailableShipments>>[number];
+
+export async function getClientForwarders(clientId: string) {
+  const links = await prisma.clientForwarder.findMany({
+    where: { clientId },
+    include: {
+      forwarder: {
+        select: { id: true, name: true, code5: true, country: true, city: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  return links.map((l) => l.forwarder);
+}
+
+export type ClientForwarderRow = Awaited<ReturnType<typeof getClientForwarders>>[number];
 
 export async function getClientRecipients(clientId: string) {
   return prisma.recipient.findMany({

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { getClientRecipients } from "@/lib/client-data";
+import { getClientRecipients, getClientForwarders } from "@/lib/client-data";
 import { DeclareParcelWizard } from "@/components/client/declare-parcel-wizard";
 
 export const metadata: Metadata = { title: "Déclarer un colis" };
@@ -13,14 +13,17 @@ export default async function DeclarePage() {
     redirect("/login");
   }
 
-  const recipients = await getClientRecipients(clientId);
+  const [recipients, forwarders] = await Promise.all([
+    getClientRecipients(clientId),
+    getClientForwarders(clientId),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-lg">
       <h1 className="mb-6 text-[28px] font-medium leading-tight text-hh-earth-dk">
         Déclarer un colis
       </h1>
-      <DeclareParcelWizard recipients={recipients} />
+      <DeclareParcelWizard recipients={recipients} forwarders={forwarders} />
     </div>
   );
 }

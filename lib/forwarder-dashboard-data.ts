@@ -8,6 +8,10 @@ const parcelListInclude = {
   },
   recipient: { select: { city: true, country: true, firstName: true, lastName: true } },
   shipment: { select: { id: true, reference: true, status: true } },
+  images: {
+    orderBy: { sortOrder: "asc" as const },
+    select: { id: true, url: true, sortOrder: true },
+  },
 } satisfies Prisma.ParcelInclude;
 
 export type ForwarderParcelListRow = Prisma.ParcelGetPayload<{
@@ -26,11 +30,10 @@ export async function getForwarderDashboardKpis(forwarderId: string): Promise<{
   clientsCount: number;
   recentParcels: ForwarderParcelListRow[];
 }> {
-  const clientScope = { forwarderId };
   const [parcelsInTransit, activeShipments, clientsCount, recentParcels] =
     await Promise.all([
       prisma.parcel.count({
-        where: { client: clientScope, status: ParcelStatus.IN_TRANSIT },
+        where: { forwarderId, status: ParcelStatus.IN_TRANSIT },
       }),
       prisma.shipment.count({
         where: {
@@ -38,9 +41,9 @@ export async function getForwarderDashboardKpis(forwarderId: string): Promise<{
           status: { in: ACTIVE_SHIPMENT },
         },
       }),
-      prisma.client.count({ where: { forwarderId } }),
+      prisma.client.count({ where: { forwarders: { some: { forwarderId } } } }),
       prisma.parcel.findMany({
-        where: { client: clientScope },
+        where: { forwarderId },
         orderBy: { createdAt: "desc" },
         take: 6,
         include: parcelListInclude,
@@ -61,7 +64,7 @@ export async function getForwarderParcels(
 ): Promise<ForwarderParcelListRow[]> {
   return prisma.parcel.findMany({
     where: {
-      client: { forwarderId },
+      forwarderId,
       ...(statusFilter ? { status: statusFilter } : {}),
     },
     orderBy: { createdAt: "desc" },
@@ -117,7 +120,7 @@ export async function getForwarderParcelById(
   parcelId: string,
 ): Promise<ForwarderParcelDetail | null> {
   return prisma.parcel.findFirst({
-    where: { id: parcelId, client: { forwarderId } },
+    where: { id: parcelId, forwarderId },
     include: parcelDetailInclude,
   });
 }

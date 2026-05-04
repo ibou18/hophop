@@ -56,7 +56,7 @@ export async function getForwarderClients(
 ): Promise<ForwarderClientListRow[]> {
   return prisma.client.findMany({
     where: {
-      forwarderId,
+      forwarders: { some: { forwarderId } },
       isActive: true,
       ...(countryFilter ? { country: countryFilter } : {}),
     },
@@ -81,7 +81,11 @@ export async function getForwarderClientById(
   clientId: string,
 ): Promise<ForwarderClientDetail | null> {
   return prisma.client.findFirst({
-    where: { id: clientId, forwarderId, isActive: true },
+    where: {
+      id: clientId,
+      forwarders: { some: { forwarderId } },
+      isActive: true,
+    },
     include: clientDetailInclude,
   });
 }

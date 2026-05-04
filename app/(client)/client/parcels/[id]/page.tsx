@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -20,14 +21,13 @@ export default async function ClientParcelDetailPage({ params }: Props) {
   const { id } = await params;
   const session = await auth();
   const clientId = session?.user?.clientId;
-  const forwarderId = session?.user?.forwarderId;
-  if (!session?.user || session.user.role !== "CLIENT" || !clientId || !forwarderId) {
+  if (!session?.user || session.user.role !== "CLIENT" || !clientId) {
     redirect("/login");
   }
 
   const [parcel, availableShipments] = await Promise.all([
     getClientParcelDetail(clientId, id),
-    getAvailableShipments(forwarderId),
+    getAvailableShipments(clientId),
   ]);
   if (!parcel) notFound();
 
@@ -76,12 +76,53 @@ export default async function ClientParcelDetailPage({ params }: Props) {
           </div>
         )}
 
+        {parcel.images.length > 0 && (
+          <div className="border-t border-hh-sand-dk/15 pt-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+              Photos
+            </p>
+            <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">
+              {parcel.images.map((im) => (
+                <a
+                  key={im.id}
+                  href={im.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-hh-sand-dk/20"
+                >
+                  <Image
+                    src={im.url}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 25vw, 120px"
+                    unoptimized
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Parcel info */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 border-t border-hh-sand-dk/15 pt-3 text-[13px]">
           {parcel.weightKg != null && (
             <>
               <span className="text-hh-muted">Poids</span>
               <span className="text-hh-earth-dk">{parcel.weightKg} kg</span>
+            </>
+          )}
+          {(parcel.lengthCm != null ||
+            parcel.widthCm != null ||
+            parcel.heightCm != null) && (
+            <>
+              <span className="text-hh-muted">Dimensions (L × l × H)</span>
+              <span className="text-hh-earth-dk">
+                {[parcel.lengthCm ?? "—", parcel.widthCm ?? "—", parcel.heightCm ?? "—"].join(
+                  " × ",
+                )}{" "}
+                cm
+              </span>
             </>
           )}
           {parcel.shipment && (

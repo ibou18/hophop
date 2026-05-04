@@ -66,13 +66,15 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!parcel) return jsonError("Colis introuvable", 404);
   if (parcel.shipmentId) return jsonError("Ce colis est déjà affecté à un envoi", 409);
 
-  // Vérifier que l'envoi est publié et appartient au bon transitaire (le forwarder du client)
+  // Vérifier que l'envoi est publié et que le client est lié à ce transitaire
   const shipment = await prisma.shipment.findFirst({
     where: {
       id: shipmentId,
       isPublished: true,
-      forwarderId: auth.forwarderId,
       status: { in: ["DRAFT", "CONFIRMED"] },
+      forwarder: {
+        clients: { some: { clientId: auth.clientId } },
+      },
     },
   });
   if (!shipment) return jsonError("Envoi non disponible", 404);

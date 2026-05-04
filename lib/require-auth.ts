@@ -9,7 +9,6 @@ export type ForwarderCtx = {
 
 export type ClientCtx = {
   role: "CLIENT";
-  forwarderId: string;
   clientId: string;
 };
 
@@ -26,26 +25,22 @@ export async function requireForwarder():
 export async function requireClient(): Promise<ClientCtx | NextResponse> {
   const session = await auth();
   const u = session?.user;
-  if (!u || u.role !== "CLIENT" || !u.forwarderId || !u.clientId) {
+  if (!u || u.role !== "CLIENT" || !u.clientId) {
     return jsonError("Non autorisé", 401);
   }
-  return { role: "CLIENT", forwarderId: u.forwarderId, clientId: u.clientId };
+  return { role: "CLIENT", clientId: u.clientId };
 }
 
 export async function requireForwarderOrClient():
   Promise<ForwarderCtx | ClientCtx | NextResponse> {
   const session = await auth();
   const u = session?.user;
-  if (!u?.forwarderId) return jsonError("Non autorisé", 401);
-  if (u.role === "FORWARDER") {
+  if (!u) return jsonError("Non autorisé", 401);
+  if (u.role === "FORWARDER" && u.forwarderId) {
     return { role: "FORWARDER", forwarderId: u.forwarderId };
   }
   if (u.role === "CLIENT" && u.clientId) {
-    return {
-      role: "CLIENT",
-      forwarderId: u.forwarderId,
-      clientId: u.clientId,
-    };
+    return { role: "CLIENT", clientId: u.clientId };
   }
   return jsonError("Non autorisé", 401);
 }

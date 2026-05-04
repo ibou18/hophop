@@ -74,7 +74,7 @@ export async function getAssignableParcels(
 ): Promise<AssignableParcelRow[]> {
   return prisma.parcel.findMany({
     where: {
-      client: { forwarderId },
+      forwarderId,
       status: ParcelStatus.COLLECTED,
       shipmentId: null,
     },

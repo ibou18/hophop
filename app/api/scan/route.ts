@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const parcel = await prisma.parcel.findFirst({
     where: {
       trackingCode,
-      client: { forwarderId: auth.forwarderId },
+      forwarderId: auth.forwarderId,
     },
     include: {
       recipient: {

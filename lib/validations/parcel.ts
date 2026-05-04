@@ -19,6 +19,7 @@ const parcelItem = z.object({
 
 export const createParcelSchema = z.object({
   recipientId: z.string().uuid(),
+  forwarderId: z.string().uuid(),
   weightKg: z.number().positive().optional(),
   lengthCm: z.number().positive().optional(),
   widthCm: z.number().positive().optional(),
@@ -27,6 +28,11 @@ export const createParcelSchema = z.object({
   declaredValue: z.number().nonnegative().optional(),
   price: z.number().nonnegative().optional(),
   items: z.array(parcelItem).min(1),
+});
+
+/** Après création du colis : enregistrer les URLs S3 (upload déjà effectué). */
+export const attachParcelImagesSchema = z.object({
+  imageUrls: z.array(z.string().url()).min(1).max(8),
 });
 
 export const patchParcelSchema = z.object({

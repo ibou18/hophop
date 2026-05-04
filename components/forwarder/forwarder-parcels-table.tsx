@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ParcelStatus } from "@/app/generated/prisma/enums";
@@ -13,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { ForwarderParcelQuickModal } from "@/components/forwarder/forwarder-parcel-quick-modal";
 
 function statusBadgeClass(status: ParcelStatus): string {
   switch (status) {
@@ -37,6 +42,9 @@ export function ForwarderParcelsTable({
   parcels: ForwarderParcelListRow[];
   emptyLabel?: string;
 }) {
+  const router = useRouter();
+  const [quickParcel, setQuickParcel] = useState<ForwarderParcelListRow | null>(null);
+
   if (parcels.length === 0) {
     return (
       <p className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white px-4 py-8 text-center text-[15px] text-hh-muted">
@@ -46,68 +54,91 @@ export function ForwarderParcelsTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white shadow-sm">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-hh-sand-dk/20 hover:bg-transparent">
-            <TableHead className="text-hh-muted">Code suivi</TableHead>
-            <TableHead className="text-hh-muted">Statut</TableHead>
-            <TableHead className="text-hh-muted">Client</TableHead>
-            <TableHead className="text-hh-muted">Destination</TableHead>
-            <TableHead className="text-hh-muted">Envoi</TableHead>
-            <TableHead className="text-right text-hh-muted">Créé</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {parcels.map((p) => (
-            <TableRow
-              key={p.id}
-              className="border-hh-sand-dk/15 hover:bg-hh-sand/40"
-            >
-              <TableCell>
-                <Link
-                  href={`/parcels/${p.id}`}
-                  className="font-mono text-[13px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
-                >
-                  {p.trackingCode}
-                </Link>
-              </TableCell>
-              <TableCell>
-                <span
-                  className={cn(
-                    "inline-flex rounded-[var(--hh-radius-md)] px-2 py-0.5 text-[11px] font-medium",
-                    statusBadgeClass(p.status),
-                  )}
-                >
-                  {parcelStatusLabelFr(p.status)}
-                </span>
-              </TableCell>
-              <TableCell className="max-w-[180px] truncate text-[13px] text-hh-earth-dk">
-                {p.client.firstName} {p.client.lastName}
-                {p.client.email ? (
-                  <span className="mt-0.5 block truncate text-[11px] font-normal text-hh-muted">
-                    {p.client.email}
-                  </span>
-                ) : null}
-              </TableCell>
-              <TableCell className="text-[13px] text-hh-earth-dk">
-                {p.recipient.city}
-                <span className="text-hh-muted"> · </span>
-                {p.recipient.country}
-              </TableCell>
-              <TableCell className="text-[13px] text-hh-muted">
-                {p.shipment?.reference ?? "—"}
-              </TableCell>
-              <TableCell className="text-right text-[12px] text-hh-muted">
-                {formatDistanceToNow(p.createdAt, {
-                  addSuffix: true,
-                  locale: fr,
-                })}
-              </TableCell>
+    <>
+      <div className="overflow-hidden rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-hh-sand-dk/20 hover:bg-transparent">
+              <TableHead className="text-hh-muted">Code suivi</TableHead>
+              <TableHead className="text-hh-muted">Statut</TableHead>
+              <TableHead className="text-hh-muted">Client</TableHead>
+              <TableHead className="text-hh-muted">Destination</TableHead>
+              <TableHead className="text-hh-muted">Envoi</TableHead>
+              <TableHead className="text-right text-hh-muted">Créé</TableHead>
+              <TableHead className="w-[1%] text-right text-hh-muted">
+                Actions
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {parcels.map((p) => (
+              <TableRow
+                key={p.id}
+                className="border-hh-sand-dk/15 hover:bg-hh-sand/40"
+              >
+                <TableCell>
+                  <Link
+                    href={`/parcels/${p.id}`}
+                    className="font-mono text-[13px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
+                  >
+                    {p.trackingCode}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <span
+                    className={cn(
+                      "inline-flex rounded-[var(--hh-radius-md)] px-2 py-0.5 text-[11px] font-medium",
+                      statusBadgeClass(p.status),
+                    )}
+                  >
+                    {parcelStatusLabelFr(p.status)}
+                  </span>
+                </TableCell>
+                <TableCell className="max-w-[180px] truncate text-[13px] text-hh-earth-dk">
+                  {p.client.firstName} {p.client.lastName}
+                  {p.client.email ? (
+                    <span className="mt-0.5 block truncate text-[11px] font-normal text-hh-muted">
+                      {p.client.email}
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell className="text-[13px] text-hh-earth-dk">
+                  {p.recipient.city}
+                  <span className="text-hh-muted"> · </span>
+                  {p.recipient.country}
+                </TableCell>
+                <TableCell className="text-[13px] text-hh-muted">
+                  {p.shipment?.reference ?? "—"}
+                </TableCell>
+                <TableCell className="text-right text-[12px] text-hh-muted">
+                  {formatDistanceToNow(p.createdAt, {
+                    addSuffix: true,
+                    locale: fr,
+                  })}
+                </TableCell>
+                <TableCell className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setQuickParcel(p)}
+                    className="rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-2.5 py-1 text-[12px] font-medium text-hh-earth-dk shadow-sm transition-colors hover:bg-hh-saffron/15 hover:border-hh-saffron/40"
+                  >
+                    Actions rapides
+                  </button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <ForwarderParcelQuickModal
+        parcel={quickParcel}
+        open={quickParcel !== null}
+        onOpenChange={(next) => {
+          if (!next) setQuickParcel(null);
+        }}
+        onStatusUpdated={() => router.refresh()}
+      />
+    </>
   );
 }

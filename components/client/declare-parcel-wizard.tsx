@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
-import { ArrowLeft, ArrowRight, Check, Plus, Minus, Package } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Minus,
+  Package,
+  Plus,
+  X,
+} from "lucide-react";
 import type { Recipient } from "@/app/generated/prisma/client";
+import type { ClientForwarderRow } from "@/lib/client-data";
+import { uploadParcelImagesViaApi } from "@/lib/client/parcel-image-upload";
+import {
+  normalizeImageContentType,
+  PARCEL_IMAGE_MAX_BYTES,
+} from "@/lib/image-file-types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,6 +32,7 @@ type ParcelItem = {
 };
 
 type WizardState = {
+  forwarderId: string;
   recipientId: string;
   newRecipient: {
     firstName: string;
@@ -28,7 +43,12 @@ type WizardState = {
   } | null;
   items: ParcelItem[];
   weightKg: string;
+  lengthCm: string;
+  widthCm: string;
+  heightCm: string;
   description: string;
+  /** Fichiers + URL d’aperçu blob (créée à l’ajout, révoquée à la suppression / démontage). */
+  imageEntries: { file: File; previewUrl: string }[];
 };
 
 const CATEGORIES: { value: Category; icon: string; label: string }[] = [
@@ -54,24 +74,42 @@ const inputClass =
 
 export function DeclareParcelWizard({
   recipients,
+  forwarders,
 }: {
   recipients: Recipient[];
+  forwarders: ClientForwarderRow[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitLabel, setSubmitLabel] = useState("Envoi…");
   const [addingNew, setAddingNew] = useState(recipients.length === 0);
 
   const defaultRecipient = recipients.find((r) => r.isDefault);
 
   const [state, setState] = useState<WizardState>({
+    forwarderId: forwarders[0]?.id ?? "",
     recipientId: defaultRecipient?.id ?? recipients[0]?.id ?? "",
     newRecipient: null,
     items: [],
     weightKg: "",
+    lengthCm: "",
+    widthCm: "",
+    heightCm: "",
     description: "",
+    imageEntries: [],
   });
+
+  const imageEntriesRef = useRef(state.imageEntries);
+  useEffect(() => {
+    imageEntriesRef.current = state.imageEntries;
+  });
+  useEffect(() => {
+    return () => {
+      imageEntriesRef.current.forEach((e) => URL.revokeObjectURL(e.previewUrl));
+    };
+  }, []);
 
   function update(patch: Partial<WizardState>) {
     setState((s) => ({ ...s, ...patch }));
@@ -79,6 +117,7 @@ export function DeclareParcelWizard({
 
   function canAdvance(): boolean {
     if (step === 0) {
+      if (!state.forwarderId) return false;
       if (addingNew) {
         const r = state.newRecipient;
         return !!(r?.firstName && r?.lastName && r?.phone && r?.city && r?.country);
@@ -92,10 +131,10 @@ export function DeclareParcelWizard({
   async function handleSubmit() {
     setSubmitting(true);
     setError(null);
+    setSubmitLabel("Création du colis…");
     try {
       let recipientId = state.recipientId;
 
-      // Create new recipient if needed
       if (addingNew && state.newRecipient) {
         const res = await fetch("/api/recipients", {
           method: "POST",
@@ -111,28 +150,63 @@ export function DeclareParcelWizard({
         recipientId = data.id;
       }
 
+      function optionalPositiveFloat(raw: string): number | undefined {
+        const t = raw.trim();
+        if (!t) return undefined;
+        const n = parseFloat(t.replace(",", "."));
+        if (!Number.isFinite(n) || n <= 0) return undefined;
+        return n;
+      }
+
+      const lengthCm = optionalPositiveFloat(state.lengthCm);
+      const widthCm = optionalPositiveFloat(state.widthCm);
+      const heightCm = optionalPositiveFloat(state.heightCm);
+
       const body: Record<string, unknown> = {
+        forwarderId: state.forwarderId,
         recipientId,
         items: state.items,
         description: state.description || undefined,
         weightKg: state.weightKg ? parseFloat(state.weightKg) : undefined,
+        ...(lengthCm !== undefined ? { lengthCm } : {}),
+        ...(widthCm !== undefined ? { widthCm } : {}),
+        ...(heightCm !== undefined ? { heightCm } : {}),
       };
 
       const res = await fetch("/api/parcels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as { id?: string; error?: string };
-      if (!res.ok || !data.id) {
-        setError(data.error ?? "Erreur lors de la déclaration.");
+      const parcelJson = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !parcelJson.id) {
+        setError(parcelJson.error ?? "Erreur lors de la déclaration.");
         setSubmitting(false);
         return;
       }
-      router.push(`/client/parcels/${data.id}`);
+
+      const parcelId = parcelJson.id;
+
+      if (state.imageEntries.length > 0) {
+        setSubmitLabel("Envoi des photos…");
+        const uploadResult = await uploadParcelImagesViaApi(
+          parcelId,
+          state.imageEntries.map((e) => e.file),
+        );
+        if (!uploadResult.ok) {
+          setError(
+            `${uploadResult.error} Le colis a bien été créé ; les photos peuvent être ajoutées plus tard si besoin.`,
+          );
+        }
+      }
+
+      router.push(`/client/parcels/${parcelId}`);
     } catch {
       setError("Une erreur réseau est survenue.");
+    } finally {
       setSubmitting(false);
+      setSubmitLabel("Envoi…");
     }
   }
 
@@ -171,6 +245,7 @@ export function DeclareParcelWizard({
         {step === 0 && (
           <StepRecipient
             recipients={recipients}
+            forwarders={forwarders}
             state={state}
             update={update}
             addingNew={addingNew}
@@ -183,7 +258,11 @@ export function DeclareParcelWizard({
         {step === 2 && (
           <StepDimensions
             weightKg={state.weightKg}
+            lengthCm={state.lengthCm}
+            widthCm={state.widthCm}
+            heightCm={state.heightCm}
             description={state.description}
+            imageEntries={state.imageEntries}
             update={update}
           />
         )}
@@ -191,6 +270,7 @@ export function DeclareParcelWizard({
           <StepSummary
             state={state}
             recipients={recipients}
+            forwarders={forwarders}
             addingNew={addingNew}
           />
         )}
@@ -234,7 +314,7 @@ export function DeclareParcelWizard({
             disabled={submitting}
             className="flex items-center gap-2 rounded-[var(--hh-radius-md)] bg-hh-savane px-5 py-2.5 text-[14px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            {submitting ? "Envoi…" : "Déclarer le colis"}
+            {submitting ? submitLabel : "Déclarer le colis"}
             {!submitting && <Check size={16} strokeWidth={2} />}
           </button>
         )}
@@ -247,12 +327,14 @@ export function DeclareParcelWizard({
 
 function StepRecipient({
   recipients,
+  forwarders,
   state,
   update,
   addingNew,
   setAddingNew,
 }: {
   recipients: Recipient[];
+  forwarders: ClientForwarderRow[];
   state: WizardState;
   update: (p: Partial<WizardState>) => void;
   addingNew: boolean;
@@ -272,6 +354,36 @@ function StepRecipient({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Forwarder selector — only shown when client has multiple forwarders */}
+      {forwarders.length > 1 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] font-medium text-hh-muted">Via quel transitaire ?</p>
+          <div className="flex flex-col gap-1.5">
+            {forwarders.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => update({ forwarderId: f.id })}
+                className={cn(
+                  "flex items-center justify-between rounded-[var(--hh-radius-md)] border-2 px-3 py-2.5 text-left transition-colors",
+                  state.forwarderId === f.id
+                    ? "border-hh-saffron bg-hh-saffron-lt"
+                    : "border-transparent bg-hh-sand hover:border-hh-sand-dk"
+                )}
+              >
+                <div>
+                  <p className="text-[14px] font-medium text-hh-earth-dk">{f.name}</p>
+                  <p className="text-[12px] text-hh-muted">{f.city}</p>
+                </div>
+                {state.forwarderId === f.id && (
+                  <Check size={15} strokeWidth={2} className="shrink-0 text-hh-saffron" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-[17px] font-medium text-hh-earth-dk">Destinataire</h2>
         <p className="mt-0.5 text-[13px] text-hh-muted">
@@ -504,18 +616,52 @@ function StepContent({
 
 function StepDimensions({
   weightKg,
+  lengthCm,
+  widthCm,
+  heightCm,
   description,
+  imageEntries,
   update,
 }: {
   weightKg: string;
+  lengthCm: string;
+  widthCm: string;
+  heightCm: string;
   description: string;
+  imageEntries: { file: File; previewUrl: string }[];
   update: (p: Partial<WizardState>) => void;
 }) {
+  const [photoUploadErr, setPhotoUploadErr] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const remainingPhotos = Math.max(0, 8 - imageEntries.length);
+
+  function addPhotos(list: FileList | null) {
+    if (!list?.length) return;
+    const next = [...imageEntries];
+    for (const file of Array.from(list)) {
+      if (next.length >= 8) break;
+      if (file.size > PARCEL_IMAGE_MAX_BYTES) {
+        setPhotoUploadErr(
+          `Photo trop volumineuse (max ${Math.round(PARCEL_IMAGE_MAX_BYTES / 1024 / 1024)} Mo).`,
+        );
+        continue;
+      }
+      if (!normalizeImageContentType(file)) {
+        setPhotoUploadErr("Format non pris en charge (JPEG, PNG, WebP, GIF).");
+        continue;
+      }
+      next.push({ file, previewUrl: URL.createObjectURL(file) });
+      setPhotoUploadErr(null);
+    }
+    update({ imageEntries: next });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-[17px] font-medium text-hh-earth-dk">
-          Poids & description
+          Poids, dimensions & photos
         </h2>
         <p className="mt-0.5 text-[13px] text-hh-muted">
           Ces informations sont optionnelles mais utiles pour le transitaire.
@@ -536,6 +682,115 @@ function StepDimensions({
           value={weightKg}
           onChange={(e) => update({ weightKg: e.target.value })}
         />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-[12px] font-medium text-hh-muted">
+            Longueur (cm)
+          </label>
+          <input
+            className={inputClass}
+            type="number"
+            inputMode="decimal"
+            min="0.1"
+            step="0.1"
+            placeholder="L"
+            value={lengthCm}
+            onChange={(e) => update({ lengthCm: e.target.value })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[12px] font-medium text-hh-muted">
+            Largeur (cm)
+          </label>
+          <input
+            className={inputClass}
+            type="number"
+            inputMode="decimal"
+            min="0.1"
+            step="0.1"
+            placeholder="l"
+            value={widthCm}
+            onChange={(e) => update({ widthCm: e.target.value })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[12px] font-medium text-hh-muted">
+            Hauteur (cm)
+          </label>
+          <input
+            className={inputClass}
+            type="number"
+            inputMode="decimal"
+            min="0.1"
+            step="0.1"
+            placeholder="H"
+            value={heightCm}
+            onChange={(e) => update({ heightCm: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-[12px] font-medium text-hh-muted">
+          Photos du colis (optionnel, max 8 — envoyées après création du colis)
+        </label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          multiple
+          className="sr-only"
+          tabIndex={-1}
+          disabled={remainingPhotos === 0}
+          onChange={(e) => addPhotos(e.target.files)}
+        />
+        <button
+          type="button"
+          disabled={remainingPhotos === 0}
+          onClick={() => fileInputRef.current?.click()}
+          className="h-10 w-fit rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 bg-hh-sand px-4 text-[13px] font-medium text-hh-earth-dk hover:bg-hh-sand-dk/25 disabled:opacity-40"
+        >
+          Choisir des photos
+        </button>
+        <p className="text-[11px] text-hh-muted">
+          Les fichiers sont enregistrés sur ton appareil jusqu’à la déclaration ; l’upload vers ton S3 se fait ensuite automatiquement.
+        </p>
+        {photoUploadErr ? (
+          <p className="text-[12px] text-hh-kola" role="alert">
+            {photoUploadErr}
+          </p>
+        ) : null}
+        {imageEntries.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
+            {imageEntries.map((entry, index) => (
+              <li
+                key={entry.previewUrl}
+                className="relative h-16 w-16 overflow-hidden rounded-lg ring-1 ring-hh-sand-dk/30"
+              >
+                <img
+                  src={entry.previewUrl}
+                  alt=""
+                  className="block size-full object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label="Retirer la photo"
+                  onClick={() => {
+                    URL.revokeObjectURL(entry.previewUrl);
+                    update({
+                      imageEntries: imageEntries.filter((_, i) => i !== index),
+                    });
+                  }}
+                  className="absolute right-0.5 top-0.5 flex size-6 items-center justify-center rounded-full bg-hh-earth-dk/80 text-white hover:bg-hh-earth-dk"
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -559,15 +814,18 @@ function StepDimensions({
 function StepSummary({
   state,
   recipients,
+  forwarders,
   addingNew,
 }: {
   state: WizardState;
   recipients: Recipient[];
+  forwarders: ClientForwarderRow[];
   addingNew: boolean;
 }) {
   const recipient = addingNew
     ? state.newRecipient
     : recipients.find((r) => r.id === state.recipientId);
+  const forwarder = forwarders.find((f) => f.id === state.forwarderId);
 
   return (
     <div className="flex flex-col gap-4">
@@ -579,6 +837,14 @@ function StepSummary({
       </div>
 
       <div className="flex flex-col gap-3">
+        {forwarder && (
+          <div className="rounded-[var(--hh-radius-md)] bg-hh-sand px-4 py-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+              Transitaire
+            </p>
+            <p className="mt-1 text-[14px] font-medium text-hh-earth-dk">{forwarder.name}</p>
+          </div>
+        )}
         <div className="rounded-[var(--hh-radius-md)] bg-hh-sand px-4 py-3">
           <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
             Destinataire
@@ -617,7 +883,12 @@ function StepSummary({
           </div>
         </div>
 
-        {(state.weightKg || state.description) && (
+        {(state.weightKg ||
+          state.description ||
+          state.lengthCm ||
+          state.widthCm ||
+          state.heightCm ||
+          state.imageEntries.length > 0) && (
           <div className="rounded-[var(--hh-radius-md)] bg-hh-sand px-4 py-3">
             <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
               Détails
@@ -627,10 +898,37 @@ function StepSummary({
                 Poids : <span className="font-medium">{state.weightKg} kg</span>
               </p>
             )}
+            {(state.lengthCm || state.widthCm || state.heightCm) && (
+              <p className="mt-1 text-[13px] text-hh-earth-dk">
+                Dimensions (L × l × H) :{" "}
+                <span className="font-medium">
+                  {[state.lengthCm || "—", state.widthCm || "—", state.heightCm || "—"].join(
+                    " × ",
+                  )}{" "}
+                  cm
+                </span>
+              </p>
+            )}
             {state.description && (
               <p className="mt-1 text-[13px] text-hh-earth-dk">
                 {state.description}
               </p>
+            )}
+            {state.imageEntries.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {state.imageEntries.map((entry) => (
+                  <div
+                    key={entry.previewUrl}
+                    className="relative h-14 w-14 overflow-hidden rounded-md ring-1 ring-hh-sand-dk/25"
+                  >
+                    <img
+                      src={entry.previewUrl}
+                      alt=""
+                      className="block size-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -643,7 +941,7 @@ function StepSummary({
             </p>
           </div>
           <p className="mt-1 text-[12px] text-hh-muted">
-            Tu pourras imprimer l'étiquette et partager le QR code avec le destinataire.
+            Au clic sur « Déclarer », le colis est créé puis les photos sont envoyées vers ton stockage et liées au colis dans l’ordre.
           </p>
         </div>
       </div>

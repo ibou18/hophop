@@ -63,7 +63,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: client.email ?? undefined,
           name: `${client.firstName} ${client.lastName}`,
           role: "CLIENT" as const,
-          forwarderId: client.forwarderId,
           clientId: client.id,
         };
       },
@@ -74,12 +73,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user && "role" in user) {
         const u = user as import("next-auth").User & {
           role: "FORWARDER" | "CLIENT";
-          forwarderId: string;
+          forwarderId?: string;
           clientId?: string;
         };
         token.role = u.role;
-        token.forwarderId = u.forwarderId;
-        token.clientId = u.clientId;
+        if (u.forwarderId) token.forwarderId = u.forwarderId;
+        if (u.clientId) token.clientId = u.clientId;
       }
       return token;
     },
@@ -87,12 +86,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         const t = token as import("next-auth/jwt").JWT & {
           role: "FORWARDER" | "CLIENT";
-          forwarderId: string;
+          forwarderId?: string;
           clientId?: string;
         };
         session.user.role = t.role;
-        session.user.forwarderId = t.forwarderId;
-        session.user.clientId = t.clientId;
+        if (t.forwarderId) session.user.forwarderId = t.forwarderId;
+        if (t.clientId) session.user.clientId = t.clientId;
       }
       return session;
     },

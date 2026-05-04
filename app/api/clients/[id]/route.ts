@@ -19,7 +19,10 @@ export async function GET(_req: Request, ctx: Ctx) {
   const asForwarder = await requireForwarder();
   if (!(asForwarder instanceof Response)) {
     const client = await prisma.client.findFirst({
-      where: { id, forwarderId: asForwarder.forwarderId },
+      where: {
+        id,
+        forwarders: { some: { forwarderId: asForwarder.forwarderId } },
+      },
       omit: { passwordHash: true, otpSecret: true },
     });
     if (!client) return jsonError("Introuvable", 404);

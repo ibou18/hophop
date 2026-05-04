@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { Share2 } from "lucide-react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import { getForwarderDashboardKpis } from "@/lib/forwarder-dashboard-data";
 import { ForwarderParcelsTable } from "@/components/forwarder/forwarder-parcels-table";
+import { ShareProfileButton } from "@/components/forwarder/share-profile-button";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -11,19 +14,36 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { parcelsInTransit, activeShipments, clientsCount, recentParcels } =
-    await getForwarderDashboardKpis(forwarderId);
+  const [{ parcelsInTransit, activeShipments, clientsCount, recentParcels }, forwarder] =
+    await Promise.all([
+      getForwarderDashboardKpis(forwarderId),
+      prisma.forwarder.findUnique({
+        where: { id: forwarderId },
+        select: { code5: true, name: true },
+      }),
+    ]);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-      <div>
-        <h1 className="text-[32px] font-medium leading-tight text-hh-earth-dk">
-          Tableau de bord
-        </h1>
-        <p className="mt-2 text-[15px] font-normal text-hh-muted">
-          Bienvenue, {session.user.name ?? "transitaire"}. Vue d’ensemble de ton
-          activité.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[32px] font-medium leading-tight text-hh-earth-dk">
+            Tableau de bord
+          </h1>
+          <p className="mt-2 text-[15px] font-normal text-hh-muted">
+            Bienvenue, {session.user.name ?? "transitaire"}. Vue d’ensemble de ton
+            activité.
+          </p>
+        </div>
+        {forwarder && (
+          <div className="flex flex-col gap-2 sm:items-end">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-hh-muted">
+              <Share2 size={12} />
+              Ma page publique
+            </div>
+            <ShareProfileButton code5={forwarder.code5} />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

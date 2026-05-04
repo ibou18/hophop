@@ -1,9 +1,7 @@
 /**
  * Données de démo : 1 transitaire + 2 clients + colis.
- * Constantes en tête de fichier : email / code5 transitaire, codes colis TRS-SEED0x.
- *
  * Connexion transitaire : SEED_FORWARDER_EMAIL + test123
- * Connexion clients : SEED_CODE5 + email client + test123
+ * Connexion clients : email client + test123
  */
 import "dotenv/config";
 import { hash } from "bcryptjs";
@@ -24,7 +22,6 @@ import {
 const SEED_FORWARDER_EMAIL = "pro1@gmail.com";
 const SEED_CODE5 = "12345";
 
-/** Codes réservés au seed (globalement uniques) — nettoyage si orphelins d’un ancien run / autre tenant. */
 const SEED_TRACKING_CODES = [
   "TRS-SEED01",
   "TRS-SEED02",
@@ -34,77 +31,65 @@ const SEED_TRACKING_CODES = [
 
 function createPrisma(): PrismaClient {
   const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL est requise pour le seed.");
-  }
+  if (!url) throw new Error("DATABASE_URL est requise pour le seed.");
   const pool = new Pool({ connectionString: url });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 
-/** Supprime un transitaire et toutes ses données liées (FK). */
 async function wipeForwarderCascade(
   prisma: PrismaClient,
   forwarderId: string,
 ): Promise<void> {
+  await prisma.shipmentRequest.deleteMany({
+    where: { shipment: { forwarderId } },
+  });
   await prisma.payment.deleteMany({
-    where: { client: { forwarderId } },
+    where: { parcel: { forwarderId } },
   });
   await prisma.notification.deleteMany({
-    where: { client: { forwarderId } },
+    where: { parcel: { forwarderId } },
   });
   await prisma.trackingEvent.deleteMany({
-    where: { parcel: { client: { forwarderId } } },
+    where: { parcel: { forwarderId } },
   });
   await prisma.parcelItem.deleteMany({
-    where: { parcel: { client: { forwarderId } } },
+    where: { parcel: { forwarderId } },
   });
-  await prisma.parcel.deleteMany({
-    where: { client: { forwarderId } },
-  });
+  await prisma.parcel.deleteMany({ where: { forwarderId } });
   await prisma.shipment.deleteMany({ where: { forwarderId } });
-  await prisma.recipient.deleteMany({
-    where: { client: { forwarderId } },
-  });
-  await prisma.client.deleteMany({ where: { forwarderId } });
+  await prisma.clientForwarder.deleteMany({ where: { forwarderId } });
   await prisma.forwarder.delete({ where: { id: forwarderId } });
 }
 
-/**
- * Libère l’email ET le code5 réservés au seed (évite P2002 si un ancien enregistrement
- * n’a plus le même email mais garde encore le code5, ou l’inverse).
- */
 async function wipeSeedForwarder(prisma: PrismaClient): Promise<void> {
   const rows = await prisma.forwarder.findMany({
-    where: {
-      OR: [{ email: SEED_FORWARDER_EMAIL }, { code5: SEED_CODE5 }],
-    },
+    where: { OR: [{ email: SEED_FORWARDER_EMAIL }, { code5: SEED_CODE5 }] },
     select: { id: true },
   });
-  const ids = [...new Set(rows.map((r) => r.id))];
-  for (const id of ids) {
+  for (const id of [...new Set(rows.map((r) => r.id))]) {
     await wipeForwarderCascade(prisma, id);
   }
 }
 
-/** Supprime tout colis portant un code seed (même hors du transitaire courant). */
 async function wipeParcelsBySeedTrackingCodes(prisma: PrismaClient): Promise<void> {
   const codes = [...SEED_TRACKING_CODES];
-  await prisma.payment.deleteMany({
-    where: { parcel: { trackingCode: { in: codes } } },
-  });
-  await prisma.notification.deleteMany({
-    where: { parcel: { trackingCode: { in: codes } } },
-  });
-  await prisma.trackingEvent.deleteMany({
-    where: { parcel: { trackingCode: { in: codes } } },
-  });
-  await prisma.parcelItem.deleteMany({
-    where: { parcel: { trackingCode: { in: codes } } },
-  });
-  await prisma.parcel.deleteMany({
-    where: { trackingCode: { in: codes } },
-  });
+  await prisma.payment.deleteMany({ where: { parcel: { trackingCode: { in: codes } } } });
+  await prisma.notification.deleteMany({ where: { parcel: { trackingCode: { in: codes } } } });
+  await prisma.trackingEvent.deleteMany({ where: { parcel: { trackingCode: { in: codes } } } });
+  await prisma.parcelItem.deleteMany({ where: { parcel: { trackingCode: { in: codes } } } });
+  await prisma.parcel.deleteMany({ where: { trackingCode: { in: codes } } });
+}
+
+async function wipeSeedClients(prisma: PrismaClient): Promise<void> {
+  const emails = ["client1@gmail.com", "client2@gmail.com"];
+  for (const email of emails) {
+    const c = await prisma.client.findUnique({ where: { email }, select: { id: true } });
+    if (c) {
+      await prisma.recipient.deleteMany({ where: { clientId: c.id } });
+      await prisma.client.delete({ where: { id: c.id } });
+    }
+  }
 }
 
 async function main(): Promise<void> {
@@ -114,6 +99,7 @@ async function main(): Promise<void> {
   try {
     await wipeSeedForwarder(prisma);
     await wipeParcelsBySeedTrackingCodes(prisma);
+    await wipeSeedClients(prisma);
 
     const forwarder = await prisma.forwarder.create({
       data: {
@@ -132,7 +118,6 @@ async function main(): Promise<void> {
 
     const client1 = await prisma.client.create({
       data: {
-        forwarderId: forwarder.id,
         firstName: "Mamadou",
         lastName: "Diallo",
         email: "client1@gmail.com",
@@ -144,10 +129,12 @@ async function main(): Promise<void> {
         passwordHash,
       },
     });
+    await prisma.clientForwarder.create({
+      data: { clientId: client1.id, forwarderId: forwarder.id },
+    });
 
     const client2 = await prisma.client.create({
       data: {
-        forwarderId: forwarder.id,
         firstName: "Karim",
         lastName: "Pro Logistics",
         email: "client2@gmail.com",
@@ -158,6 +145,9 @@ async function main(): Promise<void> {
         authMethod: AuthMethod.EMAIL,
         passwordHash,
       },
+    });
+    await prisma.clientForwarder.create({
+      data: { clientId: client2.id, forwarderId: forwarder.id },
     });
 
     const recipient1 = await prisma.recipient.create({
@@ -214,6 +204,7 @@ async function main(): Promise<void> {
     const parcelA = await prisma.parcel.create({
       data: {
         clientId: client1.id,
+        forwarderId: forwarder.id,
         recipientId: recipient1.id,
         trackingCode: "TRS-SEED01",
         status: ParcelStatus.DECLARED,
@@ -231,6 +222,7 @@ async function main(): Promise<void> {
     const parcelB = await prisma.parcel.create({
       data: {
         clientId: client1.id,
+        forwarderId: forwarder.id,
         recipientId: recipient1.id,
         shipmentId: shipment.id,
         trackingCode: "TRS-SEED02",
@@ -247,6 +239,7 @@ async function main(): Promise<void> {
     const parcelC = await prisma.parcel.create({
       data: {
         clientId: client1.id,
+        forwarderId: forwarder.id,
         recipientId: recipient1b.id,
         shipmentId: shipment.id,
         trackingCode: "TRS-SEED03",
@@ -263,6 +256,7 @@ async function main(): Promise<void> {
     const parcelD = await prisma.parcel.create({
       data: {
         clientId: client2.id,
+        forwarderId: forwarder.id,
         recipientId: recipient2.id,
         trackingCode: "TRS-SEED04",
         status: ParcelStatus.COLLECTED,
@@ -276,102 +270,28 @@ async function main(): Promise<void> {
 
     await prisma.parcelItem.createMany({
       data: [
-        {
-          parcelId: parcelA.id,
-          name: "Pulls et tee-shirts",
-          quantity: 6,
-          category: ItemCategory.CLOTHING,
-          weightKg: 2.5,
-        },
-        {
-          parcelId: parcelA.id,
-          name: "Crème hydratante",
-          quantity: 2,
-          category: ItemCategory.COSMETICS,
-          weightKg: 0.4,
-        },
-        {
-          parcelId: parcelB.id,
-          name: "Tablette reconditionnée",
-          quantity: 1,
-          category: ItemCategory.ELECTRONICS,
-          weightKg: 0.6,
-        },
-        {
-          parcelId: parcelD.id,
-          name: "Roulements et joints",
-          quantity: 40,
-          category: ItemCategory.OTHER,
-          weightKg: 6,
-        },
+        { parcelId: parcelA.id, name: "Pulls et tee-shirts", quantity: 6, category: ItemCategory.CLOTHING, weightKg: 2.5 },
+        { parcelId: parcelA.id, name: "Crème hydratante", quantity: 2, category: ItemCategory.COSMETICS, weightKg: 0.4 },
+        { parcelId: parcelB.id, name: "Tablette reconditionnée", quantity: 1, category: ItemCategory.ELECTRONICS, weightKg: 0.6 },
+        { parcelId: parcelD.id, name: "Roulements et joints", quantity: 40, category: ItemCategory.OTHER, weightKg: 6 },
       ],
     });
 
     await prisma.trackingEvent.createMany({
       data: [
-        {
-          parcelId: parcelA.id,
-          type: TrackingEventType.PARCEL_DECLARED,
-          actor: TrackingActor.CLIENT,
-          actorId: client1.id,
-          location: "Montréal",
-          country: Country.CA,
-          note: "Colis déclaré par le client",
-        },
-        {
-          parcelId: parcelB.id,
-          type: TrackingEventType.PARCEL_DECLARED,
-          actor: TrackingActor.CLIENT,
-          actorId: client1.id,
-          country: Country.CA,
-        },
-        {
-          parcelId: parcelB.id,
-          type: TrackingEventType.PARCEL_COLLECTED,
-          actor: TrackingActor.FORWARDER,
-          actorId: forwarder.id,
-          location: "Entrepôt Montréal",
-          country: Country.CA,
-          shipmentId: shipment.id,
-        },
-        {
-          parcelId: parcelB.id,
-          type: TrackingEventType.SHIPMENT_DEPARTED,
-          actor: TrackingActor.FORWARDER,
-          actorId: forwarder.id,
-          location: "Aéroport YUL",
-          country: Country.CA,
-          shipmentId: shipment.id,
-        },
-        {
-          parcelId: parcelC.id,
-          type: TrackingEventType.PARCEL_READY,
-          actor: TrackingActor.FORWARDER,
-          actorId: forwarder.id,
-          location: "Agence Kindia",
-          country: Country.GN,
-          note: "Prêt au retrait — pièce d’identité requise",
-          shipmentId: shipment.id,
-        },
-        {
-          parcelId: parcelD.id,
-          type: TrackingEventType.PARCEL_COLLECTED,
-          actor: TrackingActor.FORWARDER,
-          actorId: forwarder.id,
-          location: "Paris — entrepôt",
-          country: Country.FR,
-        },
+        { parcelId: parcelA.id, type: TrackingEventType.PARCEL_DECLARED, actor: TrackingActor.CLIENT, actorId: client1.id, location: "Montréal", country: Country.CA, note: "Colis déclaré par le client" },
+        { parcelId: parcelB.id, type: TrackingEventType.PARCEL_DECLARED, actor: TrackingActor.CLIENT, actorId: client1.id, country: Country.CA },
+        { parcelId: parcelB.id, type: TrackingEventType.PARCEL_COLLECTED, actor: TrackingActor.FORWARDER, actorId: forwarder.id, location: "Entrepôt Montréal", country: Country.CA, shipmentId: shipment.id },
+        { parcelId: parcelB.id, type: TrackingEventType.SHIPMENT_DEPARTED, actor: TrackingActor.FORWARDER, actorId: forwarder.id, location: "Aéroport YUL", country: Country.CA, shipmentId: shipment.id },
+        { parcelId: parcelC.id, type: TrackingEventType.PARCEL_READY, actor: TrackingActor.FORWARDER, actorId: forwarder.id, location: "Agence Kindia", country: Country.GN, note: "Prêt au retrait — pièce d'identité requise", shipmentId: shipment.id },
+        { parcelId: parcelD.id, type: TrackingEventType.PARCEL_COLLECTED, actor: TrackingActor.FORWARDER, actorId: forwarder.id, location: "Paris — entrepôt", country: Country.FR },
       ],
     });
 
     console.log("Seed terminé.");
     console.log(`Transitaire : ${SEED_FORWARDER_EMAIL} (mdp: test123)`);
-    console.log(
-      `Code5 clients : ${SEED_CODE5} — client1@gmail.com, client2@gmail.com (mdp: test123)`,
-    );
-    console.log(
-      `Colis : ${parcelA.trackingCode}, ${parcelB.trackingCode}, ${parcelC.trackingCode}, ${parcelD.trackingCode}`,
-    );
+    console.log(`Clients : client1@gmail.com, client2@gmail.com (mdp: test123)`);
+    console.log(`Colis : ${parcelA.trackingCode}, ${parcelB.trackingCode}, ${parcelC.trackingCode}, ${parcelD.trackingCode}`);
   } finally {
     await prisma.$disconnect();
   }

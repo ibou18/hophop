@@ -38,7 +38,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const parcels = await prisma.parcel.findMany({
       where: {
         id: { in: parcelIds },
-        client: { forwarderId: auth.forwarderId },
+        forwarderId: auth.forwarderId,
         status: ParcelStatus.COLLECTED,
       },
     });
@@ -68,7 +68,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     where: {
       id: { in: parcelIds },
       shipmentId,
-      client: { forwarderId: auth.forwarderId },
+      forwarderId: auth.forwarderId,
     },
   });
   if (toClear.length !== parcelIds.length) {

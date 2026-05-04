@@ -1,10 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import type { Country } from "@/app/generated/prisma/enums";
 import { COUNTRY_OPTIONS } from "@/lib/country-label-fr";
 import { Button } from "@/components/ui/button";
+import { GooglePlacesAddressField } from "@/components/maps/google-places-address";
+import {
+  forwarderLogoMaxBytes,
+  S3ImageUploadButton,
+} from "@/components/storage/s3-image-upload-button";
 
 export type ForwarderProfileDTO = {
   id: string;
@@ -15,6 +20,9 @@ export type ForwarderProfileDTO = {
   country: Country;
   city: string;
   address: string | null;
+  addressFormatted: string | null;
+  latitude: number | null;
+  longitude: number | null;
   logoUrl: string | null;
   description: string | null;
   paymentEnabled: boolean;
@@ -30,6 +38,7 @@ export function ForwarderSettingsForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [logoUploadErr, setLogoUploadErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const [name, setName] = useState(profile.name);
@@ -37,7 +46,32 @@ export function ForwarderSettingsForm({
   const [country, setCountry] = useState<Country>(profile.country);
   const [city, setCity] = useState(profile.city);
   const [address, setAddress] = useState(profile.address ?? "");
+  const [addressFormatted, setAddressFormatted] = useState(
+    profile.addressFormatted ?? "",
+  );
+  const [latitude, setLatitude] = useState<number | null>(profile.latitude);
+  const [longitude, setLongitude] = useState<number | null>(profile.longitude);
   const [logoUrl, setLogoUrl] = useState(profile.logoUrl ?? "");
+
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  const onPlaceResolved = useCallback(
+    (data: {
+      formattedAddress: string;
+      latitude: number;
+      longitude: number;
+      city?: string;
+      country?: Country;
+    }) => {
+      setAddressFormatted(data.formattedAddress);
+      setAddress(data.formattedAddress);
+      setLatitude(data.latitude);
+      setLongitude(data.longitude);
+      if (data.city) setCity(data.city);
+      if (data.country) setCountry(data.country);
+    },
+    [],
+  );
   const [description, setDescription] = useState(profile.description ?? "");
   const [paymentEnabled, setPaymentEnabled] = useState(profile.paymentEnabled);
   const [stripeAccountId, setStripeAccountId] = useState(
@@ -56,6 +90,10 @@ export function ForwarderSettingsForm({
         paymentEnabled,
         phone: phone.trim() === "" ? null : phone.trim(),
         address: address.trim() === "" ? null : address.trim(),
+        addressFormatted:
+          addressFormatted.trim() === "" ? null : addressFormatted.trim(),
+        latitude,
+        longitude,
         description: description.trim() === "" ? null : description.trim(),
         logoUrl: logoUrl.trim() === "" ? null : logoUrl.trim(),
         stripeAccountId:
@@ -196,31 +234,87 @@ export function ForwarderSettingsForm({
             >
               Adresse
             </label>
-            <textarea
-              id="fwd-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              disabled={pending}
-              rows={2}
-              className="w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 py-2 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
-            />
+            {mapsApiKey ? (
+              <GooglePlacesAddressField
+                apiKey={mapsApiKey}
+                value={addressFormatted || address}
+                onChangeText={(v) => {
+                  setAddressFormatted(v);
+                  setAddress(v);
+                }}
+                onResolved={onPlaceResolved}
+                disabled={pending}
+                placeholder="Rechercher une adresse…"
+                inputClassName="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+              />
+            ) : (
+              <textarea
+                id="fwd-address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                disabled={pending}
+                rows={2}
+                className="w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 py-2 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+              />
+            )}
+            {latitude != null && longitude != null ? (
+              <p className="text-[11px] text-hh-muted">
+                GPS : {latitude.toFixed(5)}, {longitude.toFixed(5)}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <label
-              htmlFor="fwd-logo"
-              className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
-            >
-              URL du logo (HTTPS)
-            </label>
-            <input
-              id="fwd-logo"
-              type="url"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              disabled={pending}
-              placeholder="https://…"
-              className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
-            />
+            <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+              Logo
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[var(--hh-radius-md)] border border-dashed border-hh-sand-dk/40 bg-hh-sand/30">
+                {logoUrl.trim() ? (
+                  <img
+                    src={logoUrl.trim()}
+                    alt="Aperçu du logo"
+                    className="max-h-full max-w-full object-contain p-2"
+                  />
+                ) : (
+                  <span className="px-2 text-center text-[12px] leading-snug text-hh-muted">
+                    Aucun logo
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <S3ImageUploadButton
+                  label={
+                    logoUrl.trim() ? "Modifier le logo" : "Ajouter un logo"
+                  }
+                  disabled={pending}
+                  maxNewFiles={1}
+                  maxBytes={forwarderLogoMaxBytes}
+                  className="h-10 w-fit rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-hh-sand px-3 text-[13px] font-medium text-hh-earth-dk hover:bg-hh-sand-dk/20"
+                  onError={(m) => setLogoUploadErr(m)}
+                  onUploaded={(urls) => {
+                    setLogoUploadErr(null);
+                    const u = urls[0];
+                    if (u) setLogoUrl(u);
+                  }}
+                />
+                {logoUrl.trim() ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setLogoUploadErr(null);
+                      setLogoUrl("");
+                    }}
+                    className="w-fit text-[12px] font-medium text-hh-muted underline-offset-2 hover:text-hh-earth-dk hover:underline disabled:opacity-50"
+                  >
+                    Retirer le logo
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {logoUploadErr ? (
+              <p className="text-[12px] text-hh-kola">{logoUploadErr}</p>
+            ) : null}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <label
