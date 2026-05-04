@@ -6,10 +6,14 @@ import {
 } from "@/lib/require-auth";
 import { patchParcelSchema } from "@/lib/validations/parcel";
 import {
+  NotificationChannel,
+  NotificationStatus,
+  NotificationType,
   ParcelStatus,
   TrackingActor,
   TrackingEventType,
 } from "@/app/generated/prisma/enums";
+import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -96,6 +100,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!existing) return jsonError("Introuvable", 404);
   const data = parsed.data;
   const { status: newStatus, ...rest } = data;
+  const notifyIds: string[] = [];
   const updated = await prisma.$transaction(async (tx) => {
     const p = await tx.parcel.update({
       where: { id },
@@ -120,8 +125,66 @@ export async function PATCH(req: Request, ctx: Ctx) {
           },
         });
       }
+      if (newStatus === ParcelStatus.READY) {
+        const nMail = await tx.notification.create({
+          data: {
+            parcelId: p.id,
+            clientId: p.clientId,
+            channel: NotificationChannel.EMAIL,
+            type: NotificationType.PARCEL_READY,
+            status: NotificationStatus.PENDING,
+          },
+        });
+        notifyIds.push(nMail.id);
+        const nSms = await tx.notification.create({
+          data: {
+            parcelId: p.id,
+            clientId: p.clientId,
+            channel: NotificationChannel.SMS,
+            type: NotificationType.PARCEL_READY,
+            status: NotificationStatus.PENDING,
+          },
+        });
+        notifyIds.push(nSms.id);
+        const nPush = await tx.notification.create({
+          data: {
+            parcelId: p.id,
+            clientId: p.clientId,
+            channel: NotificationChannel.PUSH,
+            type: NotificationType.PARCEL_READY,
+            status: NotificationStatus.PENDING,
+          },
+        });
+        notifyIds.push(nPush.id);
+      }
+      if (newStatus === ParcelStatus.DELIVERED) {
+        const ch = p.client.email
+          ? NotificationChannel.EMAIL
+          : NotificationChannel.SMS;
+        const n = await tx.notification.create({
+          data: {
+            parcelId: p.id,
+            clientId: p.clientId,
+            channel: ch,
+            type: NotificationType.PARCEL_DELIVERED,
+            status: NotificationStatus.PENDING,
+          },
+        });
+        notifyIds.push(n.id);
+        const nPush = await tx.notification.create({
+          data: {
+            parcelId: p.id,
+            clientId: p.clientId,
+            channel: NotificationChannel.PUSH,
+            type: NotificationType.PARCEL_DELIVERED,
+            status: NotificationStatus.PENDING,
+          },
+        });
+        notifyIds.push(nPush.id);
+      }
     }
     return p;
   });
+  scheduleNotificationDispatch(notifyIds);
   return jsonOk(updated);
 }

@@ -14,6 +14,7 @@ import {
   TrackingActor,
   TrackingEventType,
 } from "@/app/generated/prisma/enums";
+import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
 
 export async function GET() {
   const auth = await requireForwarderOrClient();
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
     trackingCode = generateTrackingCode();
   }
   let parcel;
+  const notificationIds: string[] = [];
   try {
     parcel = await prisma.$transaction(async (tx) => {
       const p = await tx.parcel.create({
@@ -145,7 +147,7 @@ export async function POST(req: Request) {
       const channel = clientRow?.email
         ? NotificationChannel.EMAIL
         : NotificationChannel.SMS;
-      await tx.notification.create({
+      const nClient = await tx.notification.create({
         data: {
           parcelId: p.id,
           clientId: auth.clientId,
@@ -154,6 +156,41 @@ export async function POST(req: Request) {
           status: NotificationStatus.PENDING,
         },
       });
+      notificationIds.push(nClient.id);
+
+      const nClientPush = await tx.notification.create({
+        data: {
+          parcelId: p.id,
+          clientId: auth.clientId,
+          channel: NotificationChannel.PUSH,
+          type: NotificationType.PARCEL_REGISTERED,
+          status: NotificationStatus.PENDING,
+        },
+      });
+      notificationIds.push(nClientPush.id);
+
+      const nForwarder = await tx.notification.create({
+        data: {
+          parcelId: p.id,
+          forwarderId: data.forwarderId,
+          channel: NotificationChannel.EMAIL,
+          type: NotificationType.FORWARDER_NEW_PARCEL_DECLARED,
+          status: NotificationStatus.PENDING,
+        },
+      });
+      notificationIds.push(nForwarder.id);
+
+      const nForwarderPush = await tx.notification.create({
+        data: {
+          parcelId: p.id,
+          forwarderId: data.forwarderId,
+          channel: NotificationChannel.PUSH,
+          type: NotificationType.FORWARDER_NEW_PARCEL_DECLARED,
+          status: NotificationStatus.PENDING,
+        },
+      });
+      notificationIds.push(nForwarderPush.id);
+
       return p;
     });
   } catch (error) {
@@ -171,5 +208,6 @@ export async function POST(req: Request) {
     trackingCode: parcel.trackingCode,
     clientId: auth.clientId,
   });
+  scheduleNotificationDispatch(notificationIds);
   return jsonOk(parcel, 201);
 }

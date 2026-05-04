@@ -9,6 +9,7 @@ import {
   NotificationStatus,
   NotificationType,
 } from "@/app/generated/prisma/enums";
+import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
 
 type Ctx = { params: Promise<{ id: string; parcelId: string }> };
 
@@ -57,14 +58,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const data = parsed.data;
 
   if (data.action === "accept") {
-    const updated = await prisma.$transaction(async (tx) => {
-      // Affecter le colis à l'envoi
+    const { updated, notifyIds } = await prisma.$transaction(async (tx) => {
       await tx.parcel.update({
         where: { id: parcelId },
         data: { shipmentId },
       });
 
-      // Créer un TrackingEvent
       await tx.trackingEvent.create({
         data: {
           parcelId,
@@ -76,11 +75,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
         },
       });
 
-      // Notifier le client
       const channel = request.client.email
         ? NotificationChannel.EMAIL
         : NotificationChannel.SMS;
-      await tx.notification.create({
+      const created = await tx.notification.create({
         data: {
           parcelId,
           clientId: request.clientId,
@@ -89,24 +87,35 @@ export async function PATCH(req: Request, ctx: Ctx) {
           status: NotificationStatus.PENDING,
         },
       });
+      const push = await tx.notification.create({
+        data: {
+          parcelId,
+          clientId: request.clientId,
+          channel: NotificationChannel.PUSH,
+          type: NotificationType.SHIPMENT_REQUEST_ACCEPTED,
+          status: NotificationStatus.PENDING,
+        },
+      });
 
-      return tx.shipmentRequest.update({
+      const updated = await tx.shipmentRequest.update({
         where: { parcelId },
         data: {
           status: "ACCEPTED",
           forwarderNote: data.forwarderNote ?? null,
         },
       });
+      return { updated, notifyIds: [created.id, push.id] };
     });
+    scheduleNotificationDispatch(notifyIds);
     return jsonOk(updated);
   }
 
   if (data.action === "reject") {
-    const updated = await prisma.$transaction(async (tx) => {
+    const { updated, notifyIds } = await prisma.$transaction(async (tx) => {
       const channel = request.client.email
         ? NotificationChannel.EMAIL
         : NotificationChannel.SMS;
-      await tx.notification.create({
+      const created = await tx.notification.create({
         data: {
           parcelId,
           clientId: request.clientId,
@@ -115,15 +124,26 @@ export async function PATCH(req: Request, ctx: Ctx) {
           status: NotificationStatus.PENDING,
         },
       });
+      const push = await tx.notification.create({
+        data: {
+          parcelId,
+          clientId: request.clientId,
+          channel: NotificationChannel.PUSH,
+          type: NotificationType.SHIPMENT_REQUEST_REJECTED,
+          status: NotificationStatus.PENDING,
+        },
+      });
 
-      return tx.shipmentRequest.update({
+      const updated = await tx.shipmentRequest.update({
         where: { parcelId },
         data: {
           status: "REJECTED",
           forwarderNote: data.forwarderNote ?? null,
         },
       });
+      return { updated, notifyIds: [created.id, push.id] };
     });
+    scheduleNotificationDispatch(notifyIds);
     return jsonOk(updated);
   }
 

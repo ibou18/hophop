@@ -10,6 +10,7 @@ import {
   TrackingActor,
   TrackingEventType,
 } from "@/app/generated/prisma/enums";
+import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,6 +27,7 @@ export async function POST(_req: Request, ctx: Ctx) {
     return jsonError("Envoi doit être en transit", 409);
   }
   const now = new Date();
+  const notifyIds: string[] = [];
   await prisma.$transaction(async (tx) => {
     await tx.shipment.update({
       where: { id },
@@ -48,25 +50,38 @@ export async function POST(_req: Request, ctx: Ctx) {
           shipmentId: id,
         },
       });
-      await tx.notification.createMany({
-        data: [
-          {
-            parcelId: parcel.id,
-            clientId: parcel.clientId,
-            channel: NotificationChannel.EMAIL,
-            type: NotificationType.SHIPMENT_ARRIVED,
-            status: NotificationStatus.PENDING,
-          },
-          {
-            parcelId: parcel.id,
-            clientId: parcel.clientId,
-            channel: NotificationChannel.SMS,
-            type: NotificationType.SHIPMENT_ARRIVED,
-            status: NotificationStatus.PENDING,
-          },
-        ],
+      const n1 = await tx.notification.create({
+        data: {
+          parcelId: parcel.id,
+          clientId: parcel.clientId,
+          channel: NotificationChannel.EMAIL,
+          type: NotificationType.SHIPMENT_ARRIVED,
+          status: NotificationStatus.PENDING,
+        },
       });
+      notifyIds.push(n1.id);
+      const n2 = await tx.notification.create({
+        data: {
+          parcelId: parcel.id,
+          clientId: parcel.clientId,
+          channel: NotificationChannel.SMS,
+          type: NotificationType.SHIPMENT_ARRIVED,
+          status: NotificationStatus.PENDING,
+        },
+      });
+      notifyIds.push(n2.id);
+      const n3 = await tx.notification.create({
+        data: {
+          parcelId: parcel.id,
+          clientId: parcel.clientId,
+          channel: NotificationChannel.PUSH,
+          type: NotificationType.SHIPMENT_ARRIVED,
+          status: NotificationStatus.PENDING,
+        },
+      });
+      notifyIds.push(n3.id);
     }
   });
+  scheduleNotificationDispatch(notifyIds);
   return jsonOk({ ok: true });
 }

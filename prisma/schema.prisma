@@ -63,10 +63,12 @@ enum PaymentMethod {
 enum NotificationChannel {
   EMAIL
   SMS
+  PUSH // Expo / app mobile
 }
 
 enum NotificationType {
   PARCEL_REGISTERED // Colis enregistré
+  FORWARDER_NEW_PARCEL_DECLARED // Nouveau colis déclaré (notif transitaire)
   SHIPMENT_DEPARTURE // Envoi parti
   SHIPMENT_ARRIVED // Envoi arrivé
   PARCEL_READY // Prêt à récupérer
@@ -194,9 +196,11 @@ model Forwarder {
 
   // Relations
   clients   ClientForwarder[]
-  shipments Shipment[]
-  parcels   Parcel[]
-  tariffs   ForwarderTariff[]
+  shipments     Shipment[]
+  parcels       Parcel[]
+  tariffs         ForwarderTariff[]
+  notifications   Notification[]
+  expoPushTokens  ExpoPushToken[]
 
   @@map("forwarders")
 }
@@ -232,6 +236,7 @@ model Client {
   payments         Payment[]
   notifications    Notification[]
   shipmentRequests ShipmentRequest[]
+  expoPushTokens   ExpoPushToken[]
 
   @@map("clients")
 }
@@ -549,13 +554,42 @@ model ForwarderTariff {
 }
 
 // ─────────────────────────────────────────────
-// NOTIFICATION — Emails et SMS envoyés
+// EXPO PUSH — jetons d’appareil (app mobile)
+// ─────────────────────────────────────────────
+
+model ExpoPushToken {
+  id       String  @id @default(uuid())
+  /// Jeton retourné par `expo-notifications` (Expo push token)
+  token    String  @unique
+  /// `ios` | `android` (optionnel, pour debug / filtrage)
+  platform String?
+
+  clientId    String?
+  forwarderId String?
+
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  client    Client?    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  forwarder Forwarder? @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([forwarderId])
+  @@map("expo_push_tokens")
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATION — Emails, SMS, push
 // ─────────────────────────────────────────────
 
 model Notification {
   id       String @id @default(uuid())
   parcelId String
-  clientId String
+
+  /// Destinataire client (la plupart des notifs)
+  clientId String?
+  /// Destinataire transitaire (ex. nouveau colis déclaré)
+  forwarderId String?
 
   channel NotificationChannel
   type    NotificationType
@@ -569,8 +603,10 @@ model Notification {
   createdAt DateTime  @default(now())
 
   // Relations
-  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
-  client Client @relation(fields: [clientId], references: [id])
+  parcel    Parcel     @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  client    Client?    @relation(fields: [clientId], references: [id])
+  forwarder Forwarder? @relation(fields: [forwarderId], references: [id])
 
+  @@index([status, createdAt])
   @@map("notifications")
 }
