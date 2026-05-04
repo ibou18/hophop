@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -83,7 +84,20 @@ export function RegisterForwarderForm() {
       setApiError(data.error ?? "Inscription impossible.");
       return;
     }
-    router.push("/login?registered=1");
+    const signInRes = await signIn("forwarder-credentials", {
+      email: values.email.trim().toLowerCase(),
+      password: values.password,
+      redirect: false,
+    });
+    if (signInRes?.error) {
+      setApiError(
+        "Compte créé. La connexion automatique a échoué — utilise la page Connexion.",
+      );
+      router.push("/login?registered=1");
+      return;
+    }
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
