@@ -11,6 +11,7 @@ export type ForwarderShipmentListRow = Prisma.ShipmentGetPayload<{
 }>;
 
 const shipmentDetailInclude = {
+  forwarder: { select: { code5: true, name: true } },
   parcels: {
     orderBy: { createdAt: "asc" as const },
     include: {

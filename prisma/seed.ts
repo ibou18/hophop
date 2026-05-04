@@ -23,10 +23,10 @@ const SEED_FORWARDER_EMAIL = "pro1@gmail.com";
 const SEED_CODE5 = "12345";
 
 const SEED_TRACKING_CODES = [
-  "TRS-SEED01",
-  "TRS-SEED02",
-  "TRS-SEED03",
-  "TRS-SEED04",
+  "HOP-SEED01",
+  "HOP-SEED02",
+  "HOP-SEED03",
+  "HOP-SEED04",
 ] as const;
 
 function createPrisma(): PrismaClient {
@@ -206,7 +206,7 @@ async function main(): Promise<void> {
         clientId: client1.id,
         forwarderId: forwarder.id,
         recipientId: recipient1.id,
-        trackingCode: "TRS-SEED01",
+        trackingCode: "HOP-SEED01",
         status: ParcelStatus.DECLARED,
         weightKg: 4.2,
         lengthCm: 45,
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
         forwarderId: forwarder.id,
         recipientId: recipient1.id,
         shipmentId: shipment.id,
-        trackingCode: "TRS-SEED02",
+        trackingCode: "HOP-SEED02",
         status: ParcelStatus.IN_TRANSIT,
         weightKg: 12.5,
         description: "Carton électronique + chargeurs",
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
         forwarderId: forwarder.id,
         recipientId: recipient1b.id,
         shipmentId: shipment.id,
-        trackingCode: "TRS-SEED03",
+        trackingCode: "HOP-SEED03",
         status: ParcelStatus.READY,
         weightKg: 2.1,
         description: "Documents administratifs",
@@ -258,7 +258,7 @@ async function main(): Promise<void> {
         clientId: client2.id,
         forwarderId: forwarder.id,
         recipientId: recipient2.id,
-        trackingCode: "TRS-SEED04",
+        trackingCode: "HOP-SEED04",
         status: ParcelStatus.COLLECTED,
         weightKg: 8,
         description: "Matériel pro — pièces détachées",

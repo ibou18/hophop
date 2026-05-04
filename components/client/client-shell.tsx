@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, PlusCircle, Users, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  PlusCircle,
+  Truck,
+  Users,
+} from "lucide-react";
 import { HopLogo } from "@/components/auth/hop-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/client/dashboard", label: "Accueil", icon: LayoutDashboard },
+  { href: "/client/shipments", label: "Envois", icon: Truck },
   { href: "/client/parcels", label: "Mes colis", icon: Package },
   { href: "/client/declare", label: "Déclarer", icon: PlusCircle },
   { href: "/client/recipients", label: "Proches", icon: Users },
@@ -16,6 +23,9 @@ const NAV = [
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/client/dashboard") return pathname === "/client/dashboard";
+  if (href === "/client/shipments") {
+    return pathname === "/client/shipments" || pathname.startsWith("/client/shipments/");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -32,9 +42,14 @@ export function ClientShell({
     <div className="flex min-h-screen flex-col bg-hh-sand">
       {/* Header */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-hh-sand-dk/25 bg-hh-earth-lt px-4 sm:px-6">
-        <Link href="/client/dashboard" className="flex items-center gap-2">
-          <HopLogo />
-          <span className="text-[11px] font-normal text-hh-muted hidden sm:block">
+        <Link
+          href="/client/dashboard"
+          className="flex min-w-0 items-center gap-2"
+        >
+          <span className="shrink-0 sm:hidden">
+            <HopLogo variant="wide" height={32} />
+          </span>
+          <span className="hidden text-[15px] font-medium text-hh-earth-dk sm:inline">
             Espace client
           </span>
         </Link>
@@ -49,6 +64,15 @@ export function ClientShell({
       <div className="flex flex-1">
         {/* Sidebar desktop */}
         <nav className="hidden w-56 shrink-0 flex-col border-r border-hh-sand-dk/20 bg-hh-earth-lt py-6 sm:flex">
+          <div className="px-3 pb-5">
+            <Link
+              href="/client/dashboard"
+              className="inline-flex rounded-[var(--hh-radius-md)] p-1 transition hover:bg-hh-saffron/10"
+              aria-label="Hophop — accueil client"
+            >
+              <HopLogo variant="mark" height={44} />
+            </Link>
+          </div>
           <div className="flex flex-col gap-1 px-3">
             {NAV.map((item) => {
               const active = isActive(item.href, pathname);

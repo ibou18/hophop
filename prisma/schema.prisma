@@ -309,7 +309,7 @@ model Parcel {
   shipmentId  String? // Null jusqu'à l'affectation à un envoi
 
   // Code de tracking — affiché en QR code + format humain lisible
-  // ex: "TRS-A3F9K2" — généré à la création
+  // ex: "HOP-A3F9K2" — généré à la création
   trackingCode String @unique
 
   status ParcelStatus @default(DECLARED)

@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       originCountry: data.originCountry,
       destinationCountry: data.destinationCountry,
       destinationCity: data.destinationCity ?? null,
-      departureDate: data.departureDate ?? null,
+      departureDate: data.departureDate,
       arrivalDate: data.arrivalDate ?? null,
       notes: data.notes ?? null,
     },

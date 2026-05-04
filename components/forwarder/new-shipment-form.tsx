@@ -5,8 +5,14 @@ import { useState, useTransition } from "react";
 import type { Country } from "@/app/generated/prisma/enums";
 import { COUNTRY_OPTIONS } from "@/lib/country-label-fr";
 import { Button } from "@/components/ui/button";
+import { isoDateUtcToday } from "@/lib/iso-date-utc";
 
-export function NewShipmentForm() {
+type Props = {
+  /** Fourni par la page RSC pour éviter tout décalage SSR / client sur la date du jour. */
+  defaultDepartureDate: string;
+};
+
+export function NewShipmentForm({ defaultDepartureDate }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -14,6 +20,8 @@ export function NewShipmentForm() {
   const [destinationCountry, setDestinationCountry] = useState<Country>("GN");
   const [destinationCity, setDestinationCity] = useState("");
   const [notes, setNotes] = useState("");
+  const minDate = defaultDepartureDate || isoDateUtcToday();
+  const [departureDate, setDepartureDate] = useState(minDate);
 
   function submit(e: React.FormEvent): void {
     e.preventDefault();
@@ -27,6 +35,7 @@ export function NewShipmentForm() {
           originCountry,
           destinationCountry,
           destinationCity: destinationCity.trim() || undefined,
+          departureDate,
           notes: notes.trim() || undefined,
         }),
       });
@@ -39,7 +48,6 @@ export function NewShipmentForm() {
       }
       if (json?.id) {
         router.push(`/shipments/${json.id}`);
-        router.refresh();
         return;
       }
       setError("Réponse inattendue du serveur.");
@@ -86,6 +94,30 @@ export function NewShipmentForm() {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor="departure-date"
+          className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
+        >
+          Date d’envoi
+        </label>
+        <input
+          id="departure-date"
+          type="date"
+          required
+          min={minDate}
+          suppressHydrationWarning
+          value={departureDate}
+          onChange={(e) => setDepartureDate(e.target.value)}
+          disabled={pending}
+          className="h-10 w-full max-w-xs rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
+        />
+        <p className="text-[12px] text-hh-muted">
+          Passée cette date (UTC), l’envoi ne sera plus proposé sur la vitrine ni dans le catalogue
+          client.
+        </p>
       </div>
 
       <div className="space-y-1.5">

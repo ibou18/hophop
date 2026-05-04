@@ -17,6 +17,7 @@ import { ShipmentDetailActions } from "@/components/forwarder/shipment-detail-ac
 import { ShipmentParcelsAssignment } from "@/components/forwarder/shipment-parcels-assignment";
 import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
 import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
+import { ShipmentShareBlock } from "@/components/forwarder/shipment-share-block";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ id: string }> };
@@ -113,6 +114,16 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
           />
         </div>
       </section>
+
+      <ShipmentShareBlock
+        code5={shipment.forwarder.code5}
+        shipmentId={shipment.id}
+        reference={shipment.reference}
+        originCountry={shipment.originCountry}
+        destinationCountry={shipment.destinationCountry}
+        forwarderName={shipment.forwarder.name}
+        isPublished={shipment.isPublished}
+      />
 
       <ShipmentDetailActions
         shipmentId={shipment.id}

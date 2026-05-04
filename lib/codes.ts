@@ -5,10 +5,13 @@ export function generateCode5(): string {
 
 const TRACKING_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-/** Code colis TRS-XXXXXX (spec). */
+/** Préfixe codes colis (landing + PDF + QR). Anciens colis peuvent encore être en TRS-. */
+export const TRACKING_CODE_PREFIX = "HOP-";
+
+/** Code colis HOP-XXXXXX (6 caractères alphanumériques). */
 export function generateTrackingCode(): string {
   const part = Array.from({ length: 6 }, () => {
     return TRACKING_CHARS[Math.floor(Math.random() * TRACKING_CHARS.length)]!;
   }).join("");
-  return `TRS-${part}`;
+  return `${TRACKING_CODE_PREFIX}${part}`;
 }

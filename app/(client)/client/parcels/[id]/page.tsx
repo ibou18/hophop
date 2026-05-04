@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ArrowLeft, Package, Printer } from "lucide-react";
-import { getClientParcelDetail, getAvailableShipments } from "@/lib/client-data";
+import { getClientParcelDetail, getParcelShipmentJoinData } from "@/lib/client-data";
 import { ParcelStatusBadge } from "@/components/client/parcel-status-badge";
 import { TrackingTimeline } from "@/components/client/tracking-timeline";
 import { ParcelQrCode } from "@/components/client/parcel-qr-code";
@@ -25,9 +25,9 @@ export default async function ClientParcelDetailPage({ params }: Props) {
     redirect("/login");
   }
 
-  const [parcel, availableShipments] = await Promise.all([
+  const [parcel, joinData] = await Promise.all([
     getClientParcelDetail(clientId, id),
-    getAvailableShipments(clientId),
+    getParcelShipmentJoinData(clientId, id),
   ]);
   if (!parcel) notFound();
 
@@ -190,7 +190,12 @@ export default async function ClientParcelDetailPage({ params }: Props) {
         <JoinShipmentPanel
           parcelId={parcel.id}
           shipmentRequest={parcel.shipmentRequest ?? null}
-          availableShipments={availableShipments}
+          availableShipments={joinData.shipments}
+          isLinkedToForwarder={joinData.isLinkedToForwarder}
+          forwarderProfileHref={
+            joinData.forwarderCode5 ? `/p/${joinData.forwarderCode5}` : null
+          }
+          forwarderName={joinData.forwarderName}
         />
       )}
     </div>

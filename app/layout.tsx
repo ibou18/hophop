@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
+import iconMark from "@/assets/logos/logo.png";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -22,6 +23,9 @@ export const metadata: Metadata = {
     template: "%s | Hophop",
   },
   description: "Suivi de colis et gestion transitaire",
+  icons: {
+    icon: [{ url: iconMark.src, type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

@@ -5,7 +5,7 @@ import { TrackingSearch } from "@/components/landing/tracking-search";
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-hh-sand px-5 text-center">
-      <HopLogo />
+      <HopLogo href="/" variant="wide" height={40} />
 
       <div className="flex flex-col items-center gap-3">
         <span className="text-6xl font-bold text-hh-sand-dk">404</span>

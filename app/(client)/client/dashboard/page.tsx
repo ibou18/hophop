@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Package, PlusCircle, Users, ArrowRight } from "lucide-react";
+import { Package, PlusCircle, Truck, Users, ArrowRight } from "lucide-react";
 import { getClientDashboardData } from "@/lib/client-data";
 import { ParcelStatusBadge } from "@/components/client/parcel-status-badge";
 import { countryLabelFr } from "@/lib/country-label-fr";
@@ -32,6 +32,22 @@ export default async function ClientDashboardPage() {
           Voici l'état de tes envois en cours.
         </p>
       </div>
+
+      <Link
+        href="/client/shipments"
+        className="flex items-center justify-between rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white px-5 py-4 shadow-sm ring-1 ring-hh-sand-dk/15 transition-colors hover:bg-hh-sand/40"
+      >
+        <div className="flex items-center gap-3">
+          <Truck size={22} strokeWidth={1.5} className="text-hh-saffron-dk" />
+          <div>
+            <p className="text-[15px] font-medium text-hh-earth-dk">Voir les envois publics</p>
+            <p className="text-[12px] text-hh-muted">
+              Départs publiés par les transitaires
+            </p>
+          </div>
+        </div>
+        <ArrowRight size={18} strokeWidth={1.5} className="text-hh-saffron-dk" />
+      </Link>
 
       {/* Quick action */}
       <Link

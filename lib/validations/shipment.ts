@@ -2,14 +2,43 @@ import { z } from "zod";
 
 const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
 
-export const createShipmentSchema = z.object({
-  originCountry: country,
-  destinationCountry: country,
-  destinationCity: z.string().optional(),
-  departureDate: z.coerce.date().optional(),
-  arrivalDate: z.coerce.date().optional(),
-  notes: z.string().optional(),
-});
+export const createShipmentSchema = z
+  .object({
+    originCountry: country,
+    destinationCountry: country,
+    destinationCity: z.string().optional(),
+    departureDate: z.coerce.date({
+      message: "La date d’envoi est requise",
+    }),
+    arrivalDate: z.coerce.date().optional(),
+    notes: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      const dep = data.departureDate.getTime();
+      const min = startOfTodayUtcMs();
+      return dep >= min;
+    },
+    {
+      message:
+        "La date d’envoi doit être aujourd’hui (UTC) ou une date ultérieure",
+      path: ["departureDate"],
+    },
+  );
+
+/** Minuit UTC du jour courant en timestamp (comparaison avec Date complète). */
+function startOfTodayUtcMs(): number {
+  const now = new Date();
+  return Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
 
 export const patchShipmentSchema = z.object({
   status: z

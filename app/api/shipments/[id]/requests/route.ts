@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
 import { requireClient, requireForwarder } from "@/lib/require-auth";
+import { clientJoinableShipmentWhere } from "@/lib/shipment-public-visibility";
 import { z } from "zod";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -70,8 +71,7 @@ export async function POST(req: Request, ctx: Ctx) {
   const shipment = await prisma.shipment.findFirst({
     where: {
       id: shipmentId,
-      isPublished: true,
-      status: { in: ["DRAFT", "CONFIRMED"] },
+      ...clientJoinableShipmentWhere(),
       forwarder: {
         clients: { some: { clientId: auth.clientId } },
       },

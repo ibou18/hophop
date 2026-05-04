@@ -13,8 +13,8 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen bg-hh-sand flex flex-col">
-      <header className="flex flex-col items-center gap-1 pt-10 pb-6 px-6">
-        <HopLogo href="/" />
+      <header className="flex flex-col items-center gap-2 pt-10 pb-6 px-6">
+        <HopLogo href="/" variant="wide" height={44} priority />
         <p className="text-[11px] font-normal text-hh-muted tracking-normal">
           Suivi de colis, transitaires & expéditeurs
         </p>

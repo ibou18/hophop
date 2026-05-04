@@ -2,12 +2,15 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { NewShipmentForm } from "@/components/forwarder/new-shipment-form";
+import { isoDateUtcToday } from "@/lib/iso-date-utc";
 
 export default async function NewShipmentPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "FORWARDER") {
     redirect("/login");
   }
+
+  const departureDateDefault = isoDateUtcToday();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
@@ -26,7 +29,7 @@ export default async function NewShipmentPage() {
           Collecté » depuis la fiche envoi.
         </p>
       </div>
-      <NewShipmentForm />
+      <NewShipmentForm defaultDepartureDate={departureDateDefault} />
     </div>
   );
 }

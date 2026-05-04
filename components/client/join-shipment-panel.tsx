@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -35,10 +36,17 @@ export function JoinShipmentPanel({
   parcelId,
   shipmentRequest,
   availableShipments,
+  isLinkedToForwarder,
+  forwarderProfileHref,
+  forwarderName,
 }: {
   parcelId: string;
   shipmentRequest: ShipmentRequestInfo;
   availableShipments: AvailableShipmentRow[];
+  /** Lien ClientForwarder requis par l’API pour envoyer la demande. */
+  isLinkedToForwarder: boolean;
+  forwarderProfileHref: string | null;
+  forwarderName: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -76,8 +84,26 @@ export function JoinShipmentPanel({
         Rejoindre un envoi
       </h2>
       <p className="mt-1 text-[13px] text-hh-muted">
-        Demande à intégrer ce colis à un envoi publié par ton transitaire.
+        Associe ce colis à un départ publié par le transitaire qui gère déjà ce colis.
       </p>
+
+      {!isLinkedToForwarder &&
+        availableShipments.length > 0 &&
+        forwarderProfileHref &&
+        forwarderName && (
+          <div className="mt-4 rounded-[var(--hh-radius-md)] border border-amber-200/80 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+            <p>
+              Pour envoyer une demande, associe d&apos;abord ton compte à{" "}
+              <strong>{forwarderName}</strong> depuis sa page publique.
+            </p>
+            <Link
+              href={forwarderProfileHref}
+              className="mt-2 inline-flex font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
+            >
+              Ouvrir la fiche transitaire →
+            </Link>
+          </div>
+        )}
 
       {/* Current request status */}
       {shipmentRequest && (
@@ -155,12 +181,18 @@ export function JoinShipmentPanel({
 
               <Button
                 type="button"
-                disabled={!selectedId || pending}
+                disabled={!selectedId || pending || !isLinkedToForwarder}
                 onClick={handleSubmit}
                 className="self-start bg-hh-saffron text-white hover:bg-hh-saffron-dk disabled:opacity-50"
               >
                 {pending ? "Envoi…" : "Envoyer la demande"}
               </Button>
+              {!isLinkedToForwarder && selectedId ? (
+                <p className="text-[12px] text-hh-muted">
+                  Lie ton compte au transitaire (lien ci-dessus) pour activer l&apos;envoi de la
+                  demande.
+                </p>
+              ) : null}
             </>
           )}
         </div>

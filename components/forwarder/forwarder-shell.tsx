@@ -9,7 +9,7 @@ import {
   Truck,
   UsersRound,
 } from "lucide-react";
-import { HopLogo } from "@/components/auth/hop-logo";
+import { HopLogoSidebarBrand } from "@/components/auth/hop-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import {
   Sidebar,
@@ -59,15 +59,11 @@ export function ForwarderShell({
         className="border-hh-sand-dk/25 bg-hh-earth-lt text-hh-earth-dk [&_[data-slot=sidebar-inner]]:bg-hh-earth-lt"
       >
         <SidebarHeader className="border-b border-hh-sand-dk/15">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 rounded-[var(--hh-radius-md)] px-2 py-2 transition-colors hover:bg-hh-saffron/10 outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
-          >
-            <HopLogo />
+          <HopLogoSidebarBrand href="/dashboard">
             <span className="text-[11px] font-normal text-hh-muted group-data-[collapsible=icon]:hidden">
               Espace transitaire
             </span>
-          </Link>
+          </HopLogoSidebarBrand>
         </SidebarHeader>
 
         <SidebarContent>
