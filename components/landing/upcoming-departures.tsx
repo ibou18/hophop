@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Plane, Ship, Truck, Package, ArrowRight, CalendarDays } from "lucide-react";
+import {
+  Plane,
+  Ship,
+  Truck,
+  Package,
+  ArrowRight,
+  CalendarDays,
+} from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { PublicUpcomingShipment } from "@/lib/public-shipments-data";
@@ -17,31 +24,69 @@ const COUNTRY_FLAG: Record<string, string> = {
 
 const MODE: Record<
   TransportMode,
-  { Icon: typeof Plane; label: string; iconColor: string; iconBg: string; bar: string }
+  {
+    Icon: typeof Plane;
+    label: string;
+    iconColor: string;
+    iconBg: string;
+    bar: string;
+  }
 > = {
-  AIR:  { Icon: Plane, label: "Avion",    iconColor: "#0369a1", iconBg: "rgba(14,165,233,0.12)", bar: "#38bdf8" },
-  SEA:  { Icon: Ship,  label: "Maritime", iconColor: "#0f766e", iconBg: "rgba(20,184,166,0.12)", bar: "#2dd4bf" },
-  ROAD: { Icon: Truck, label: "Route",    iconColor: "#b45309", iconBg: "rgba(245,158,11,0.12)", bar: "#fbbf24" },
+  AIR: {
+    Icon: Plane,
+    label: "Avion",
+    iconColor: "#0369a1",
+    iconBg: "rgba(14,165,233,0.12)",
+    bar: "#38bdf8",
+  },
+  SEA: {
+    Icon: Ship,
+    label: "Maritime",
+    iconColor: "#0f766e",
+    iconBg: "rgba(20,184,166,0.12)",
+    bar: "#2dd4bf",
+  },
+  ROAD: {
+    Icon: Truck,
+    label: "Route",
+    iconColor: "#b45309",
+    iconBg: "rgba(245,158,11,0.12)",
+    bar: "#fbbf24",
+  },
 };
 
 function Countdown({ date }: { date: Date }) {
   const days = differenceInCalendarDays(date, new Date());
-  if (days === 0) return <span className="font-semibold text-hh-kola">Aujourd'hui !</span>;
-  if (days === 1) return <span className="font-semibold text-hh-saffron">Demain</span>;
-  if (days <= 7)  return <span className="font-semibold text-hh-saffron">Dans {days} j.</span>;
+  if (days === 0)
+    return (
+      <span className="font-semibold text-hh-kola">Aujourd&apos;hui !</span>
+    );
+  if (days === 1)
+    return <span className="font-semibold text-hh-saffron">Demain</span>;
+  if (days <= 7)
+    return (
+      <span className="font-semibold text-hh-saffron">Dans {days} j.</span>
+    );
   return <span className="font-medium text-white/60">Dans {days} j.</span>;
 }
 
-export function UpcomingDepartures({ shipments }: { shipments: PublicUpcomingShipment[] }) {
+export function UpcomingDepartures({
+  shipments,
+}: {
+  shipments: PublicUpcomingShipment[];
+}) {
   if (shipments.length === 0) return null;
 
   return (
-    <section className="bg-hh-nuit px-5 py-20">
+    <section className="bg-hh-nuit px-5 pt-4 pb-10 sm:pt-6">
       {/* Subtle radial glow top-center */}
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 -mt-20 h-72 w-72 -translate-x-1/2 rounded-full"
-        style={{ background: "radial-gradient(circle, rgba(232,130,12,0.12) 0%, transparent 70%)" }}
+        style={{
+          background:
+            "radial-gradient(circle, rgba(232,130,12,0.12) 0%, transparent 70%)",
+        }}
       />
 
       <div className="relative mx-auto max-w-5xl">
@@ -54,7 +99,8 @@ export function UpcomingDepartures({ shipments }: { shipments: PublicUpcomingShi
             Prochains départs
           </h2>
           <p className="mt-3 max-w-md text-sm text-white/45">
-            Ces envois groupés partent bientôt. Inscrivez-vous et rejoignez l'un d'eux pour expédier votre colis.
+            Ces envois groupés partent bientôt. Inscrivez-vous et rejoignez
+            l&apos;un d&apos;eux pour expédier votre colis.
           </p>
         </div>
 
@@ -77,7 +123,9 @@ export function UpcomingDepartures({ shipments }: { shipments: PublicUpcomingShi
                   <div
                     aria-hidden
                     className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    style={{ boxShadow: "inset 0 0 40px rgba(232,130,12,0.08)" }}
+                    style={{
+                      boxShadow: "inset 0 0 40px rgba(232,130,12,0.08)",
+                    }}
                   />
                 )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Loader2, X } from "lucide-react";
@@ -10,6 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
+import type { Country } from "@/app/generated/prisma/enums";
+import { createClientSchema } from "@/lib/validations/client";
+import { PhoneCountryField } from "@/components/forms/phone-country-field";
 
 type Tab = "login" | "register";
 
@@ -35,6 +38,9 @@ export function ForwarderAuthModal({
   const [tab, setTab] = useState<Tab>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [regCountry, setRegCountry] = useState<Country>("FR");
+  const [regPhoneNational, setRegPhoneNational] = useState("");
+  const onRegPhoneNational = useCallback((v: string) => setRegPhoneNational(v), []);
 
   async function linkForwarder() {
     await fetch("/api/client/forwarders", {
@@ -72,21 +78,23 @@ export function ForwarderAuthModal({
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const body = {
+    const parsed = createClientSchema.safeParse({
       code5,
       firstName: String(fd.get("firstName") ?? "").trim(),
       lastName: String(fd.get("lastName") ?? "").trim(),
       email: String(fd.get("email") ?? "").trim().toLowerCase(),
+      phone: regPhoneNational,
       password: String(fd.get("password") ?? ""),
-      country: String(fd.get("country") ?? "FR"),
-      authMethod: "EMAIL",
-    };
-    if (!body.firstName || !body.lastName || !body.email || !body.password) {
-      return setError("Tous les champs sont requis.");
+      country: regCountry,
+      authMethod: "EMAIL" as const,
+      address: "",
+      city: "",
+    });
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? "Données invalides.";
+      return setError(msg);
     }
-    if (body.password.length < 8) {
-      return setError("Le mot de passe doit contenir au moins 8 caractères.");
-    }
+    const body = parsed.data;
     setLoading(true);
     const res = await fetch("/api/clients", {
       method: "POST",
@@ -211,6 +219,33 @@ export function ForwarderAuthModal({
                 </div>
               </div>
               <div>
+                <label className={labelClass}>Pays</label>
+                <select
+                  value={regCountry}
+                  onChange={(e) => setRegCountry(e.target.value as Country)}
+                  className={inputClass}
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="modal-reg-phone">
+                  Téléphone
+                </label>
+                <PhoneCountryField
+                  id="modal-reg-phone"
+                  country={regCountry}
+                  nationalFormatted={regPhoneNational}
+                  onNationalChange={onRegPhoneNational}
+                  disabled={loading}
+                  inputClassName={inputClass}
+                />
+              </div>
+              <div>
                 <label className={labelClass}>Email</label>
                 <input
                   name="email"
@@ -219,16 +254,6 @@ export function ForwarderAuthModal({
                   placeholder="votre@email.com"
                   className={inputClass}
                 />
-              </div>
-              <div>
-                <label className={labelClass}>Pays</label>
-                <select name="country" defaultValue="FR" className={inputClass}>
-                  {COUNTRY_OPTIONS.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className={labelClass}>Mot de passe</label>

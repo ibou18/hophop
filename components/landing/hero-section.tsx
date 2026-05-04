@@ -37,7 +37,7 @@ const fadeUp = {
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden bg-hh-nuit px-5 py-24">
+    <section className="relative flex flex-col items-center justify-start overflow-hidden bg-hh-nuit px-5 pt-24 pb-8 sm:pt-28 sm:pb-10">
       {/* Dot grid background */}
       <div
         aria-hidden
@@ -64,7 +64,6 @@ export function HeroSection() {
 
       {/* Content */}
       <div className="relative z-10 flex max-w-3xl flex-col items-center gap-7 text-center">
-
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -105,8 +104,8 @@ export function HeroSection() {
           transition={{ delay: 0.7 }}
           className="max-w-xl text-base leading-relaxed text-white/50 sm:text-lg"
         >
-          Hophop connecte transitaires et clients pour un suivi transparent
-          de chaque colis, de la collecte jusqu&rsquo;à la livraison finale.
+          Hophop connecte transitaires et clients pour un suivi transparent de
+          chaque colis, de la collecte jusqu&rsquo;à la livraison finale.
         </motion.p>
 
         {/* Tracking input */}
@@ -150,7 +149,7 @@ export function HeroSection() {
       </div>
 
       {/* Scroll indicator */}
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 0.8 }}
@@ -163,7 +162,7 @@ export function HeroSection() {
         >
           <div className="h-1.5 w-0.5 rounded-full bg-white/40" />
         </motion.div>
-      </motion.div>
+      </motion.div> */}
     </section>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,18 +14,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { createClientSchema } from "@/lib/validations/client";
+import {
+  createClientSchema,
+  type ClientRegistrationFormInput,
+} from "@/lib/validations/client";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
-import { authCardClass, authInputClass, authSubmitButtonClass } from "@/components/auth/auth-ui-classes";
+import {
+  authCardClass,
+  authInputClass,
+  authSubmitButtonClass,
+} from "@/components/auth/auth-ui-classes";
 import { cn } from "@/lib/utils";
-import type { z } from "zod";
+import { GooglePlacesAddressField } from "@/components/maps/google-places-address";
+import { PhoneCountryField } from "@/components/forms/phone-country-field";
 
-type FormValues = z.infer<typeof createClientSchema>;
+const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export function RegisterClientForm() {
   const router = useRouter();
   const [apiError, setApiError] = useState<string | null>(null);
-  const form = useForm<FormValues>({
+  const form = useForm<ClientRegistrationFormInput>({
     defaultValues: {
       code5: "",
       firstName: "",
@@ -34,18 +42,22 @@ export function RegisterClientForm() {
       phone: "",
       address: "",
       city: "",
-      country: "FR",
+      country: "CA",
       authMethod: "EMAIL",
       password: "",
     },
   });
-  const authMethod = useWatch({
-    control: form.control,
-    name: "authMethod",
-    defaultValue: "EMAIL",
-  });
 
-  async function onSubmit(raw: FormValues) {
+  const country = form.watch("country");
+
+  const onPhoneNationalChange = useCallback(
+    (v: string) => {
+      form.setValue("phone", v, { shouldValidate: true, shouldDirty: true });
+    },
+    [form],
+  );
+
+  async function onSubmit(raw: ClientRegistrationFormInput) {
     setApiError(null);
     const parsed = createClientSchema.safeParse({
       ...raw,
@@ -56,7 +68,9 @@ export function RegisterClientForm() {
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
         if (typeof key === "string") {
-          form.setError(key as keyof FormValues, { message: issue.message });
+          form.setError(key as keyof ClientRegistrationFormInput, {
+            message: issue.message,
+          });
         }
       }
       return;
@@ -94,8 +108,11 @@ export function RegisterClientForm() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-4"
         >
-          <div className="space-y-2">
-            <Label htmlFor="code5" className="text-[13px] font-medium text-hh-muted">
+          {/* <div className="space-y-2">
+            <Label
+              htmlFor="code5"
+              className="text-[13px] font-medium text-hh-muted"
+            >
               Code transitaire
             </Label>
             <Input
@@ -104,19 +121,31 @@ export function RegisterClientForm() {
               pattern="\d{5}"
               maxLength={5}
               placeholder="5 chiffres"
-              className={cn(authInputClass, "font-mono text-[13px] font-medium text-hh-saffron-dk")}
+              className={cn(
+                authInputClass,
+                "font-mono text-[13px] font-medium text-hh-saffron-dk",
+              )}
               {...form.register("code5")}
             />
             {form.formState.errors.code5 ? (
-              <p className="text-[11px] text-hh-kola">{form.formState.errors.code5.message}</p>
+              <p className="text-[11px] text-hh-kola">
+                {form.formState.errors.code5.message}
+              </p>
             ) : null}
-          </div>
+          </div> */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-[13px] font-medium text-hh-muted">
+              <Label
+                htmlFor="firstName"
+                className="text-[13px] font-medium text-hh-muted"
+              >
                 Prénom
               </Label>
-              <Input id="firstName" className={cn(authInputClass)} {...form.register("firstName")} />
+              <Input
+                id="firstName"
+                className={cn(authInputClass)}
+                {...form.register("firstName")}
+              />
               {form.formState.errors.firstName ? (
                 <p className="text-[11px] text-hh-kola">
                   {form.formState.errors.firstName.message}
@@ -124,10 +153,17 @@ export function RegisterClientForm() {
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-[13px] font-medium text-hh-muted">
+              <Label
+                htmlFor="lastName"
+                className="text-[13px] font-medium text-hh-muted"
+              >
                 Nom
               </Label>
-              <Input id="lastName" className={cn(authInputClass)} {...form.register("lastName")} />
+              <Input
+                id="lastName"
+                className={cn(authInputClass)}
+                {...form.register("lastName")}
+              />
               {form.formState.errors.lastName ? (
                 <p className="text-[11px] text-hh-kola">
                   {form.formState.errors.lastName.message}
@@ -135,93 +171,146 @@ export function RegisterClientForm() {
               ) : null}
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="authMethod" className="text-[13px] font-medium text-hh-muted">
-              Méthode de connexion
+            <Label
+              htmlFor="country"
+              className="text-[13px] font-medium text-hh-muted"
+            >
+              Pays
             </Label>
-            <Controller
-              name="authMethod"
-              control={form.control}
-              render={({ field }) => (
-                <select
-                  id="authMethod"
-                  className={cn(authInputClass, "flex w-full px-3")}
-                  {...field}
-                >
-                  <option value="EMAIL">Email + mot de passe</option>
-                  <option value="PHONE">Téléphone + mot de passe</option>
-                </select>
-              )}
-            />
+            <select
+              id="country"
+              className={cn(authInputClass, "flex w-full px-3")}
+              {...form.register("country")}
+            >
+              {COUNTRY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-hh-muted">
+              Choisis d’abord ton pays : indicatif téléphone et suggestions
+              d’adresse s’alignent dessus.
+            </p>
           </div>
-          {authMethod === "EMAIL" ? (
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-[13px] font-medium text-hh-muted">
-                Email
-              </Label>
-              <Input id="email" type="email" className={cn(authInputClass)} {...form.register("email")} />
-              {form.formState.errors.email ? (
-                <p className="text-[11px] text-hh-kola">{form.formState.errors.email.message}</p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-[13px] font-medium text-hh-muted">
-                Téléphone
-              </Label>
-              <Input id="phone" type="tel" className={cn(authInputClass)} {...form.register("phone")} />
-              {form.formState.errors.phone ? (
-                <p className="text-[11px] text-hh-kola">{form.formState.errors.phone.message}</p>
-              ) : null}
-            </div>
-          )}
+
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-[13px] font-medium text-hh-muted">
-              Mot de passe (min. 8 caractères)
+            <Label
+              htmlFor="phone"
+              className="text-[13px] font-medium text-hh-muted"
+            >
+              Téléphone
             </Label>
-            <Input
-              id="password"
-              type="password"
-              className={cn(authInputClass)}
-              {...form.register("password")}
+            <PhoneCountryField
+              id="phone"
+              country={country}
+              nationalFormatted={form.watch("phone")}
+              onNationalChange={onPhoneNationalChange}
+              disabled={form.formState.isSubmitting}
+              inputClassName={authInputClass}
+              error={form.formState.errors.phone?.message}
             />
-            {form.formState.errors.password ? (
-              <p className="text-[11px] text-hh-kola">{form.formState.errors.password.message}</p>
-            ) : null}
+            <p className="text-[11px] text-hh-muted">
+              Saisie limitée (14 chiffres côté numéro national, hors indicatif).
+            </p>
           </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="country" className="text-[13px] font-medium text-hh-muted">
-                Pays
-              </Label>
-              <select
-                id="country"
-                className={cn(authInputClass, "flex w-full px-3")}
-                {...form.register("country")}
+              <Label
+                htmlFor="email"
+                className="text-[13px] font-medium text-hh-muted"
               >
-                {COUNTRY_OPTIONS.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                className={cn(authInputClass)}
+                {...form.register("email")}
+              />
+              {form.formState.errors.email ? (
+                <p className="text-[11px] text-hh-kola">
+                  {form.formState.errors.email.message}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="city" className="text-[13px] font-medium text-hh-muted">
-                Ville
+              <Label
+                htmlFor="password"
+                className="text-[13px] font-medium text-hh-muted"
+              >
+                Mot de passe
               </Label>
-              <Input id="city" className={cn(authInputClass)} {...form.register("city")} />
-              {form.formState.errors.city ? (
-                <p className="text-[11px] text-hh-kola">{form.formState.errors.city.message}</p>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                maxLength={12}
+                className={cn(authInputClass)}
+                {...form.register("password")}
+              />
+              {form.formState.errors.password ? (
+                <p className="text-[11px] text-hh-kola">
+                  {form.formState.errors.password.message}
+                </p>
               ) : null}
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="address" className="text-[13px] font-medium text-hh-muted">
+            <Label
+              htmlFor="address"
+              className="text-[13px] font-medium text-hh-muted"
+            >
               Adresse (optionnel)
             </Label>
-            <Input id="address" className={cn(authInputClass)} {...form.register("address")} />
+            <GooglePlacesAddressField
+              apiKey={mapsApiKey}
+              value={form.watch("address") ?? ""}
+              onChangeText={(v) =>
+                form.setValue("address", v, { shouldDirty: true })
+              }
+              onResolved={(data) => {
+                form.setValue("address", data.formattedAddress, {
+                  shouldDirty: true,
+                });
+                if (data.city)
+                  form.setValue("city", data.city, { shouldDirty: true });
+                if (data.country)
+                  form.setValue("country", data.country, { shouldDirty: true });
+              }}
+              disabled={form.formState.isSubmitting}
+              placeholder={
+                mapsApiKey ? "Rechercher une adresse…" : "Adresse libre"
+              }
+              restrictCountry={country}
+              inputClassName={cn(authInputClass)}
+            />
           </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="city"
+              className="text-[13px] font-medium text-hh-muted"
+            >
+              Ville
+            </Label>
+            <Input
+              id="city"
+              className={cn(authInputClass)}
+              {...form.register("city")}
+            />
+            {form.formState.errors.city ? (
+              <p className="text-[11px] text-hh-kola">
+                {form.formState.errors.city.message}
+              </p>
+            ) : null}
+          </div>
+
           {apiError ? (
             <p className="text-[13px] text-hh-kola" role="alert">
               {apiError}

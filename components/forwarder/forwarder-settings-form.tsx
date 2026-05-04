@@ -245,6 +245,7 @@ export function ForwarderSettingsForm({
                 onResolved={onPlaceResolved}
                 disabled={pending}
                 placeholder="Rechercher une adresse…"
+                restrictCountry={country}
                 inputClassName="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
               />
             ) : (

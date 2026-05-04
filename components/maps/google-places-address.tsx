@@ -25,7 +25,10 @@ type MapsNs = {
     places: {
       Autocomplete: new (
         input: HTMLInputElement,
-        opts?: { fields?: string[] },
+        opts?: {
+          fields?: string[];
+          componentRestrictions?: { country: string | string[] };
+        },
       ) => {
         addListener: (ev: string, fn: () => void) => void;
         getPlace: () => GPlace | undefined;
@@ -122,6 +125,7 @@ export function GooglePlacesAddressField({
   disabled,
   placeholder,
   inputClassName,
+  restrictCountry,
 }: {
   apiKey: string | undefined;
   value: string;
@@ -130,6 +134,8 @@ export function GooglePlacesAddressField({
   disabled?: boolean;
   placeholder?: string;
   inputClassName: string;
+  /** Limite les suggestions Places au pays sélectionné (ISO2 Prisma). */
+  restrictCountry?: Country;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const onResolvedRef = useRef(onResolved);
@@ -149,9 +155,18 @@ export function GooglePlacesAddressField({
           setLoadErr("API Places indisponible.");
           return;
         }
-        const ac = new Places.Autocomplete(inputRef.current, {
+        const acOpts: {
+          fields: string[];
+          componentRestrictions?: { country: string | string[] };
+        } = {
           fields: ["formatted_address", "geometry", "address_components"],
-        });
+        };
+        if (restrictCountry) {
+          acOpts.componentRestrictions = {
+            country: restrictCountry.toLowerCase(),
+          };
+        }
+        const ac = new Places.Autocomplete(inputRef.current, acOpts);
         ac.addListener("place_changed", () => {
           const place = ac.getPlace();
           const parsed = parsePlace(place);
@@ -164,7 +179,7 @@ export function GooglePlacesAddressField({
     return () => {
       cancelled = true;
     };
-  }, [apiKey]);
+  }, [apiKey, restrictCountry]);
 
   if (!apiKey) {
     return (

@@ -42,12 +42,6 @@ export async function POST(req: Request) {
     });
   }
   const data = parsed.data;
-  if (data.authMethod === "EMAIL" && !data.email) {
-    return jsonError("Email requis pour auth EMAIL", 400);
-  }
-  if (data.authMethod === "PHONE" && !data.phone) {
-    return jsonError("Téléphone requis pour auth PHONE", 400);
-  }
   const forwarder = await prisma.forwarder.findUnique({
     where: { code5: data.code5 },
   });
@@ -61,8 +55,8 @@ export async function POST(req: Request) {
         data: {
           firstName: data.firstName,
           lastName: data.lastName,
-          email: data.email?.toLowerCase() ?? null,
-          phone: data.phone ?? null,
+          email: data.email.toLowerCase(),
+          phone: data.phone,
           address: data.address ?? null,
           city: data.city ?? null,
           country: data.country,

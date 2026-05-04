@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RegisterForwarderForm } from "@/components/auth/register-forwarder-form";
 import { RegisterClientForm } from "@/components/auth/register-client-form";
-import { authTabsListClass, authTabsTriggerClass } from "@/components/auth/auth-ui-classes";
+import {
+  authTabsListClass,
+  authTabsTriggerClass,
+} from "@/components/auth/auth-ui-classes";
 import { Building2, PenLine, User } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -11,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
       <div className="text-center">
         <p className="mb-2 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-hh-saffron-dk">
           <PenLine className="size-3.5" aria-hidden />
@@ -25,15 +28,15 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="forwarder" className="w-full gap-4">
+      <Tabs defaultValue="client" className="w-full gap-4">
         <TabsList className={authTabsListClass}>
-          <TabsTrigger value="forwarder" className={authTabsTriggerClass}>
-            <Building2 className="size-4 opacity-80" aria-hidden />
-            Transitaire
-          </TabsTrigger>
           <TabsTrigger value="client" className={authTabsTriggerClass}>
             <User className="size-4 opacity-80" aria-hidden />
             Client
+          </TabsTrigger>
+          <TabsTrigger value="forwarder" className={authTabsTriggerClass}>
+            <Building2 className="size-4 opacity-80" aria-hidden />
+            Transitaire
           </TabsTrigger>
         </TabsList>
         <TabsContent value="forwarder" className="mt-0 outline-none">

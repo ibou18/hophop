@@ -25,7 +25,7 @@ export default async function Home() {
               href="/register"
               className="inline-flex h-8 items-center rounded-lg border border-hh-saffron/40 bg-hh-saffron/10 px-4 text-sm font-medium text-hh-saffron transition hover:bg-hh-saffron hover:text-white"
             >
-              S'inscrire
+              S&apos;inscrire
             </Link>
           </div>
         </div>
