@@ -5,6 +5,10 @@ import { fr } from "date-fns/locale";
 import { auth } from "@/auth";
 import { getForwarderParcelById } from "@/lib/forwarder-dashboard-data";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
+import { countryLabelFr } from "@/lib/country-label-fr";
+import { itemCategoryLabelFr } from "@/lib/item-category-fr";
+import { trackingEventTypeLabelFr } from "@/lib/tracking-event-type-fr";
+import { CURRENCY_SYMBOL } from "@/lib/pricing";
 import { ParcelStatusUpdater } from "@/components/forwarder/parcel-status-updater";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
@@ -84,7 +88,7 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
             <p className="mt-0.5 text-[14px] text-hh-muted">{parcel.client.phone}</p>
           ) : null}
           <p className="mt-2 text-[13px] text-hh-muted">
-            {[parcel.client.city, parcel.client.country].filter(Boolean).join(" · ")}
+            {[parcel.client.city, countryLabelFr(parcel.client.country)].filter(Boolean).join(" · ")}
           </p>
         </section>
 
@@ -97,7 +101,7 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
           </p>
           <p className="mt-1 text-[14px] text-hh-muted">{parcel.recipient.phone}</p>
           <p className="mt-2 text-[13px] text-hh-earth-dk">
-            {parcel.recipient.city}, {parcel.recipient.country}
+            {parcel.recipient.city}, {countryLabelFr(parcel.recipient.country)}
           </p>
           {parcel.recipient.address ? (
             <p className="mt-1 text-[13px] text-hh-muted">{parcel.recipient.address}</p>
@@ -123,7 +127,9 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
           {parcel.price != null ? (
             <>
               <dt className="text-hh-muted">Prix</dt>
-              <dd className="text-hh-earth-dk">{parcel.price}</dd>
+              <dd className="text-hh-earth-dk">
+                {parcel.price} {CURRENCY_SYMBOL[parcel.currency]}
+              </dd>
             </>
           ) : null}
           <dt className="text-hh-muted">Payé</dt>
@@ -140,7 +146,7 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
                 <li key={it.id}>
                   {it.name}{" "}
                   <span className="text-hh-muted">
-                    ×{it.quantity} · {it.category}
+                    ×{it.quantity} · {itemCategoryLabelFr(it.category)}
                   </span>
                 </li>
               ))}
@@ -167,7 +173,7 @@ export default async function ForwarderParcelDetailPage({ params }: Props) {
                         : "bg-hh-muted",
                   )}
                 />
-                <span className="font-medium">{ev.type}</span>
+                <span className="font-medium">{trackingEventTypeLabelFr(ev.type)}</span>
                 {ev.location ? (
                   <span className="text-hh-muted"> · {ev.location}</span>
                 ) : null}

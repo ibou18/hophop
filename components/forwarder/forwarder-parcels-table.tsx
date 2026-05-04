@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ParcelStatus } from "@/app/generated/prisma/enums";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
+import { countryLabelFr } from "@/lib/country-label-fr";
 import type { ForwarderParcelListRow } from "@/lib/forwarder-dashboard-data";
 import {
   Table,
@@ -105,7 +106,7 @@ export function ForwarderParcelsTable({
                 <TableCell className="text-[13px] text-hh-earth-dk">
                   {p.recipient.city}
                   <span className="text-hh-muted"> · </span>
-                  {p.recipient.country}
+                  {countryLabelFr(p.recipient.country)}
                 </TableCell>
                 <TableCell className="text-[13px] text-hh-muted">
                   {p.shipment?.reference ?? "—"}

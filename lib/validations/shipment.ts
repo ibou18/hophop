@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
+const transportMode = z.enum(["AIR", "SEA", "ROAD"] as const);
 
 export const createShipmentSchema = z
   .object({
     originCountry: country,
     destinationCountry: country,
+    transportMode: transportMode.default("AIR"),
     destinationCity: z.string().optional(),
     departureDate: z.coerce.date({
       message: "La date d’envoi est requise",
@@ -44,6 +46,7 @@ export const patchShipmentSchema = z.object({
   status: z
     .enum(["DRAFT", "CONFIRMED", "IN_TRANSIT", "ARRIVED", "CLOSED"] as const)
     .optional(),
+  transportMode: transportMode.optional(),
   destinationCity: z.string().nullable().optional(),
   departureDate: z.coerce.date().nullable().optional(),
   arrivalDate: z.coerce.date().nullable().optional(),

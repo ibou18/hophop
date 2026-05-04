@@ -5,6 +5,7 @@ import type { ShipmentStatus } from "@/app/generated/prisma/enums";
 import { shipmentStatusLabelFr } from "@/lib/shipment-status-fr";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import type { ForwarderShipmentListRow } from "@/lib/forwarder-shipment-data";
+import { TransportModeBadge } from "@/components/transport-mode-selector";
 import {
   Table,
   TableBody,
@@ -51,6 +52,7 @@ export function ForwarderShipmentsTable({
         <TableHeader>
           <TableRow className="border-hh-sand-dk/20 hover:bg-transparent">
             <TableHead className="text-hh-muted">Référence</TableHead>
+            <TableHead className="text-hh-muted">Mode</TableHead>
             <TableHead className="text-hh-muted">Statut</TableHead>
             <TableHead className="text-hh-muted">Trajet</TableHead>
             <TableHead className="text-right text-hh-muted">Colis</TableHead>
@@ -70,6 +72,9 @@ export function ForwarderShipmentsTable({
                 >
                   {s.reference}
                 </Link>
+              </TableCell>
+              <TableCell>
+                <TransportModeBadge mode={s.transportMode} size="xs" />
               </TableCell>
               <TableCell>
                 <span

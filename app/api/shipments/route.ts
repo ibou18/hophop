@@ -49,6 +49,7 @@ export async function POST(req: Request) {
       forwarderId: auth.forwarderId,
       reference,
       status: ShipmentStatus.DRAFT,
+      transportMode: data.transportMode,
       originCountry: data.originCountry,
       destinationCountry: data.destinationCountry,
       destinationCity: data.destinationCity ?? null,

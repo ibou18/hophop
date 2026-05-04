@@ -18,6 +18,7 @@ import { ShipmentParcelsAssignment } from "@/components/forwarder/shipment-parce
 import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
 import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
 import { ShipmentShareBlock } from "@/components/forwarder/shipment-share-block";
+import { TransportModeBadge } from "@/components/transport-mode-selector";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ id: string }> };
@@ -60,9 +61,12 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         >
           ← Envois
         </Link>
-        <h1 className="mt-3 font-mono text-[26px] font-medium tracking-tight text-hh-earth-dk">
-          {shipment.reference}
-        </h1>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <h1 className="font-mono text-[26px] font-medium tracking-tight text-hh-earth-dk">
+            {shipment.reference}
+          </h1>
+          <TransportModeBadge mode={shipment.transportMode} />
+        </div>
         <p className="mt-1 text-[14px] text-hh-muted">
           {shipmentStatusLabelFr(shipment.status)}
           {" · "}

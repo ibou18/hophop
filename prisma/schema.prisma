@@ -136,6 +136,27 @@ enum ItemCategory {
   OTHER
 }
 
+enum TransportMode {
+  AIR // Avion
+  SEA // Maritime (bateau)
+  ROAD // Route / terrestre
+}
+
+enum PricingType {
+  WEIGHT_KG // Tarif au kilo
+  PER_BOX // Tarif forfaitaire par carton
+  VOLUMETRIC // Poids volumétrique (L×l×H ÷ diviseur)
+  FLAT // Prix fixe par colis
+}
+
+enum Currency {
+  EUR // Euro
+  CAD // Dollar canadien
+  XOF // Franc CFA (UEMOA — Sénégal, Côte d'Ivoire)
+  XAF // Franc CFA (CEMAC — Cameroun)
+  GNF // Franc guinéen
+}
+
 // ─────────────────────────────────────────────
 // FORWARDER — Tenant principal (le transitaire/pro)
 // ─────────────────────────────────────────────
@@ -175,6 +196,7 @@ model Forwarder {
   clients   ClientForwarder[]
   shipments Shipment[]
   parcels   Parcel[]
+  tariffs   ForwarderTariff[]
 
   @@map("forwarders")
 }
@@ -269,6 +291,9 @@ model Shipment {
   reference String // ex: "ENV-2024-001" — généré automatiquement
   status    ShipmentStatus @default(DRAFT)
 
+  // Mode de transport — détermine le tarif applicable
+  transportMode TransportMode @default(AIR)
+
   originCountry      Country
   destinationCountry Country
   destinationCity    String?
@@ -327,7 +352,12 @@ model Parcel {
   isPaid        Boolean        @default(false)
   paymentMethod PaymentMethod?
   declaredValue Float? // Valeur déclarée du contenu (pour la douane)
-  price         Float? // Prix facturé par le transitaire
+  price         Float? // Prix final facturé (saisie manuelle ou résultat du calcul)
+
+  // Tarification automatique
+  pricingType     PricingType? // Méthode utilisée pour calculer
+  calculatedPrice Float? // Prix calculé à partir du tarif transitaire
+  currency        Currency     @default(EUR)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -476,6 +506,46 @@ model ShipmentRequest {
   movedToShipment Shipment? @relation("MovedToShipment", fields: [movedToShipmentId], references: [id])
 
   @@map("shipment_requests")
+}
+
+// ─────────────────────────────────────────────
+// FORWARDER TARIFF — Grille tarifaire du transitaire
+// Une règle = un type de calcul + éventuellement une destination
+// La règle la plus spécifique (par pays) prime sur la règle générale
+// ─────────────────────────────────────────────
+
+model ForwarderTariff {
+  id          String @id @default(uuid())
+  forwarderId String
+
+  // Destination ciblée — null = s'applique à toutes les destinations
+  destinationCountry Country?
+
+  // Mode de transport ciblé — null = s'applique à tous les modes
+  transportMode TransportMode?
+
+  pricingType PricingType
+
+  // Paramètres selon le type
+  ratePerKg     Float? // WEIGHT_KG  : prix par kilo (ex: 4.50)
+  ratePerBox    Float? // PER_BOX    : prix par carton (ex: 45.00)
+  flatRate      Float? // FLAT       : prix fixe par colis
+  ratePerVolume Float? // VOLUMETRIC : prix par unité volumétrique
+  volumeDivisor Float  @default(5000) // VOLUMETRIC : diviseur L×l×H
+
+  minimumCharge Float    @default(0) // Minimum facturé même si calcul < minimum
+  currency      Currency @default(EUR)
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0) // Ordre d'affichage dans l'UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  forwarder Forwarder @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
+
+  @@index([forwarderId, destinationCountry, transportMode])
+  @@map("forwarder_tariffs")
 }
 
 // ─────────────────────────────────────────────

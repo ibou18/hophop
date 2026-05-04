@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
+  Receipt,
   Settings,
   Truck,
   UsersRound,
@@ -34,11 +35,12 @@ const NAV = [
   { href: "/shipments", label: "Envois", icon: Truck },
   { href: "/parcels", label: "Colis", icon: Package },
   { href: "/clients", label: "Clients", icon: UsersRound },
+  { href: "/settings/tariffs", label: "Tarifs", icon: Receipt },
   { href: "/settings", label: "Paramètres", icon: Settings },
 ] as const;
 
 function navItemActive(href: string, pathname: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/dashboard" || href === "/settings") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

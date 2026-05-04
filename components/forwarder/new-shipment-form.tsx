@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { Country } from "@/app/generated/prisma/enums";
+import type { Country, TransportMode } from "@/app/generated/prisma/enums";
 import { COUNTRY_OPTIONS } from "@/lib/country-label-fr";
 import { Button } from "@/components/ui/button";
 import { isoDateUtcToday } from "@/lib/iso-date-utc";
+import { TransportModeSelector } from "@/components/transport-mode-selector";
 
 type Props = {
   /** Fourni par la page RSC pour éviter tout décalage SSR / client sur la date du jour. */
@@ -18,6 +19,7 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [originCountry, setOriginCountry] = useState<Country>("CA");
   const [destinationCountry, setDestinationCountry] = useState<Country>("GN");
+  const [transportMode, setTransportMode] = useState<TransportMode>("AIR");
   const [destinationCity, setDestinationCity] = useState("");
   const [notes, setNotes] = useState("");
   const minDate = defaultDepartureDate || isoDateUtcToday();
@@ -34,6 +36,7 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
         body: JSON.stringify({
           originCountry,
           destinationCountry,
+          transportMode,
           destinationCity: destinationCity.trim() || undefined,
           departureDate,
           notes: notes.trim() || undefined,
@@ -59,6 +62,17 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
       onSubmit={submit}
       className="space-y-5 rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-6 shadow-sm"
     >
+      <div className="space-y-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+          Mode de transport
+        </p>
+        <TransportModeSelector
+          value={transportMode}
+          onChange={setTransportMode}
+          disabled={pending}
+        />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
