@@ -2,8 +2,12 @@ import Link from "next/link";
 import { HopLogo } from "@/components/auth/hop-logo";
 import { HeroSection } from "@/components/landing/hero-section";
 import { ScrollSections } from "@/components/landing/scroll-section";
+import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
+import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
 
-export default function Home() {
+export default async function Home() {
+  const upcomingShipments = await getPublicUpcomingShipments(5);
+
   return (
     <div className="flex min-h-screen flex-col bg-hh-sand">
       {/* ── Nav ── */}
@@ -29,6 +33,9 @@ export default function Home() {
 
       {/* ── Animated hero ── */}
       <HeroSection />
+
+      {/* ── Prochains départs publics ── */}
+      <UpcomingDepartures shipments={upcomingShipments} />
 
       {/* ── Scroll sections ── */}
       <ScrollSections />

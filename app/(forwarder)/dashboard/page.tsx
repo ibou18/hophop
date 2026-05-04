@@ -3,9 +3,10 @@ import { Share2 } from "lucide-react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getForwarderDashboardKpis } from "@/lib/forwarder-dashboard-data";
+import { getForwarderDashboardKpis, getUpcomingShipments } from "@/lib/forwarder-dashboard-data";
 import { ForwarderParcelsTable } from "@/components/forwarder/forwarder-parcels-table";
 import { ShareProfileButton } from "@/components/forwarder/share-profile-button";
+import { UpcomingShipmentsWidget } from "@/components/forwarder/upcoming-shipments-widget";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -14,13 +15,14 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [{ parcelsInTransit, activeShipments, clientsCount, recentParcels }, forwarder] =
+  const [{ parcelsInTransit, activeShipments, clientsCount, recentParcels }, forwarder, upcomingShipments] =
     await Promise.all([
       getForwarderDashboardKpis(forwarderId),
       prisma.forwarder.findUnique({
         where: { id: forwarderId },
         select: { code5: true, name: true },
       }),
+      getUpcomingShipments(forwarderId, 10),
     ]);
 
   return (
@@ -86,6 +88,27 @@ export default async function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Upcoming shipments */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-[22px] font-medium text-hh-earth-dk">
+              Prochains départs
+            </h2>
+            <p className="mt-0.5 text-[14px] text-hh-muted">
+              Envois confirmés triés par date de départ.
+            </p>
+          </div>
+          <Link
+            href="/shipments"
+            className="text-[14px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
+          >
+            Tous les envois
+          </Link>
+        </div>
+        <UpcomingShipmentsWidget shipments={upcomingShipments} />
+      </section>
 
       <section className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

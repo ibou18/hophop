@@ -2,6 +2,30 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { ParcelStatus, ShipmentStatus } from "@/app/generated/prisma/enums";
 
+const upcomingShipmentInclude = {
+  _count: { select: { parcels: true } },
+} satisfies Prisma.ShipmentInclude;
+
+export type UpcomingShipmentRow = Prisma.ShipmentGetPayload<{
+  include: typeof upcomingShipmentInclude;
+}>;
+
+export async function getUpcomingShipments(
+  forwarderId: string,
+  take = 10,
+): Promise<UpcomingShipmentRow[]> {
+  return prisma.shipment.findMany({
+    where: {
+      forwarderId,
+      status: { in: [ShipmentStatus.CONFIRMED, ShipmentStatus.IN_TRANSIT] },
+      departureDate: { gte: new Date() },
+    },
+    orderBy: { departureDate: "asc" },
+    take,
+    include: upcomingShipmentInclude,
+  });
+}
+
 const parcelListInclude = {
   client: {
     select: { id: true, firstName: true, lastName: true, email: true },
