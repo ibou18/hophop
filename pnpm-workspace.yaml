@@ -1,3 +1,7 @@
+# Repo à paquet unique ; `packages` requis sinon `pnpm install` échoue (CI/Railpack).
+packages:
+  - "."
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
