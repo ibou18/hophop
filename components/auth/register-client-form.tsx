@@ -16,13 +16,11 @@ import {
 } from "@/components/ui/card";
 import { createClientSchema } from "@/lib/validations/client";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
+import { authCardClass, authInputClass, authSubmitButtonClass } from "@/components/auth/auth-ui-classes";
 import { cn } from "@/lib/utils";
 import type { z } from "zod";
 
 type FormValues = z.infer<typeof createClientSchema>;
-
-const inputClass =
-  "h-10 rounded-[var(--hh-radius-md)] border-hh-sand-dk/40 bg-white text-[15px] placeholder:text-hh-muted focus-visible:border-hh-saffron focus-visible:ring-hh-saffron/25";
 
 export function RegisterClientForm() {
   const router = useRouter();
@@ -82,16 +80,16 @@ export function RegisterClientForm() {
   }
 
   return (
-    <Card className="border-hh-sand-dk/35 bg-white shadow-sm ring-1 ring-hh-earth/5 rounded-[var(--hh-radius-lg)]">
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-[32px] font-medium leading-tight text-hh-earth-dk">
+    <Card className={cn(authCardClass)}>
+      <CardHeader className="space-y-2 pb-4 pt-7">
+        <CardTitle className="text-[1.35rem] font-semibold leading-tight text-hh-earth-dk">
           Compte expéditeur
         </CardTitle>
-        <CardDescription className="text-[13px] text-hh-muted">
+        <CardDescription className="text-[14px] leading-relaxed text-hh-muted">
           Rattache-toi à ton transitaire avec son code à 5 chiffres.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-8">
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-4"
@@ -106,7 +104,7 @@ export function RegisterClientForm() {
               pattern="\d{5}"
               maxLength={5}
               placeholder="5 chiffres"
-              className={cn(inputClass, "font-mono text-[13px] font-medium text-hh-saffron-dk")}
+              className={cn(authInputClass, "font-mono text-[13px] font-medium text-hh-saffron-dk")}
               {...form.register("code5")}
             />
             {form.formState.errors.code5 ? (
@@ -118,7 +116,7 @@ export function RegisterClientForm() {
               <Label htmlFor="firstName" className="text-[13px] font-medium text-hh-muted">
                 Prénom
               </Label>
-              <Input id="firstName" className={cn(inputClass)} {...form.register("firstName")} />
+              <Input id="firstName" className={cn(authInputClass)} {...form.register("firstName")} />
               {form.formState.errors.firstName ? (
                 <p className="text-[11px] text-hh-kola">
                   {form.formState.errors.firstName.message}
@@ -129,7 +127,7 @@ export function RegisterClientForm() {
               <Label htmlFor="lastName" className="text-[13px] font-medium text-hh-muted">
                 Nom
               </Label>
-              <Input id="lastName" className={cn(inputClass)} {...form.register("lastName")} />
+              <Input id="lastName" className={cn(authInputClass)} {...form.register("lastName")} />
               {form.formState.errors.lastName ? (
                 <p className="text-[11px] text-hh-kola">
                   {form.formState.errors.lastName.message}
@@ -147,7 +145,7 @@ export function RegisterClientForm() {
               render={({ field }) => (
                 <select
                   id="authMethod"
-                  className={cn(inputClass, "flex w-full px-3")}
+                  className={cn(authInputClass, "flex w-full px-3")}
                   {...field}
                 >
                   <option value="EMAIL">Email + mot de passe</option>
@@ -161,7 +159,7 @@ export function RegisterClientForm() {
               <Label htmlFor="email" className="text-[13px] font-medium text-hh-muted">
                 Email
               </Label>
-              <Input id="email" type="email" className={cn(inputClass)} {...form.register("email")} />
+              <Input id="email" type="email" className={cn(authInputClass)} {...form.register("email")} />
               {form.formState.errors.email ? (
                 <p className="text-[11px] text-hh-kola">{form.formState.errors.email.message}</p>
               ) : null}
@@ -171,7 +169,7 @@ export function RegisterClientForm() {
               <Label htmlFor="phone" className="text-[13px] font-medium text-hh-muted">
                 Téléphone
               </Label>
-              <Input id="phone" type="tel" className={cn(inputClass)} {...form.register("phone")} />
+              <Input id="phone" type="tel" className={cn(authInputClass)} {...form.register("phone")} />
               {form.formState.errors.phone ? (
                 <p className="text-[11px] text-hh-kola">{form.formState.errors.phone.message}</p>
               ) : null}
@@ -184,7 +182,7 @@ export function RegisterClientForm() {
             <Input
               id="password"
               type="password"
-              className={cn(inputClass)}
+              className={cn(authInputClass)}
               {...form.register("password")}
             />
             {form.formState.errors.password ? (
@@ -198,7 +196,7 @@ export function RegisterClientForm() {
               </Label>
               <select
                 id="country"
-                className={cn(inputClass, "flex w-full px-3")}
+                className={cn(authInputClass, "flex w-full px-3")}
                 {...form.register("country")}
               >
                 {COUNTRY_OPTIONS.map((c) => (
@@ -212,7 +210,7 @@ export function RegisterClientForm() {
               <Label htmlFor="city" className="text-[13px] font-medium text-hh-muted">
                 Ville
               </Label>
-              <Input id="city" className={cn(inputClass)} {...form.register("city")} />
+              <Input id="city" className={cn(authInputClass)} {...form.register("city")} />
               {form.formState.errors.city ? (
                 <p className="text-[11px] text-hh-kola">{form.formState.errors.city.message}</p>
               ) : null}
@@ -222,7 +220,7 @@ export function RegisterClientForm() {
             <Label htmlFor="address" className="text-[13px] font-medium text-hh-muted">
               Adresse (optionnel)
             </Label>
-            <Input id="address" className={cn(inputClass)} {...form.register("address")} />
+            <Input id="address" className={cn(authInputClass)} {...form.register("address")} />
           </div>
           {apiError ? (
             <p className="text-[13px] text-hh-kola" role="alert">
@@ -232,16 +230,16 @@ export function RegisterClientForm() {
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="h-10 w-full rounded-[var(--hh-radius-md)] bg-hh-saffron text-white text-sm font-medium hover:bg-hh-saffron/90 shadow-none"
+            className={authSubmitButtonClass}
           >
             {form.formState.isSubmitting ? "Création…" : "Créer mon compte"}
           </Button>
         </form>
-        <p className="mt-6 text-center text-[13px] text-hh-muted">
+        <p className="mt-8 border-t border-hh-sand-dk/15 pt-6 text-center text-[13px] text-hh-muted">
           Déjà inscrit ?{" "}
           <Link
             href="/login"
-            className="font-medium text-hh-saffron-dk underline-offset-4 hover:underline"
+            className="font-semibold text-hh-saffron-dk underline-offset-4 transition hover:text-hh-earth-dk hover:underline"
           >
             Connexion
           </Link>

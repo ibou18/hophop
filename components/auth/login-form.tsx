@@ -15,10 +15,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  authCardClass,
+  authInputClass,
+  authSubmitButtonClass,
+  authTabsListClass,
+  authTabsTriggerClass,
+} from "@/components/auth/auth-ui-classes";
 import { cn } from "@/lib/utils";
-
-const inputClass =
-  "h-10 rounded-[var(--hh-radius-md)] border-hh-sand-dk/40 bg-white text-[15px] placeholder:text-hh-muted focus-visible:border-hh-saffron focus-visible:ring-hh-saffron/25";
+import { Building2, Sparkles, User } from "lucide-react";
 
 export function LoginForm() {
   const router = useRouter();
@@ -81,40 +86,40 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="border-hh-sand-dk/35 bg-white shadow-sm ring-1 ring-hh-earth/5 rounded-[var(--hh-radius-lg)]">
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-[32px] font-medium leading-tight text-hh-earth-dk">
+    <Card className={cn(authCardClass)}>
+      <CardHeader className="space-y-3 pb-4 pt-8">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-hh-saffron-dk">
+          <Sparkles className="size-3.5 shrink-0" aria-hidden />
+          Accès compte
+        </div>
+        <CardTitle className="text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-hh-earth-dk sm:text-[2rem]">
           Connexion
         </CardTitle>
-        <CardDescription className="text-[13px] text-hh-muted">
+        <CardDescription className="text-[14px] leading-relaxed text-hh-muted">
           Espace transitaire ou compte expéditeur
         </CardDescription>
         {registered ? (
-          <p className="text-[13px] font-medium text-hh-savane-dk pt-1">
+          <p className="rounded-xl border border-hh-savane/25 bg-hh-savane-lt/80 px-3 py-2 text-[13px] font-medium text-hh-savane-dk">
             Compte créé. Tu peux te connecter.
           </p>
         ) : null}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-8">
         <Tabs
           value={tab}
           onValueChange={(v) => {
             setTab(v as "forwarder" | "client");
             setError(null);
           }}
-          className="gap-4"
+          className="gap-5"
         >
-          <TabsList className="w-full grid grid-cols-2 h-10 rounded-[var(--hh-radius-md)] bg-hh-earth-lt/60 p-1">
-            <TabsTrigger
-              value="forwarder"
-              className="rounded-[8px] data-active:bg-white data-active:text-hh-earth-dk data-active:shadow-sm text-[13px] font-medium text-hh-muted"
-            >
+          <TabsList className={authTabsListClass}>
+            <TabsTrigger value="forwarder" className={authTabsTriggerClass}>
+              <Building2 className="size-4 opacity-80" aria-hidden />
               Transitaire
             </TabsTrigger>
-            <TabsTrigger
-              value="client"
-              className="rounded-[8px] data-active:bg-white data-active:text-hh-earth-dk data-active:shadow-sm text-[13px] font-medium text-hh-muted"
-            >
+            <TabsTrigger value="client" className={authTabsTriggerClass}>
+              <User className="size-4 opacity-80" aria-hidden />
               Client
             </TabsTrigger>
           </TabsList>
@@ -131,7 +136,7 @@ export function LoginForm() {
                   type="email"
                   autoComplete="email"
                   required
-                  className={cn(inputClass)}
+                  className={cn(authInputClass)}
                 />
               </div>
               <div className="space-y-2">
@@ -144,7 +149,7 @@ export function LoginForm() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className={cn(inputClass)}
+                  className={cn(authInputClass)}
                 />
               </div>
               {error && tab === "forwarder" ? (
@@ -152,11 +157,7 @@ export function LoginForm() {
                   {error}
                 </p>
               ) : null}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="h-10 w-full rounded-[var(--hh-radius-md)] bg-hh-saffron text-white text-sm font-medium hover:bg-hh-saffron/90 shadow-none"
-              >
+              <Button type="submit" disabled={loading} className={authSubmitButtonClass}>
                 {loading ? "Connexion…" : "Se connecter"}
               </Button>
             </form>
@@ -173,7 +174,7 @@ export function LoginForm() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  className={cn(inputClass)}
+                  className={cn(authInputClass)}
                 />
               </div>
               <div className="space-y-2">
@@ -185,7 +186,7 @@ export function LoginForm() {
                   name="phone"
                   type="tel"
                   autoComplete="tel"
-                  className={cn(inputClass)}
+                  className={cn(authInputClass)}
                 />
               </div>
               <div className="space-y-2">
@@ -198,7 +199,7 @@ export function LoginForm() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className={cn(inputClass)}
+                  className={cn(authInputClass)}
                 />
               </div>
               {error && tab === "client" ? (
@@ -206,22 +207,18 @@ export function LoginForm() {
                   {error}
                 </p>
               ) : null}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="h-10 w-full rounded-[var(--hh-radius-md)] bg-hh-saffron text-white text-sm font-medium hover:bg-hh-saffron/90 shadow-none"
-              >
+              <Button type="submit" disabled={loading} className={authSubmitButtonClass}>
                 {loading ? "Connexion…" : "Se connecter"}
               </Button>
             </form>
           </TabsContent>
         </Tabs>
 
-        <p className="mt-6 text-center text-[13px] text-hh-muted">
+        <p className="mt-8 border-t border-hh-sand-dk/15 pt-6 text-center text-[13px] text-hh-muted">
           Pas encore de compte ?{" "}
           <Link
             href="/register"
-            className="font-medium text-hh-saffron-dk underline-offset-4 hover:underline"
+            className="font-semibold text-hh-saffron-dk underline-offset-4 transition hover:text-hh-earth-dk hover:underline"
           >
             Créer un compte
           </Link>

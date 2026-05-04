@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 function LoginFallback() {
   return (
     <div
-      className="w-full max-w-md rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/30 bg-white p-10 min-h-[22rem] animate-pulse"
+      className="min-h-[24rem] w-full max-w-md animate-pulse rounded-2xl bg-white/60 p-10 shadow-xl shadow-hh-earth-dk/[0.06] ring-1 ring-white/80"
       aria-hidden
     />
   );
@@ -17,7 +17,7 @@ function LoginFallback() {
 
 export default function LoginPage() {
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="mx-auto w-full max-w-md">
       <Suspense fallback={<LoginFallback />}>
         <LoginForm />
       </Suspense>

@@ -16,13 +16,11 @@ import {
 } from "@/components/ui/card";
 import { createForwarderSchema } from "@/lib/validations/forwarder";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
+import { authCardClass, authInputClass, authSubmitButtonClass } from "@/components/auth/auth-ui-classes";
 import { cn } from "@/lib/utils";
 import type { z } from "zod";
 
 type FormValues = z.infer<typeof createForwarderSchema>;
-
-const inputClass =
-  "h-10 rounded-[var(--hh-radius-md)] border-hh-sand-dk/40 bg-white text-[15px] placeholder:text-hh-muted focus-visible:border-hh-saffron focus-visible:ring-hh-saffron/25";
 
 export function RegisterForwarderForm() {
   const router = useRouter();
@@ -70,16 +68,16 @@ export function RegisterForwarderForm() {
   }
 
   return (
-    <Card className="border-hh-sand-dk/35 bg-white shadow-sm ring-1 ring-hh-earth/5 rounded-[var(--hh-radius-lg)]">
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-[32px] font-medium leading-tight text-hh-earth-dk">
+    <Card className={cn(authCardClass)}>
+      <CardHeader className="space-y-2 pb-4 pt-7">
+        <CardTitle className="text-[1.35rem] font-semibold leading-tight text-hh-earth-dk">
           Compte transitaire
         </CardTitle>
-        <CardDescription className="text-[13px] text-hh-muted">
+        <CardDescription className="text-[14px] leading-relaxed text-hh-muted">
           Crée ton espace pro pour gérer colis et envois.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-8">
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-4"
@@ -88,7 +86,7 @@ export function RegisterForwarderForm() {
             <Label htmlFor="name" className="text-[13px] font-medium text-hh-muted">
               Nom de l’entreprise
             </Label>
-            <Input id="name" className={cn(inputClass)} {...form.register("name")} />
+            <Input id="name" className={cn(authInputClass)} {...form.register("name")} />
             {form.formState.errors.name ? (
               <p className="text-[11px] text-hh-kola">{form.formState.errors.name.message}</p>
             ) : null}
@@ -100,7 +98,7 @@ export function RegisterForwarderForm() {
             <Input
               id="email"
               type="email"
-              className={cn(inputClass)}
+              className={cn(authInputClass)}
               {...form.register("email")}
             />
             {form.formState.errors.email ? (
@@ -114,7 +112,7 @@ export function RegisterForwarderForm() {
             <Input
               id="password"
               type="password"
-              className={cn(inputClass)}
+              className={cn(authInputClass)}
               {...form.register("password")}
             />
             {form.formState.errors.password ? (
@@ -125,7 +123,7 @@ export function RegisterForwarderForm() {
             <Label htmlFor="phone" className="text-[13px] font-medium text-hh-muted">
               Téléphone (optionnel)
             </Label>
-            <Input id="phone" className={cn(inputClass)} {...form.register("phone")} />
+            <Input id="phone" className={cn(authInputClass)} {...form.register("phone")} />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -134,7 +132,7 @@ export function RegisterForwarderForm() {
               </Label>
               <select
                 id="country"
-                className={cn(inputClass, "flex w-full appearance-none px-3")}
+                className={cn(authInputClass, "flex w-full appearance-none px-3")}
                 {...form.register("country")}
               >
                 {COUNTRY_OPTIONS.map((c) => (
@@ -148,7 +146,7 @@ export function RegisterForwarderForm() {
               <Label htmlFor="city" className="text-[13px] font-medium text-hh-muted">
                 Ville
               </Label>
-              <Input id="city" className={cn(inputClass)} {...form.register("city")} />
+              <Input id="city" className={cn(authInputClass)} {...form.register("city")} />
               {form.formState.errors.city ? (
                 <p className="text-[11px] text-hh-kola">{form.formState.errors.city.message}</p>
               ) : null}
@@ -158,13 +156,13 @@ export function RegisterForwarderForm() {
             <Label htmlFor="address" className="text-[13px] font-medium text-hh-muted">
               Adresse (optionnel)
             </Label>
-            <Input id="address" className={cn(inputClass)} {...form.register("address")} />
+            <Input id="address" className={cn(authInputClass)} {...form.register("address")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="description" className="text-[13px] font-medium text-hh-muted">
               Description (optionnel)
             </Label>
-            <Input id="description" className={cn(inputClass)} {...form.register("description")} />
+            <Input id="description" className={cn(authInputClass)} {...form.register("description")} />
           </div>
           {apiError ? (
             <p className="text-[13px] text-hh-kola" role="alert">
@@ -174,16 +172,16 @@ export function RegisterForwarderForm() {
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="h-10 w-full rounded-[var(--hh-radius-md)] bg-hh-saffron text-white text-sm font-medium hover:bg-hh-saffron/90 shadow-none"
+            className={authSubmitButtonClass}
           >
             {form.formState.isSubmitting ? "Création…" : "Créer mon compte pro"}
           </Button>
         </form>
-        <p className="mt-6 text-center text-[13px] text-hh-muted">
+        <p className="mt-8 border-t border-hh-sand-dk/15 pt-6 text-center text-[13px] text-hh-muted">
           Déjà inscrit ?{" "}
           <Link
             href="/login"
-            className="font-medium text-hh-saffron-dk underline-offset-4 hover:underline"
+            className="font-semibold text-hh-saffron-dk underline-offset-4 transition hover:text-hh-earth-dk hover:underline"
           >
             Connexion
           </Link>
