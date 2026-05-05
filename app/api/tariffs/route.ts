@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
-import { requireForwarder } from "@/lib/require-auth";
+import { requireForwarder, requireForwarderAdmin } from "@/lib/require-auth";
 import { z } from "zod";
 import { PricingType, Currency, Country, TransportMode } from "@/app/generated/prisma/enums";
 
@@ -51,7 +51,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireForwarder();
+  const auth = await requireForwarderAdmin(); // STAFF ne peut pas créer de tarif
   if (auth instanceof Response) return auth;
 
   let body: unknown;

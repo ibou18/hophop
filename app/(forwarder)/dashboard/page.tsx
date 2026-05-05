@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Share2 } from "lucide-react";
+import { Share2, ShieldOff } from "lucide-react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -8,12 +8,19 @@ import { ForwarderParcelsTable } from "@/components/forwarder/forwarder-parcels-
 import { ShareProfileButton } from "@/components/forwarder/share-profile-button";
 import { UpcomingShipmentsWidget } from "@/components/forwarder/upcoming-shipments-widget";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ blocked?: string }>;
+}) {
   const session = await auth();
   const forwarderId = session?.user?.forwarderId;
   if (!session?.user || session.user.role !== "FORWARDER" || !forwarderId) {
     redirect("/login");
   }
+
+  const sp = await searchParams;
+  const blockedPage = sp?.blocked;
 
   const [{ parcelsInTransit, activeShipments, clientsCount, recentParcels }, forwarder, upcomingShipments] =
     await Promise.all([
@@ -25,8 +32,24 @@ export default async function DashboardPage() {
       getUpcomingShipments(forwarderId, 10),
     ]);
 
+  const BLOCKED_LABELS: Record<string, string> = {
+    settings: "les paramètres de l'agence",
+    tariffs: "la grille tarifaire",
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+      {/* Bandeau accès refusé pour STAFF */}
+      {blockedPage && BLOCKED_LABELS[blockedPage] && (
+        <div className="flex items-center gap-3 rounded-[var(--hh-radius-lg)] bg-hh-kola-lt px-4 py-3 ring-1 ring-hh-kola/20">
+          <ShieldOff size={16} className="shrink-0 text-hh-kola-dk" />
+          <p className="text-[14px] text-hh-kola-dk">
+            Accès refusé — seuls les administrateurs et le propriétaire peuvent accéder à{" "}
+            <strong>{BLOCKED_LABELS[blockedPage]}</strong>.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[32px] font-medium leading-tight text-hh-earth-dk">

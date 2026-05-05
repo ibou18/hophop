@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
-import { requireForwarder } from "@/lib/require-auth";
+import { requireForwarderAdmin } from "@/lib/require-auth";
 import { z } from "zod";
 import { PricingType, Currency, Country, TransportMode } from "@/app/generated/prisma/enums";
 
@@ -27,7 +27,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: Request, ctx: Ctx) {
-  const auth = await requireForwarder();
+  const auth = await requireForwarderAdmin(); // STAFF ne peut pas modifier/supprimer les tarifs
   if (auth instanceof Response) return auth;
 
   const { id } = await ctx.params;
@@ -58,7 +58,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_req: Request, ctx: Ctx) {
-  const auth = await requireForwarder();
+  const auth = await requireForwarderAdmin(); // STAFF ne peut pas modifier/supprimer les tarifs
   if (auth instanceof Response) return auth;
 
   const { id } = await ctx.params;

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
-import { requireForwarder } from "@/lib/require-auth";
+import { requireForwarder, requireForwarderAdmin } from "@/lib/require-auth";
 import { patchForwarderSchema } from "@/lib/validations/forwarder";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -21,7 +21,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 }
 
 export async function PATCH(req: Request, ctx: Ctx) {
-  const auth = await requireForwarder();
+  const auth = await requireForwarderAdmin(); // STAFF ne peut pas modifier les paramètres agence
   if (auth instanceof Response) return auth;
   const { id } = await ctx.params;
   if (id !== auth.forwarderId) {

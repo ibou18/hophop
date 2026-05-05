@@ -10,6 +10,11 @@ export default async function TariffsSettingsPage() {
     redirect("/login");
   }
 
+  // STAFF n'a pas accès à la grille tarifaire
+  if (session.user.forwarderRole === "STAFF") {
+    redirect("/dashboard?blocked=tariffs");
+  }
+
   const tariffs = await prisma.forwarderTariff.findMany({
     where: { forwarderId },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],

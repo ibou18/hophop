@@ -31,15 +31,20 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/shipments", label: "Envois", icon: Truck },
-  { href: "/parcels", label: "Colis", icon: Package },
-  { href: "/clients", label: "Clients", icon: UsersRound },
-  { href: "/settings/tariffs", label: "Tarifs", icon: Receipt },
-  { href: "/settings/team", label: "Équipe", icon: Users },
-  { href: "/settings", label: "Paramètres", icon: Settings },
-] as const;
+const NAV: {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  minRole?: "ADMIN" | "OWNER"; // undefined = accessible à tous les rôles
+}[] = [
+  { href: "/dashboard",        label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/shipments",        label: "Envois",           icon: Truck },
+  { href: "/parcels",          label: "Colis",            icon: Package },
+  { href: "/clients",          label: "Clients",          icon: UsersRound },
+  { href: "/settings/tariffs", label: "Tarifs",           icon: Receipt,  minRole: "ADMIN" },
+  { href: "/settings/team",    label: "Équipe",           icon: Users,    minRole: "ADMIN" },
+  { href: "/settings",         label: "Paramètres",       icon: Settings, minRole: "ADMIN" },
+];
 
 function navItemActive(href: string, pathname: string): boolean {
   if (href === "/dashboard" || href === "/settings") return pathname === href;
@@ -51,6 +56,13 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
   ADMIN:  { label: "Admin",        cls: "bg-sky-50 text-sky-700" },
   STAFF:  { label: "Collaborateur", cls: "bg-hh-sand text-hh-muted" },
 };
+
+function canAccess(itemMinRole: "ADMIN" | "OWNER" | undefined, userRole: string | undefined): boolean {
+  if (!itemMinRole) return true;
+  if (userRole === "OWNER") return true;
+  if (userRole === "ADMIN" && itemMinRole === "ADMIN") return true;
+  return false;
+}
 
 export function ForwarderShell({
   user,
@@ -83,7 +95,7 @@ export function ForwarderShell({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV.map((item) => {
+                {NAV.filter((item) => canAccess(item.minRole, user.forwarderRole)).map((item) => {
                   const Icon = item.icon;
                   const active = navItemActive(item.href, pathname);
                   return (

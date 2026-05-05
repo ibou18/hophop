@@ -13,6 +13,11 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
+  // STAFF n'a pas accès aux paramètres agence
+  if (session.user.forwarderRole === "STAFF") {
+    redirect("/dashboard?blocked=settings");
+  }
+
   const profile = await getForwarderProfile(forwarderId);
   if (!profile) {
     redirect("/login");

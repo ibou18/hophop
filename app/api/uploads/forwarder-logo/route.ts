@@ -1,5 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/http";
-import { requireForwarder } from "@/lib/require-auth";
+import { requireForwarderAdmin } from "@/lib/require-auth";
 import { FORWARDER_LOGO_MAX_BYTES, normalizeImageContentType } from "@/lib/image-file-types";
 import {
   objectKeyForForwarderLogo,
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const auth = await requireForwarder();
+  const auth = await requireForwarderAdmin(); // STAFF ne peut pas modifier le logo
   if (auth instanceof Response) return auth;
 
   const h = req.headers.get("content-type") || "";
