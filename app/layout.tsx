@@ -55,6 +55,7 @@ export default function RootLayout({
           data-sample-rate="0.15"
           data-mask-level="moderate"
           data-max-duration="300000"
+          data-block-selector=".no-record, #private, input[type='password']"
         ></script>
         <Script
           id="umami-analytics"

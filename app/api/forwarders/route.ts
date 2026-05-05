@@ -1,4 +1,8 @@
+import { render } from "@react-email/render";
 import { hash } from "bcryptjs";
+import { ForwarderWelcomeEmail } from "@/emails/forwarder-welcome";
+import { getAppBaseUrl } from "@/lib/mail/app-url";
+import { getDefaultFromAddress, getResendClient } from "@/lib/mail/resend";
 import { prisma } from "@/lib/prisma";
 import { generateCode5 } from "@/lib/codes";
 import { jsonError, jsonOk } from "@/lib/http";
@@ -99,6 +103,33 @@ export async function POST(req: Request) {
 
     return fw;
   });
+
+  const base = getAppBaseUrl();
+  const resend = getResendClient();
+  if (resend) {
+    try {
+      const html = await render(
+        ForwarderWelcomeEmail({
+          firstName,
+          forwarderName: forwarder.name,
+          code5: forwarder.code5,
+          loginUrl: `${base}/login`,
+          dashboardUrl: `${base}/dashboard`,
+          newShipmentUrl: `${base}/shipments/new`,
+          publicProfileUrl: `${base}/p/${forwarder.code5}`,
+        })
+      );
+      await resend.emails.send({
+        from: getDefaultFromAddress(),
+        to: email,
+        subject:
+          "Bienvenue sur Hophop — crée ton premier envoi (demandes en attente possibles)",
+        html,
+      });
+    } catch (e) {
+      console.error("forwarder welcome email failed", e);
+    }
+  }
 
   return jsonOk(forwarder, 201);
 }
