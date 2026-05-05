@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
+        <Script
+          id="umami-analytics"
+          src="https://umami-production-8931.up.railway.app/script.js"
+          strategy="afterInteractive"
+          data-website-id="d48ea5c9-79c9-45b7-abb2-f37cbd1f8157"
+        />
       </body>
     </html>
   );
