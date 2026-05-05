@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import iconMark from "@/assets/logos/logo.png";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,13 +37,26 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+      )}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
         <Script
           id="umami-analytics"
           src="https://umami-production-8931.up.railway.app/script.js"
+          strategy="afterInteractive"
+          data-website-id="d48ea5c9-79c9-45b7-abb2-f37cbd1f8157"
+        />
+        <Script
+          id="umami-analytics"
+          src="https://wtrack.ca/script.js"
           strategy="afterInteractive"
           data-website-id="d48ea5c9-79c9-45b7-abb2-f37cbd1f8157"
         />
