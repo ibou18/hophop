@@ -48,12 +48,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
-        <Script
-          id="umami-analytics"
-          src="https://umami-production-8931.up.railway.app/script.js"
-          strategy="afterInteractive"
+        <script
+          defer
+          src="https://wtrack.ca/recorder.js"
           data-website-id="d48ea5c9-79c9-45b7-abb2-f37cbd1f8157"
-        />
+          data-sample-rate="0.15"
+          data-mask-level="moderate"
+          data-max-duration="300000"
+        ></script>
         <Script
           id="umami-analytics"
           src="https://wtrack.ca/script.js"
