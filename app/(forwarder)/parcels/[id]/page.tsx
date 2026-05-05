@@ -12,6 +12,7 @@ import { itemCategoryLabelFr } from "@/lib/item-category-fr";
 import { trackingEventTypeLabelFr } from "@/lib/tracking-event-type-fr";
 import { CURRENCY_SYMBOL } from "@/lib/pricing";
 import { ParcelStatusUpdater } from "@/components/forwarder/parcel-status-updater";
+import { ForwarderParcelDecisionActions } from "@/components/forwarder/forwarder-parcel-decision-actions";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -53,6 +54,19 @@ export default async function ForwarderParcelDetailPage({
 
   const parcel = await getForwarderParcelById(forwarderId, id);
   if (!parcel) notFound();
+  const availableShipments = await prisma.shipment.findMany({
+    where: {
+      forwarderId,
+      status: { in: ["DRAFT", "CONFIRMED"] },
+    },
+    orderBy: [{ departureDate: "asc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      reference: true,
+      destinationCountry: true,
+    },
+    take: 100,
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -104,6 +118,13 @@ export default async function ForwarderParcelDetailPage({
           />
         </div>
       </section>
+
+      <ForwarderParcelDecisionActions
+        parcelId={parcel.id}
+        currentStatus={parcel.status}
+        shipmentId={parcel.shipmentId}
+        availableShipments={availableShipments}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">

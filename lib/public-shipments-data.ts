@@ -18,12 +18,12 @@ export type PublicUpcomingShipment = {
 };
 
 export async function getPublicUpcomingShipments(
-  take = 5,
+  take?: number,
 ): Promise<PublicUpcomingShipment[]> {
   const rows = await prisma.shipment.findMany({
     where: publicVitrineShipmentWhere(),
     orderBy: { departureDate: "asc" },
-    take,
+    ...(typeof take === "number" ? { take } : {}),
     select: {
       id: true,
       reference: true,

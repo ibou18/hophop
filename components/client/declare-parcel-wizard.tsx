@@ -273,6 +273,7 @@ export function DeclareParcelWizard({
     };
   }, []);
 
+  /** Sans `?envoi=`, l’estimation utilise le mode Avion. Les grilles « maritime/route seulement » exigent une règle couvrant AIR ou tous les modes (mode vide en admin). */
   const transportMode: TransportMode =
     targetShipmentSummary?.transportMode ?? "AIR";
   const transportModeLabel = TRANSPORT_MODE_LABEL[transportMode];

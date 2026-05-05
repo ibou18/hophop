@@ -14,6 +14,7 @@ import {
   TrackingEventType,
 } from "@/app/generated/prisma/enums";
 import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
+import { revalidatePath } from "next/cache";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -96,10 +97,55 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
   const existing = await prisma.parcel.findFirst({
     where: { id, forwarderId: auth.forwarderId },
+    include: { shipment: { select: { status: true } } },
   });
   if (!existing) return jsonError("Introuvable", 404);
   const data = parsed.data;
   const { status: newStatus, ...rest } = data;
+
+  // ── State machine guards ──────────────────────────────────────────────────
+  if (newStatus !== undefined && newStatus !== existing.status) {
+    const cur = existing.status;
+    const shipmentStatus = existing.shipment?.status;
+
+    // Irréversible : livré ou en transit ne peut pas être refusé
+    if (
+      newStatus === ParcelStatus.ISSUE &&
+      (cur === ParcelStatus.DELIVERED ||
+        cur === ParcelStatus.IN_TRANSIT ||
+        cur === ParcelStatus.ARRIVED)
+    ) {
+      return jsonError(
+        `Impossible de refuser un colis au statut « ${cur} ».`,
+        422,
+      );
+    }
+
+    // Acceptation (→ COLLECTED) : le colis doit être DECLARED
+    if (newStatus === ParcelStatus.COLLECTED && cur !== ParcelStatus.DECLARED) {
+      return jsonError(
+        `Impossible d'accepter un colis au statut « ${cur} ».`,
+        422,
+      );
+    }
+
+    // Acceptation d'un colis dans un envoi déjà parti : bloquer
+    if (
+      newStatus === ParcelStatus.COLLECTED &&
+      shipmentStatus !== undefined &&
+      shipmentStatus !== null &&
+      [
+        "IN_TRANSIT" as const,
+        "ARRIVED" as const,
+      ].includes(shipmentStatus as "IN_TRANSIT" | "ARRIVED")
+    ) {
+      return jsonError(
+        "Ce colis appartient à un envoi déjà parti. Modifie-le depuis la fiche de l'envoi.",
+        422,
+      );
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
   const notifyIds: string[] = [];
   const updated = await prisma.$transaction(async (tx) => {
     const p = await tx.parcel.update({
@@ -186,5 +232,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
     return p;
   });
   scheduleNotificationDispatch(notifyIds);
+
+  // Invalide le cache RSC du dashboard et de la liste des colis
+  // pour que le prochain chargement reflète le nouveau statut immédiatement
+  revalidatePath("/dashboard");
+  revalidatePath("/parcels");
+
   return jsonOk(updated);
 }

@@ -60,28 +60,46 @@ export function calculatePrice(
 
   switch (tariff.pricingType) {
     case "WEIGHT_KG": {
-      if (!input.weightKg || !tariff.ratePerKg) return null;
-      raw = input.weightKg * tariff.ratePerKg;
+      const kg = input.weightKg;
+      if (
+        kg == null ||
+        !Number.isFinite(kg) ||
+        kg <= 0 ||
+        tariff.ratePerKg == null ||
+        !Number.isFinite(tariff.ratePerKg)
+      ) {
+        return null;
+      }
+      raw = kg * tariff.ratePerKg;
       break;
     }
     case "PER_BOX": {
-      if (!tariff.ratePerBox) return null;
+      if (tariff.ratePerBox == null || !Number.isFinite(tariff.ratePerBox)) {
+        return null;
+      }
       raw = tariff.ratePerBox;
       break;
     }
     case "FLAT": {
-      if (!tariff.flatRate) return null;
+      if (tariff.flatRate == null || !Number.isFinite(tariff.flatRate)) {
+        return null;
+      }
       raw = tariff.flatRate;
       break;
     }
     case "VOLUMETRIC": {
       if (
-        !input.lengthCm ||
-        !input.widthCm ||
-        !input.heightCm ||
-        !tariff.ratePerVolume
-      )
+        input.lengthCm == null ||
+        input.widthCm == null ||
+        input.heightCm == null ||
+        !Number.isFinite(input.lengthCm) ||
+        !Number.isFinite(input.widthCm) ||
+        !Number.isFinite(input.heightCm) ||
+        tariff.ratePerVolume == null ||
+        !Number.isFinite(tariff.ratePerVolume)
+      ) {
         return null;
+      }
       const volumetricWeight =
         (input.lengthCm * input.widthCm * input.heightCm) / tariff.volumeDivisor;
       raw = volumetricWeight * tariff.ratePerVolume;

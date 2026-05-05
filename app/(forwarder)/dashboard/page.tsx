@@ -7,6 +7,7 @@ import { getForwarderDashboardKpis, getUpcomingShipments } from "@/lib/forwarder
 import { ForwarderParcelsTable } from "@/components/forwarder/forwarder-parcels-table";
 import { ShareProfileButton } from "@/components/forwarder/share-profile-button";
 import { UpcomingShipmentsWidget } from "@/components/forwarder/upcoming-shipments-widget";
+import { ParcelsToConfirmWidget } from "@/components/forwarder/parcels-to-confirm-widget";
 
 export default async function DashboardPage({
   searchParams,
@@ -22,7 +23,7 @@ export default async function DashboardPage({
   const sp = await searchParams;
   const blockedPage = sp?.blocked;
 
-  const [{ parcelsInTransit, activeShipments, clientsCount, recentParcels }, forwarder, upcomingShipments] =
+  const [{ parcelsInTransit, activeShipments, clientsCount, recentParcels, parcelsToConfirm }, forwarder, upcomingShipments] =
     await Promise.all([
       getForwarderDashboardKpis(forwarderId),
       prisma.forwarder.findUnique({
@@ -71,37 +72,37 @@ export default async function DashboardPage({
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-[var(--hh-radius-lg)] bg-hh-sand p-4 ring-1 ring-hh-sand-dk/20">
-          <p className="text-[11px] font-normal uppercase tracking-wide text-hh-muted">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-[var(--hh-radius-lg)] bg-white p-4 shadow-sm ring-1 ring-hh-sand-dk/20">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
             Colis en transit
           </p>
-          <p className="mt-1 text-[22px] font-medium text-hh-saffron-dk">
+          <p className="mt-2 text-[28px] font-semibold leading-none text-hh-saffron-dk">
             {parcelsInTransit}
           </p>
-          <p className="mt-2 text-[11px] font-normal text-hh-savane">
+          <p className="mt-2 text-[12px] text-hh-savane">
             Statut « En transit »
           </p>
         </div>
-        <div className="rounded-[var(--hh-radius-lg)] bg-hh-sand p-4 ring-1 ring-hh-sand-dk/20">
-          <p className="text-[11px] font-normal uppercase tracking-wide text-hh-muted">
+        <div className="rounded-[var(--hh-radius-lg)] bg-white p-4 shadow-sm ring-1 ring-hh-sand-dk/20">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
             Envois actifs
           </p>
-          <p className="mt-1 text-[22px] font-medium text-hh-saffron-dk">
+          <p className="mt-2 text-[28px] font-semibold leading-none text-hh-saffron-dk">
             {activeShipments}
           </p>
-          <p className="mt-2 text-[11px] font-normal text-hh-savane">
+          <p className="mt-2 text-[12px] text-hh-savane">
             Confirmés, en transit ou arrivés
           </p>
         </div>
-        <div className="rounded-[var(--hh-radius-lg)] bg-hh-sand p-4 ring-1 ring-hh-sand-dk/20 sm:col-span-2 lg:col-span-1">
-          <p className="text-[11px] font-normal uppercase tracking-wide text-hh-muted">
+        <div className="rounded-[var(--hh-radius-lg)] bg-white p-4 shadow-sm ring-1 ring-hh-sand-dk/20">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
             Clients
           </p>
-          <p className="mt-1 text-[22px] font-medium text-hh-saffron-dk">
+          <p className="mt-2 text-[28px] font-semibold leading-none text-hh-saffron-dk">
             {clientsCount}
           </p>
-          <p className="mt-2 text-[11px] font-normal text-hh-savane">
+          <p className="mt-2 text-[12px] text-hh-savane">
             <Link
               href="/clients"
               className="font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
@@ -110,7 +111,52 @@ export default async function DashboardPage({
             </Link>
           </p>
         </div>
+        <div className={`rounded-[var(--hh-radius-lg)] p-4 shadow-sm ring-1 col-span-2 lg:col-span-1 ${
+          parcelsToConfirm.length > 0
+            ? "bg-amber-50 ring-amber-200/70"
+            : "bg-white ring-hh-sand-dk/20"
+        }`}>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+            À confirmer
+          </p>
+          <p className={`mt-2 text-[28px] font-semibold leading-none ${
+            parcelsToConfirm.length > 0 ? "text-amber-600" : "text-hh-saffron-dk"
+          }`}>
+            {parcelsToConfirm.length}
+          </p>
+          <p className="mt-2 text-[12px] text-hh-savane">
+            {parcelsToConfirm.length > 0
+              ? "Colis déclarés en attente"
+              : "Aucun colis en attente"}
+          </p>
+        </div>
       </div>
+
+      {/* Colis à confirmer */}
+      {parcelsToConfirm.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-[22px] font-medium text-hh-earth-dk">
+                Colis à confirmer
+                <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-100 px-1.5 text-[13px] font-semibold text-amber-700 ring-1 ring-amber-200">
+                  {parcelsToConfirm.length}
+                </span>
+              </h2>
+              <p className="mt-0.5 text-[14px] text-hh-muted">
+                Colis déclarés par vos clients en attente de prise en charge.
+              </p>
+            </div>
+            <Link
+              href="/parcels?status=DECLARED"
+              className="text-[14px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline"
+            >
+              Voir tous
+            </Link>
+          </div>
+          <ParcelsToConfirmWidget parcels={parcelsToConfirm} />
+        </section>
+      )}
 
       {/* Upcoming shipments */}
       <section className="space-y-3">

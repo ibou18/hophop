@@ -28,6 +28,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,42 @@ const NAV: {
 function navItemActive(href: string, pathname: string): boolean {
   if (href === "/dashboard" || href === "/settings") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  active: boolean;
+}) {
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  return (
+    <SidebarMenuButton
+      asChild
+      isActive={active}
+      tooltip={label}
+      className={cn(
+        "text-[15px] font-normal text-hh-earth-dk hover:bg-hh-saffron/10",
+        active && "bg-hh-saffron/20 font-medium text-hh-earth-dk data-active:bg-hh-saffron/20"
+      )}
+    >
+      <Link
+        href={href}
+        onClick={() => {
+          if (isMobile) setOpenMobile(false);
+        }}
+      >
+        <Icon className="shrink-0 text-hh-saffron-dk" />
+        <span>{label}</span>
+      </Link>
+    </SidebarMenuButton>
+  );
 }
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
@@ -96,25 +133,15 @@ export function ForwarderShell({
             <SidebarGroupContent>
               <SidebarMenu>
                 {NAV.filter((item) => canAccess(item.minRole, user.forwarderRole)).map((item) => {
-                  const Icon = item.icon;
                   const active = navItemActive(item.href, pathname);
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={item.label}
-                        className={cn(
-                          "text-[15px] font-normal text-hh-earth-dk hover:bg-hh-saffron/10",
-                          active &&
-                            "bg-hh-saffron/20 font-medium text-hh-earth-dk data-active:bg-hh-saffron/20"
-                        )}
-                      >
-                        <Link href={item.href}>
-                          <Icon className="shrink-0 text-hh-saffron-dk" />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
+                      <NavLink
+                        href={item.href}
+                        label={item.label}
+                        icon={item.icon}
+                        active={active}
+                      />
                     </SidebarMenuItem>
                   );
                 })}

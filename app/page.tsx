@@ -6,7 +6,7 @@ import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
 import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
 
 export default async function Home() {
-  const upcomingShipments = await getPublicUpcomingShipments(5);
+  const upcomingShipments = await getPublicUpcomingShipments();
 
   return (
     <div className="flex min-h-screen flex-col bg-hh-sand">

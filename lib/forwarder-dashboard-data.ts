@@ -53,8 +53,9 @@ export async function getForwarderDashboardKpis(forwarderId: string): Promise<{
   activeShipments: number;
   clientsCount: number;
   recentParcels: ForwarderParcelListRow[];
+  parcelsToConfirm: ForwarderParcelListRow[];
 }> {
-  const [parcelsInTransit, activeShipments, clientsCount, recentParcels] =
+  const [parcelsInTransit, activeShipments, clientsCount, recentParcels, parcelsToConfirm] =
     await Promise.all([
       prisma.parcel.count({
         where: { forwarderId, status: ParcelStatus.IN_TRANSIT },
@@ -72,6 +73,26 @@ export async function getForwarderDashboardKpis(forwarderId: string): Promise<{
         take: 6,
         include: parcelListInclude,
       }),
+      // Colis déclarés en attente d'acceptation :
+      // - pas encore dans un envoi, OU dans un envoi en brouillon/confirmé (pas encore parti)
+      // Les colis dans un envoi IN_TRANSIT ou ARRIVED sont exclus : l'action n'est plus possible
+      prisma.parcel.findMany({
+        where: {
+          forwarderId,
+          status: ParcelStatus.DECLARED,
+          OR: [
+            { shipmentId: null },
+            {
+              shipment: {
+                status: { in: [ShipmentStatus.DRAFT, ShipmentStatus.CONFIRMED] },
+              },
+            },
+          ],
+        },
+        orderBy: { createdAt: "asc" }, // oldest first → most urgent
+        take: 20,
+        include: parcelListInclude,
+      }),
     ]);
 
   return {
@@ -79,6 +100,7 @@ export async function getForwarderDashboardKpis(forwarderId: string): Promise<{
     activeShipments,
     clientsCount,
     recentParcels,
+    parcelsToConfirm,
   };
 }
 
