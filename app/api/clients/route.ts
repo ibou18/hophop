@@ -1,4 +1,8 @@
+import { render } from "@react-email/render";
 import { hash } from "bcryptjs";
+import { ClientWelcomeEmail } from "@/emails/client-welcome";
+import { getAppBaseUrl } from "@/lib/mail/app-url";
+import { getDefaultFromAddress, getResendClient } from "@/lib/mail/resend";
 import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
 import { requireForwarder } from "@/lib/require-auth";
@@ -43,15 +47,19 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
   let forwarderId: string | null = null;
+  let linkedForwarderName: string | null = null;
+  let linkedForwarderCode5: string | null = null;
   if (data.code5) {
     const forwarder = await prisma.forwarder.findUnique({
       where: { code5: data.code5 },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, name: true, code5: true },
     });
     if (!forwarder?.isActive) {
       return jsonError("Code transitaire invalide", 404);
     }
     forwarderId = forwarder.id;
+    linkedForwarderName = forwarder.name;
+    linkedForwarderCode5 = forwarder.code5;
   }
   const passwordHash = await hash(data.password, 12);
   try {
@@ -86,6 +94,35 @@ export async function POST(req: Request) {
       }
       return c;
     });
+    const base = getAppBaseUrl();
+    const resend = getResendClient();
+    if (resend) {
+      try {
+        const linkedForwarderPublicUrl = linkedForwarderCode5
+          ? `${base}/p/${linkedForwarderCode5}`
+          : null;
+        const html = await render(
+          ClientWelcomeEmail({
+            firstName: client.firstName,
+            dashboardUrl: `${base}/client/dashboard`,
+            declareParcelUrl: `${base}/client/declare`,
+            loginUrl: `${base}/login`,
+            linkedForwarderName,
+            linkedForwarderCode5,
+            linkedForwarderPublicUrl,
+          }),
+        );
+        await resend.emails.send({
+          from: getDefaultFromAddress(),
+          to: data.email.toLowerCase(),
+          subject: "Bienvenue sur Hophop — déclare ton premier colis",
+          html,
+        });
+      } catch (e) {
+        console.error("client welcome email failed", e);
+      }
+    }
+
     return jsonOk(client, 201);
   } catch (e: unknown) {
     const code =
