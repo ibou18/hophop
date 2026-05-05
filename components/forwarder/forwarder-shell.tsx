@@ -9,6 +9,7 @@ import {
   Settings,
   Truck,
   UsersRound,
+  Users,
 } from "lucide-react";
 import { HopLogoSidebarBrand } from "@/components/auth/hop-logo";
 import { SignOutButton } from "@/components/auth/sign-out-button";
@@ -36,6 +37,7 @@ const NAV = [
   { href: "/parcels", label: "Colis", icon: Package },
   { href: "/clients", label: "Clients", icon: UsersRound },
   { href: "/settings/tariffs", label: "Tarifs", icon: Receipt },
+  { href: "/settings/team", label: "Équipe", icon: Users },
   { href: "/settings", label: "Paramètres", icon: Settings },
 ] as const;
 
@@ -44,11 +46,17 @@ function navItemActive(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+  OWNER:  { label: "Propriétaire", cls: "bg-hh-saffron-lt text-hh-saffron-dk" },
+  ADMIN:  { label: "Admin",        cls: "bg-sky-50 text-sky-700" },
+  STAFF:  { label: "Collaborateur", cls: "bg-hh-sand text-hh-muted" },
+};
+
 export function ForwarderShell({
   user,
   children,
 }: {
-  user: { name: string; email: string };
+  user: { name: string; email: string; forwarderRole?: string };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -107,7 +115,14 @@ export function ForwarderShell({
           <SidebarMenu>
             <SidebarMenuItem>
               <div className="flex flex-col gap-0.5 px-2 py-1.5 group-data-[collapsible=icon]:hidden">
-                <p className="truncate text-[13px] font-medium text-hh-earth-dk">{user.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-[13px] font-medium text-hh-earth-dk">{user.name}</p>
+                  {user.forwarderRole && ROLE_BADGE[user.forwarderRole] && (
+                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${ROLE_BADGE[user.forwarderRole].cls}`}>
+                      {ROLE_BADGE[user.forwarderRole].label}
+                    </span>
+                  )}
+                </div>
                 <p className="truncate text-[11px] font-normal text-hh-muted">{user.email}</p>
               </div>
             </SidebarMenuItem>

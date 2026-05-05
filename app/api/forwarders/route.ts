@@ -54,27 +54,51 @@ export async function POST(req: Request) {
     code5 = generateCode5();
   }
   const passwordHash = await hash(data.password, 12);
-  const forwarder = await prisma.forwarder.create({
-    data: {
-      code5,
-      name: data.name,
-      email,
-      phone: data.phone ?? null,
-      country: data.country,
-      city: data.city,
-      address: data.address ?? null,
-      description: data.description ?? null,
-      passwordHash,
-    },
-    select: {
-      id: true,
-      code5: true,
-      name: true,
-      email: true,
-      country: true,
-      city: true,
-      createdAt: true,
-    },
+
+  // Découper le nom pour créer l'OWNER
+  const nameParts = data.name.trim().split(/\s+/);
+  const firstName = nameParts[0] ?? data.name;
+  const lastName = nameParts.slice(1).join(" ") || "—";
+
+  // Transaction : créer Forwarder + ForwarderUser OWNER en une seule opération
+  const forwarder = await prisma.$transaction(async (tx) => {
+    const fw = await tx.forwarder.create({
+      data: {
+        code5,
+        name: data.name,
+        email,
+        phone: data.phone ?? null,
+        country: data.country,
+        city: data.city,
+        address: data.address ?? null,
+        description: data.description ?? null,
+        passwordHash,
+      },
+      select: {
+        id: true,
+        code5: true,
+        name: true,
+        email: true,
+        country: true,
+        city: true,
+        createdAt: true,
+      },
+    });
+
+    // Créer automatiquement le ForwarderUser OWNER
+    await tx.forwarderUser.create({
+      data: {
+        forwarderId: fw.id,
+        email,
+        firstName,
+        lastName,
+        passwordHash,
+        role: "OWNER",
+      },
+    });
+
+    return fw;
   });
+
   return jsonOk(forwarder, 201);
 }

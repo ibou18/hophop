@@ -15,24 +15,72 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
+        const email = (credentials?.email as string | undefined)?.toLowerCase().trim();
         const password = credentials?.password as string | undefined;
         if (!email || !password) return null;
-        const forwarder = await prisma.forwarder.findUnique({
-          where: { email: email.toLowerCase().trim() },
+
+        // ── 1. Authentification via ForwarderUser (nouveau système) ──
+        const fwUser = await prisma.forwarderUser.findUnique({
+          where: { email },
+          include: {
+            forwarder: { select: { id: true, name: true, isActive: true } },
+          },
         });
-        if (!forwarder?.isActive) return null;
+
+        if (fwUser && fwUser.isActive && fwUser.forwarder.isActive && fwUser.passwordHash) {
+          const ok = await compare(password, fwUser.passwordHash);
+          if (!ok) return null;
+          return {
+            id: fwUser.id,
+            email: fwUser.email,
+            name: `${fwUser.firstName} ${fwUser.lastName}`,
+            role: "FORWARDER" as const,
+            forwarderId: fwUser.forwarderId,
+            forwarderUserId: fwUser.id,
+            forwarderRole: fwUser.role as "OWNER" | "ADMIN" | "STAFF",
+          };
+        }
+
+        // ── 2. Fallback legacy : Forwarder.email + passwordHash ──
+        // Permet aux anciens comptes de continuer à se connecter.
+        // Un ForwarderUser OWNER est auto-créé au premier login.
+        const forwarder = await prisma.forwarder.findUnique({
+          where: { email },
+        });
+        if (!forwarder?.isActive || !forwarder.passwordHash) return null;
         const ok = await compare(password, forwarder.passwordHash);
         if (!ok) return null;
+
+        // Auto-création du ForwarderUser OWNER si inexistant
+        const nameParts = forwarder.name.trim().split(/\s+/);
+        const firstName = nameParts[0] ?? forwarder.name;
+        const lastName = nameParts.slice(1).join(" ") || "—";
+
+        const owner = await prisma.forwarderUser.upsert({
+          where: { email: forwarder.email },
+          create: {
+            forwarderId: forwarder.id,
+            email: forwarder.email,
+            firstName,
+            lastName,
+            passwordHash: forwarder.passwordHash,
+            role: "OWNER",
+          },
+          update: {}, // déjà créé → rien à faire
+        });
+
         return {
-          id: forwarder.id,
-          email: forwarder.email,
+          id: owner.id,
+          email: owner.email,
           name: forwarder.name,
           role: "FORWARDER" as const,
           forwarderId: forwarder.id,
+          forwarderUserId: owner.id,
+          forwarderRole: "OWNER" as const,
         };
       },
     }),
+
     Credentials({
       id: "client-credentials",
       name: "Client",
@@ -74,10 +122,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const u = user as import("next-auth").User & {
           role: "FORWARDER" | "CLIENT";
           forwarderId?: string;
+          forwarderUserId?: string;
+          forwarderRole?: "OWNER" | "ADMIN" | "STAFF";
           clientId?: string;
         };
         token.role = u.role;
         if (u.forwarderId) token.forwarderId = u.forwarderId;
+        if (u.forwarderUserId) token.forwarderUserId = u.forwarderUserId;
+        if (u.forwarderRole) token.forwarderRole = u.forwarderRole;
         if (u.clientId) token.clientId = u.clientId;
       }
       return token;
@@ -87,10 +139,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const t = token as import("next-auth/jwt").JWT & {
           role: "FORWARDER" | "CLIENT";
           forwarderId?: string;
+          forwarderUserId?: string;
+          forwarderRole?: "OWNER" | "ADMIN" | "STAFF";
           clientId?: string;
         };
         session.user.role = t.role;
         if (t.forwarderId) session.user.forwarderId = t.forwarderId;
+        if (t.forwarderUserId) session.user.forwarderUserId = t.forwarderUserId;
+        if (t.forwarderRole) session.user.forwarderRole = t.forwarderRole;
         if (t.clientId) session.user.clientId = t.clientId;
       }
       return session;

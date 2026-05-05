@@ -18,6 +18,12 @@ enum AuthMethod {
   PHONE
 }
 
+enum ForwarderRole {
+  OWNER // Propriétaire — accès total + gestion membres
+  ADMIN // Admin — gestion ops complète, sauf membres et billing
+  STAFF // Collaborateur — opérations terrain uniquement
+}
+
 enum Country {
   CA // Canada
   FR // France
@@ -201,8 +207,57 @@ model Forwarder {
   tariffs        ForwarderTariff[]
   notifications  Notification[]
   expoPushTokens ExpoPushToken[]
+  members        ForwarderUser[]
+  invitations    ForwarderInvitation[]
 
   @@map("forwarders")
+}
+
+// ─────────────────────────────────────────────
+// FORWARDER USER — Membre de l'équipe d'un transitaire
+// L'OWNER est créé à l'inscription ; les autres sont invités par email
+// ─────────────────────────────────────────────
+
+model ForwarderUser {
+  id           String        @id @default(uuid())
+  forwarderId  String
+  email        String        @unique
+  firstName    String
+  lastName     String
+  passwordHash String?
+  role         ForwarderRole @default(STAFF)
+  isActive     Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  forwarder       Forwarder             @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
+  sentInvitations ForwarderInvitation[] @relation("InvitedBy")
+
+  @@map("forwarder_users")
+}
+
+// ─────────────────────────────────────────────
+// FORWARDER INVITATION — Invitation par email à rejoindre l'équipe
+// ─────────────────────────────────────────────
+
+model ForwarderInvitation {
+  id          String        @id @default(uuid())
+  forwarderId String
+  invitedById String
+  email       String
+  role        ForwarderRole @default(STAFF)
+  token       String        @unique @default(uuid())
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  forwarder Forwarder     @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
+  invitedBy ForwarderUser @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([forwarderId])
+  @@map("forwarder_invitations")
 }
 
 // ─────────────────────────────────────────────

@@ -22,6 +22,7 @@ export default async function ForwarderLayout({
       user={{
         name: session.user.name ?? "Transitaire",
         email: session.user.email ?? "",
+        forwarderRole: session.user.forwarderRole,
       }}
     >
       {children}
