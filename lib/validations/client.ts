@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { Country } from "@/app/generated/prisma/enums";
 import { toE164 } from "@/lib/phone-e164";
 
-const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
+const country = z.enum(Country);
 
 const emptyToUndefined = (v: unknown) =>
   typeof v === "string" && v.trim() === "" ? undefined : v;
