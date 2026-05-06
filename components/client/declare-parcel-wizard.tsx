@@ -13,8 +13,8 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import type { ForwarderTariff, Recipient } from "@/app/generated/prisma/client";
-import type { Country, TransportMode } from "@/app/generated/prisma/enums";
+import type { Recipient } from "@/app/generated/prisma/client";
+import type { Country, Currency, PricingType, TransportMode } from "@/app/generated/prisma/enums";
 import type { ClientForwarderRow } from "@/lib/client-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
@@ -28,8 +28,8 @@ import {
   calculatePrice,
   CURRENCY_SYMBOL,
   PRICING_TYPE_LABEL,
-  resolveTariff,
   type PricingResult,
+  type ShipmentPricingFields,
 } from "@/lib/pricing";
 import { TRANSPORT_MODE_LABEL } from "@/lib/transport-mode";
 
@@ -108,11 +108,9 @@ function parseOptionalPositiveFloat(raw: string): number | undefined {
 }
 
 type PriceEstimateView = {
-  hasTariffRows: boolean;
-  noRuleForDestination: boolean;
+  hasPricing: boolean;
   result: PricingResult | null;
   missingHint: string | null;
-  needsRecipient: boolean;
 };
 
 export type TargetShipmentSummary = {
@@ -122,8 +120,16 @@ export type TargetShipmentSummary = {
   destinationCity: string | null;
   departureDate: string | null;
   arrivalDate: string | null;
-  /** Mode de l’envoi lié (pour cohérence avec la grille tarifaire) */
   transportMode?: TransportMode;
+  // Tarification propre à l’envoi (pour estimation côté client)
+  pricingType?: PricingType | null;
+  ratePerKg?: number | null;
+  ratePerBox?: number | null;
+  flatRate?: number | null;
+  ratePerVolume?: number | null;
+  volumeDivisor?: number;
+  minimumCharge?: number;
+  currency?: Currency;
 };
 
 function ParcelPriceEstimateBlock({
@@ -133,50 +139,16 @@ function ParcelPriceEstimateBlock({
   view: PriceEstimateView;
   transportModeLabel: string;
 }) {
-  const {
-    hasTariffRows,
-    noRuleForDestination,
-    result,
-    missingHint,
-    needsRecipient,
-  } = view;
+  const { hasPricing, result, missingHint } = view;
 
-  if (!hasTariffRows) {
+  if (!hasPricing) {
     return (
       <div className="rounded-[var(--hh-radius-md)] border border-dashed border-hh-sand-dk/35 bg-hh-sand/40 px-4 py-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
           Tarif indicatif
         </p>
         <p className="mt-1.5 text-[12px] text-hh-muted">
-          Ce transitaire n’a pas encore publié de grille tarifaire.
-        </p>
-      </div>
-    );
-  }
-
-  if (needsRecipient) {
-    return (
-      <div className="rounded-[var(--hh-radius-md)] border border-hh-sand-dk/25 bg-hh-sand/50 px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
-          Tarif indicatif
-        </p>
-        <p className="mt-1.5 text-[12px] text-hh-muted">
-          Choisissez un destinataire (étape 1) pour estimer le tarif selon le
-          pays de livraison.
-        </p>
-      </div>
-    );
-  }
-
-  if (noRuleForDestination) {
-    return (
-      <div className="rounded-[var(--hh-radius-md)] border border-hh-sand-dk/25 bg-hh-sand/50 px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
-          Tarif indicatif
-        </p>
-        <p className="mt-1.5 text-[12px] text-hh-muted">
-          Aucun tarif publié pour ce pays ou pour le mode « {transportModeLabel}{" "}
-          ». Vous pouvez contacter le transitaire.
+          Le tarif sera confirmé par le transitaire après acceptation de votre colis.
         </p>
       </div>
     );
@@ -223,18 +195,15 @@ export function DeclareParcelWizard({
   initialForwarderId,
   targetShipmentId,
   targetShipmentSummary,
-  tariffsByForwarderId,
 }: {
   recipients: Recipient[];
   forwarders: ClientForwarderRow[];
   /** Prérempli depuis `/client/declare?forwarder=CODE5` */
   initialForwarderId?: string;
-  /** Envoi visé — après création du colis, demande d'intégration automatique (si l'envoi accepte encore les demandes) */
+  /** Envoi visé — après création du colis, demande d’intégration automatique (si l’envoi accepte encore les demandes) */
   targetShipmentId?: string;
-  /** Détails de l’envoi (route, dates) depuis la page transitaire */
+  /** Détails de l’envoi (route, dates, tarification) depuis la page transitaire */
   targetShipmentSummary?: TargetShipmentSummary;
-  /** Grilles tarifaires actives par transitaire (pour estimation côté client) */
-  tariffsByForwarderId: Record<string, ForwarderTariff[]>;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -291,90 +260,59 @@ export function DeclareParcelWizard({
   }, [addingNew, state.newRecipient, state.recipientId, recipients]);
 
   const priceEstimateView = useMemo((): PriceEstimateView => {
-    const selectedTariffs = tariffsByForwarderId[state.forwarderId] ?? [];
-    const hasTariffRows = selectedTariffs.length > 0;
-    if (!hasTariffRows) {
-      return {
-        hasTariffRows: false,
-        noRuleForDestination: false,
-        result: null,
-        missingHint: null,
-        needsRecipient: false,
-      };
+    // Estimation disponible seulement si l'envoi a une tarification définie
+    const s = targetShipmentSummary;
+    if (!s?.pricingType) {
+      return { hasPricing: false, result: null, missingHint: null };
     }
-    if (!destinationCountry) {
-      return {
-        hasTariffRows: true,
-        noRuleForDestination: false,
-        result: null,
-        missingHint: null,
-        needsRecipient: true,
-      };
-    }
-    const tariff = resolveTariff(
-      selectedTariffs,
-      destinationCountry,
-      transportMode,
-    );
-    if (!tariff) {
-      return {
-        hasTariffRows: true,
-        noRuleForDestination: true,
-        result: null,
-        missingHint: null,
-        needsRecipient: false,
-      };
-    }
+
+    const pricing: ShipmentPricingFields = {
+      pricingType: s.pricingType,
+      ratePerKg: s.ratePerKg ?? null,
+      ratePerBox: s.ratePerBox ?? null,
+      flatRate: s.flatRate ?? null,
+      ratePerVolume: s.ratePerVolume ?? null,
+      volumeDivisor: s.volumeDivisor ?? 5000,
+      minimumCharge: s.minimumCharge ?? 0,
+      currency: s.currency ?? "EUR",
+    };
+
     const w = parseOptionalPositiveFloat(state.weightKg);
     const L = parseOptionalPositiveFloat(state.lengthCm);
     const W = parseOptionalPositiveFloat(state.widthCm);
     const H = parseOptionalPositiveFloat(state.heightCm);
-    const result = calculatePrice(tariff, {
-      destinationCountry,
-      transportMode,
+
+    const result = calculatePrice(pricing, {
+      destinationCountry: s.destinationCountry,
+      transportMode: transportMode,
       weightKg: w,
       lengthCm: L,
       widthCm: W,
       heightCm: H,
     });
+
     if (result) {
-      return {
-        hasTariffRows: true,
-        noRuleForDestination: false,
-        result,
-        missingHint: null,
-        needsRecipient: false,
-      };
+      return { hasPricing: true, result, missingHint: null };
     }
+
     let missingHint: string | null = null;
-    switch (tariff.pricingType) {
+    switch (s.pricingType) {
       case "WEIGHT_KG":
-        missingHint =
-          "Indiquez le poids estimé (kg) pour afficher une estimation.";
+        missingHint = "Indiquez le poids estimé (kg) pour afficher une estimation.";
         break;
       case "VOLUMETRIC":
-        missingHint =
-          "Indiquez longueur, largeur et hauteur (cm) pour une estimation volumétrique.";
+        missingHint = "Indiquez longueur, largeur et hauteur (cm) pour une estimation volumétrique.";
         break;
       default:
-        missingHint =
-          "Les données du tarif sont incomplètes — contactez le transitaire.";
+        missingHint = "Les données de tarification sont incomplètes — contactez le transitaire.";
     }
-    return {
-      hasTariffRows: true,
-      noRuleForDestination: false,
-      result: null,
-      missingHint,
-      needsRecipient: false,
-    };
+    return { hasPricing: true, result: null, missingHint };
   }, [
-    tariffsByForwarderId,
-    state.forwarderId,
+    targetShipmentSummary,
     state.weightKg,
     state.lengthCm,
     state.widthCm,
     state.heightCm,
-    destinationCountry,
     transportMode,
   ]);
 

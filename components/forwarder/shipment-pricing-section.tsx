@@ -100,7 +100,8 @@ export function ShipmentPricingSection({
             Tarification de l&apos;envoi
           </p>
           <p className="mt-0.5 text-[12px] text-hh-muted">
-            Prioritaire sur la grille globale. Laisse vide pour utiliser les tarifs configurés.
+            Prioritaire sur la grille globale. Laisse vide pour utiliser les
+            tarifs configurés.
           </p>
         </div>
       </div>
@@ -112,7 +113,7 @@ export function ShipmentPricingSection({
           disabled={disabled}
           className={selectClass}
         >
-          <option value="">— Utiliser la grille globale —</option>
+          <option value="">— Sélectionner une méthode de tarification —</option>
           {(Object.keys(PRICING_TYPE_LABEL) as PricingType[]).map((k) => (
             <option key={k} value={k}>
               {PRICING_TYPE_LABEL[k]}

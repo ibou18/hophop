@@ -39,6 +39,8 @@ export default async function SettingsPage() {
     description: profile.description,
     paymentEnabled: profile.paymentEnabled,
     stripeAccountId: profile.stripeAccountId,
+    locale: profile.locale,
+    timezone: profile.timezone,
     updatedAt: profile.updatedAt.toISOString(),
   };
 

@@ -4,7 +4,7 @@ import { requireForwarder } from "@/lib/require-auth";
 import { patchShipmentParcelsSchema } from "@/lib/validations/shipment";
 import { ParcelStatus, ShipmentStatus } from "@/app/generated/prisma/enums";
 import { TrackingActor, TrackingEventType } from "@/app/generated/prisma/enums";
-import { resolveAndCalculate } from "@/lib/pricing";
+import { calculatePrice } from "@/lib/pricing";
 import type { ShipmentPricingFields } from "@/lib/pricing";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -49,16 +49,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       return jsonError("Colis invalides (doivent être COLLECTED, même transitaire)", 400);
     }
 
-    // ── Résolution du prix par colis ─────────────────────────────────────────
-    // Si le shipment a une tarification propre, on l'utilise.
-    // Sinon on charge la grille globale et on résout par (destination + mode).
-    let globalTariffs: Awaited<ReturnType<typeof prisma.forwarderTariff.findMany>> = [];
-    if (!shipment.pricingType) {
-      globalTariffs = await prisma.forwarderTariff.findMany({
-        where: { forwarderId: auth.forwarderId, isActive: true },
-      });
-    }
-
+    // ── Résolution du prix par colis via la tarification du shipment ─────────
     const shipmentPricing: ShipmentPricingFields = {
       pricingType: shipment.pricingType,
       ratePerKg: shipment.ratePerKg,
@@ -81,7 +72,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
           transportMode: shipment.transportMode,
         };
 
-        const priceResult = resolveAndCalculate(globalTariffs, pricingInput, shipmentPricing);
+        const priceResult = calculatePrice(shipmentPricing, pricingInput);
 
         await tx.parcel.update({
           where: { id: parcel.id },

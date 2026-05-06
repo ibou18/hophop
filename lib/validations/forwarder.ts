@@ -60,4 +60,6 @@ export const patchForwarderSchema = z.object({
   description: z.string().nullable().optional(),
   paymentEnabled: z.boolean().optional(),
   stripeAccountId: z.string().nullable().optional(),
+  locale: z.enum(["fr", "en"]).optional(),
+  timezone: z.string().min(1).max(64).optional(),
 });

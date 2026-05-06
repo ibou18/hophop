@@ -6,4 +6,7 @@ export const COUNTRY_OPTIONS = [
   { value: "SN", label: "Sénégal" },
   { value: "CI", label: "Côte d’Ivoire" },
   { value: "CM", label: "Cameroun" },
+  { value: "TG", label: "Togo" },
+  { value: "BF", label: "Burkina Faso" },
+  { value: "NG", label: "Nigeria" },
 ] as const;

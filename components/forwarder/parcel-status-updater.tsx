@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import type { ParcelStatus } from "@/app/generated/prisma/enums";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import {
@@ -38,13 +39,15 @@ export function ParcelStatusUpdater({
         | { error?: string; message?: string }
         | null;
       if (!res.ok) {
-        setError(
+        const msg =
           json?.message ??
-            json?.error ??
-            `Mise à jour impossible (${res.status})`,
-        );
+          json?.error ??
+          `Mise à jour impossible (${res.status})`;
+        setError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success(`Statut mis à jour : ${parcelStatusLabelFr(status)}`);
       router.refresh();
     });
   }

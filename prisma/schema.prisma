@@ -31,6 +31,9 @@ enum Country {
   SN // Sénégal
   CI // Côte d'Ivoire
   CM // Cameroun
+  TG // Togo
+  BF // Burkina Faso
+  NG // Nigeria
   // Ajouter d'autres pays ici sans toucher à la structure
 }
 
@@ -163,6 +166,7 @@ enum Currency {
   XOF // Franc CFA (UEMOA — Sénégal, Côte d'Ivoire)
   XAF // Franc CFA (CEMAC — Cameroun)
   GNF // Franc guinéen
+  NGN // Naira
 }
 
 // ─────────────────────────────────────────────
@@ -193,6 +197,10 @@ model Forwarder {
   paymentEnabled  Boolean @default(false)
   stripeAccountId String? // Stripe Connect account ID
 
+  // Préférences
+  locale   String @default("fr") // code IETF : fr | en
+  timezone String @default("America/Toronto") // IANA timezone
+
   // Auth
   passwordHash String
   isActive     Boolean @default(true)
@@ -204,7 +212,6 @@ model Forwarder {
   clients        ClientForwarder[]
   shipments      Shipment[]
   parcels        Parcel[]
-  tariffs        ForwarderTariff[]
   notifications  Notification[]
   expoPushTokens ExpoPushToken[]
   members        ForwarderUser[]
@@ -227,6 +234,10 @@ model ForwarderUser {
   passwordHash String?
   role         ForwarderRole @default(STAFF)
   isActive     Boolean       @default(true)
+
+  // Préférences personnelles du membre
+  locale   String @default("fr")
+  timezone String @default("America/Toronto")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -279,6 +290,10 @@ model Client {
   authMethod   AuthMethod @default(EMAIL)
   passwordHash String?
   otpSecret    String? // Pour auth par téléphone (OTP)
+
+  // Préférences
+  locale   String @default("fr")
+  timezone String @default("America/Toronto")
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -508,7 +523,7 @@ model Payment {
 
   stripePaymentIntentId String?       @unique
   amount                Float
-  currency              String        @default("CAD") // CAD | EUR | GNF | XOF | XAF
+  currency              String        @default("CAD") // CAD | EUR | GNF | XOF | XAF | NGN
   status                PaymentStatus @default(PENDING)
 
   paidAt    DateTime?
@@ -586,46 +601,6 @@ model ShipmentRequest {
   movedToShipment Shipment? @relation("MovedToShipment", fields: [movedToShipmentId], references: [id])
 
   @@map("shipment_requests")
-}
-
-// ─────────────────────────────────────────────
-// FORWARDER TARIFF — Grille tarifaire du transitaire
-// Une règle = un type de calcul + éventuellement une destination
-// La règle la plus spécifique (par pays) prime sur la règle générale
-// ─────────────────────────────────────────────
-
-model ForwarderTariff {
-  id          String @id @default(uuid())
-  forwarderId String
-
-  // Destination ciblée — null = s'applique à toutes les destinations
-  destinationCountry Country?
-
-  // Mode de transport ciblé — null = s'applique à tous les modes
-  transportMode TransportMode?
-
-  pricingType PricingType
-
-  // Paramètres selon le type
-  ratePerKg     Float? // WEIGHT_KG  : prix par kilo (ex: 4.50)
-  ratePerBox    Float? // PER_BOX    : prix par carton (ex: 45.00)
-  flatRate      Float? // FLAT       : prix fixe par colis
-  ratePerVolume Float? // VOLUMETRIC : prix par unité volumétrique
-  volumeDivisor Float  @default(5000) // VOLUMETRIC : diviseur L×l×H
-
-  minimumCharge Float    @default(0) // Minimum facturé même si calcul < minimum
-  currency      Currency @default(EUR)
-
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0) // Ordre d'affichage dans l'UI
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  forwarder Forwarder @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
-
-  @@index([forwarderId, destinationCountry, transportMode])
-  @@map("forwarder_tariffs")
 }
 
 // ─────────────────────────────────────────────

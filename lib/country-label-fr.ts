@@ -7,6 +7,9 @@ const LABELS: Record<Country, string> = {
   SN: "Sénégal",
   CI: "Côte d’Ivoire",
   CM: "Cameroun",
+  TG: "Togo",
+  BF: "Burkina Faso",
+  NG: "Nigeria",
 };
 
 export function countryLabelFr(code: Country): string {

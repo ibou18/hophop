@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Package,
   PlusCircle,
+  Settings,
   Truck,
   Users,
 } from "lucide-react";
@@ -14,11 +15,12 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/client/dashboard", label: "Accueil", icon: LayoutDashboard },
-  { href: "/client/shipments", label: "Envois", icon: Truck },
-  { href: "/client/parcels", label: "Mes colis", icon: Package },
-  { href: "/client/declare", label: "Déclarer", icon: PlusCircle },
-  { href: "/client/recipients", label: "Proches", icon: Users },
+  { href: "/client/dashboard",  label: "Accueil",    icon: LayoutDashboard },
+  { href: "/client/shipments",  label: "Envois",     icon: Truck },
+  { href: "/client/parcels",    label: "Mes colis",  icon: Package },
+  { href: "/client/declare",    label: "Déclarer",   icon: PlusCircle },
+  { href: "/client/recipients", label: "Proches",    icon: Users },
+  { href: "/client/settings",   label: "Paramètres", icon: Settings },
 ] as const;
 
 function isActive(href: string, pathname: string): boolean {

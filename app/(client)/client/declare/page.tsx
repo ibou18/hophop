@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { ForwarderTariff } from "@/app/generated/prisma/client";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -53,20 +52,6 @@ export default async function DeclarePage({ searchParams }: PageProps) {
     getClientForwarders(clientId),
   ]);
 
-  const forwarderIds = forwarders.map((f) => f.id);
-  const tariffsRows =
-    forwarderIds.length > 0
-      ? await prisma.forwarderTariff.findMany({
-          where: { forwarderId: { in: forwarderIds }, isActive: true },
-        })
-      : [];
-  const tariffsByForwarderId: Record<string, ForwarderTariff[]> = {};
-  for (const row of tariffsRows) {
-    const list = tariffsByForwarderId[row.forwarderId] ?? [];
-    list.push(row);
-    tariffsByForwarderId[row.forwarderId] = list;
-  }
-
   let targetShipmentId: string | undefined;
   let targetShipmentSummary: TargetShipmentSummary | undefined;
 
@@ -86,6 +71,15 @@ export default async function DeclarePage({ searchParams }: PageProps) {
         departureDate: true,
         arrivalDate: true,
         transportMode: true,
+        // Tarification propre au shipment
+        pricingType: true,
+        ratePerKg: true,
+        ratePerBox: true,
+        flatRate: true,
+        ratePerVolume: true,
+        volumeDivisor: true,
+        minimumCharge: true,
+        currency: true,
       },
     });
     if (shipment) {
@@ -97,6 +91,14 @@ export default async function DeclarePage({ searchParams }: PageProps) {
         departureDate: shipment.departureDate?.toISOString() ?? null,
         arrivalDate: shipment.arrivalDate?.toISOString() ?? null,
         transportMode: shipment.transportMode,
+        pricingType: shipment.pricingType,
+        ratePerKg: shipment.ratePerKg,
+        ratePerBox: shipment.ratePerBox,
+        flatRate: shipment.flatRate,
+        ratePerVolume: shipment.ratePerVolume,
+        volumeDivisor: shipment.volumeDivisor,
+        minimumCharge: shipment.minimumCharge,
+        currency: shipment.currency,
       };
       const stillJoinable = await prisma.shipment.findFirst({
         where: {
@@ -121,7 +123,6 @@ export default async function DeclarePage({ searchParams }: PageProps) {
         initialForwarderId={initialForwarderId}
         targetShipmentId={targetShipmentId}
         targetShipmentSummary={targetShipmentSummary}
-        tariffsByForwarderId={tariffsByForwarderId}
       />
     </div>
   );

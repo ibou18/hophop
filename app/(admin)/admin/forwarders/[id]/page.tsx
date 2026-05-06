@@ -63,8 +63,8 @@ export default async function AdminForwarderDetailPage({
           </div>
           <p className="mt-0.5 text-[14px] text-slate-500">
             Code : <strong className="text-slate-700">{forwarder.code5}</strong>
-            {forwarder.defaultOriginCountry && (
-              <> · {forwarder.defaultOriginCountry} → {forwarder.defaultDestinationCountry}</>
+            {forwarder.city && forwarder.country && (
+              <> · {forwarder.city}, {forwarder.country}</>
             )}
           </p>
         </div>
@@ -84,7 +84,7 @@ export default async function AdminForwarderDetailPage({
           { label: "Clients",          value: forwarder._count.clients,      icon: Users,    color: "bg-blue-50 text-blue-600" },
           { label: "Colis",            value: forwarder._count.parcels,      icon: Package,  color: "bg-amber-50 text-amber-600" },
           { label: "Envois",           value: forwarder._count.shipments,    icon: Truck,    color: "bg-violet-50 text-violet-600" },
-          { label: "Membres équipe",   value: forwarder._count.forwarderUsers, icon: Users,  color: "bg-emerald-50 text-emerald-600" },
+          { label: "Membres équipe",   value: forwarder._count.members, icon: Users,  color: "bg-emerald-50 text-emerald-600" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
             <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${color}`}>
@@ -109,10 +109,10 @@ export default async function AdminForwarderDetailPage({
               {forwarder.email}
             </dd>
           </div>
-          {forwarder.whatsappPhone && (
+          {forwarder.phone && (
             <div>
-              <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">WhatsApp</dt>
-              <dd className="mt-0.5 text-[14px] text-slate-700">{forwarder.whatsappPhone}</dd>
+              <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Téléphone</dt>
+              <dd className="mt-0.5 text-[14px] text-slate-700">{forwarder.phone}</dd>
             </div>
           )}
           <div>

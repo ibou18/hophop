@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Receipt,
   ScanLine,
   Settings,
   Truck,
@@ -44,7 +43,6 @@ const NAV: {
   { href: "/parcels",          label: "Colis",            icon: Package },
   { href: "/scan",             label: "Scanner",          icon: ScanLine },
   { href: "/clients",          label: "Clients",          icon: UsersRound },
-  { href: "/settings/tariffs", label: "Tarifs",           icon: Receipt,  minRole: "ADMIN" },
   { href: "/settings/team",    label: "Équipe",           icon: Users,    minRole: "ADMIN" },
   { href: "/settings",         label: "Paramètres",       icon: Settings, minRole: "ADMIN" },
 ];

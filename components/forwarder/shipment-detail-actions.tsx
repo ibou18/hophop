@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import type { ShipmentStatus } from "@/app/generated/prisma/enums";
 import { ShipmentStatus as ShipmentSt } from "@/app/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
@@ -23,15 +24,19 @@ export function ShipmentDetailActions({
 
   function run(
     label: string,
+    successMsg: string,
     fn: () => Promise<{ ok: boolean; message?: string }>,
   ): void {
     setError(null);
     startTransition(async () => {
       const r = await fn();
       if (!r.ok) {
-        setError(r.message ?? label);
+        const msg = r.message ?? `Impossible : ${label}`;
+        setError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success(successMsg);
       router.refresh();
     });
   }
@@ -95,7 +100,7 @@ export function ShipmentDetailActions({
             variant="outline"
             className="border-hh-sand-dk/40"
             onClick={() =>
-              run("Confirmation", () => patchStatus(ShipmentSt.CONFIRMED))
+              run("Confirmation", "Envoi confirmé ✓", () => patchStatus(ShipmentSt.CONFIRMED))
             }
           >
             Confirmer l’envoi
@@ -105,7 +110,7 @@ export function ShipmentDetailActions({
           type="button"
           disabled={pending || !canDispatch}
           className="bg-hh-saffron text-white hover:bg-hh-saffron-dk disabled:opacity-50"
-          onClick={() => run("Départ", postDispatch)}
+          onClick={() => run("Départ", "Départ enregistré — envoi en transit ✈", postDispatch)}
         >
           Enregistrer le départ
         </Button>
@@ -114,7 +119,7 @@ export function ShipmentDetailActions({
           disabled={pending || !canArrive}
           variant="secondary"
           className="bg-hh-earth-lt text-hh-earth-dk hover:bg-hh-sand-dk/40 disabled:opacity-50"
-          onClick={() => run("Arrivée", postArrive)}
+          onClick={() => run("Arrivée", "Envoi marqué arrivé à destination ✓", postArrive)}
         >
           Marquer arrivé à destination
         </Button>

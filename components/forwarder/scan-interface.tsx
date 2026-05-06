@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import {
   ScanLine,
@@ -194,9 +195,12 @@ export function ScanInterface({
       });
       const j = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setActionError(j?.error ?? "Erreur lors de la mise à jour.");
+        const msg = j?.error ?? "Erreur lors de la mise à jour.";
+        setActionError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success(`Statut mis à jour : ${parcelStatusLabelFr(nextStatus)}`);
       // Reload parcel data
       await lookup(result.parcel.trackingCode);
     });
@@ -206,6 +210,9 @@ export function ScanInterface({
   function assignToShipment() {
     if (!result || !targetShipmentId) return;
     setActionError(null);
+    const shipmentLabel =
+      result.availableShipments.find((s) => s.id === targetShipmentId)?.reference ??
+      "l'envoi";
     startTransition(async () => {
       const res = await fetch(`/api/shipments/${targetShipmentId}/parcels`, {
         method: "PATCH",
@@ -215,9 +222,12 @@ export function ScanInterface({
       });
       const j = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setActionError(j?.error ?? "Affectation impossible.");
+        const msg = j?.error ?? "Affectation impossible.";
+        setActionError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success(`Colis affecté à ${shipmentLabel} ✓`);
       await lookup(result.parcel.trackingCode);
     });
   }

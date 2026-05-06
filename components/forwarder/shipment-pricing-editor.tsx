@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import type { PricingType, Currency } from "@/app/generated/prisma/enums";
 import { PRICING_TYPE_LABEL, CURRENCY_SYMBOL } from "@/lib/pricing";
 import {
@@ -69,9 +70,12 @@ export function ShipmentPricingEditor(props: ShipmentPricingProps) {
       });
       const j = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setError(j?.error ?? "Impossible de sauvegarder.");
+        const msg = j?.error ?? "Impossible de sauvegarder.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success("Tarification de l'envoi mise à jour ✓");
       setEditing(false);
       router.refresh();
     });

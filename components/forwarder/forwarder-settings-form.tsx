@@ -10,6 +10,8 @@ import {
   forwarderLogoMaxBytes,
   S3ImageUploadButton,
 } from "@/components/storage/s3-image-upload-button";
+import { UserPreferencesSection } from "@/components/shared/user-preferences-section";
+import { toast } from "sonner";
 
 export type ForwarderProfileDTO = {
   id: string;
@@ -27,6 +29,8 @@ export type ForwarderProfileDTO = {
   description: string | null;
   paymentEnabled: boolean;
   stripeAccountId: string | null;
+  locale: string;
+  timezone: string;
   updatedAt: string;
 };
 
@@ -77,6 +81,8 @@ export function ForwarderSettingsForm({
   const [stripeAccountId, setStripeAccountId] = useState(
     profile.stripeAccountId ?? "",
   );
+  const [locale, setLocale] = useState(profile.locale);
+  const [timezone, setTimezone] = useState(profile.timezone);
 
   function submit(e: React.FormEvent): void {
     e.preventDefault();
@@ -98,6 +104,8 @@ export function ForwarderSettingsForm({
         logoUrl: logoUrl.trim() === "" ? null : logoUrl.trim(),
         stripeAccountId:
           stripeAccountId.trim() === "" ? null : stripeAccountId.trim(),
+        locale,
+        timezone,
       };
 
       const res = await fetch(`/api/forwarders/${profile.id}`, {
@@ -110,9 +118,12 @@ export function ForwarderSettingsForm({
         | { error?: string }
         | null;
       if (!res.ok) {
-        setError(json?.error ?? `Enregistrement impossible (${res.status})`);
+        const msg = json?.error ?? `Enregistrement impossible (${res.status})`;
+        setError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success("Paramètres enregistrés ✓");
       setSaved(true);
       router.refresh();
     });
@@ -369,6 +380,14 @@ export function ForwarderSettingsForm({
           />
         </div>
       </section>
+
+      <UserPreferencesSection
+        locale={locale}
+        timezone={timezone}
+        onLocaleChange={setLocale}
+        onTimezoneChange={setTimezone}
+        disabled={pending}
+      />
 
       {error ? <p className="text-[13px] text-hh-kola">{error}</p> : null}
       {saved ? (

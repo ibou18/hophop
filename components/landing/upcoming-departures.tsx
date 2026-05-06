@@ -12,7 +12,12 @@ import { fr } from "date-fns/locale";
 import type { PublicUpcomingShipment } from "@/lib/public-shipments-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { CURRENCY_SYMBOL } from "@/lib/pricing";
-import type { Country, Currency, PricingType, TransportMode } from "@/app/generated/prisma/enums";
+import type {
+  Country,
+  Currency,
+  PricingType,
+  TransportMode,
+} from "@/app/generated/prisma/enums";
 
 const COUNTRY_FLAG: Record<string, string> = {
   CA: "🇨🇦",
@@ -67,7 +72,9 @@ function formatPricing(s: PublicUpcomingShipment): string | null {
     case "FLAT":
       return s.flatRate != null ? `${s.flatRate} ${sym} / colis` : null;
     case "VOLUMETRIC":
-      return s.ratePerVolume != null ? `${s.ratePerVolume} ${sym} / u.vol` : null;
+      return s.ratePerVolume != null
+        ? `${s.ratePerVolume} ${sym} / u.vol`
+        : null;
   }
 }
 
@@ -133,7 +140,7 @@ export function UpcomingDepartures({
               <Link
                 key={s.id}
                 href={`/p/${s.forwarder.code5}`}
-                className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/5 p-5 backdrop-blur-sm transition-all duration-300 hover:border-hh-saffron/30 hover:bg-white/8 hover:shadow-xl hover:shadow-hh-saffron/5 hover:-translate-y-0.5"
+                className="group relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-white/8 bg-white/5 p-5 backdrop-blur-sm transition-all duration-300 hover:border-hh-saffron/30 hover:bg-white/8 hover:shadow-xl hover:shadow-hh-saffron/5 hover:-translate-y-0.5"
               >
                 {/* Urgency glow on urgent cards */}
                 {isUrgent && (
@@ -147,7 +154,7 @@ export function UpcomingDepartures({
                 )}
 
                 {/* Top row: mode icon + countdown */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mr-10">
                   <div
                     className="flex h-9 w-9 items-center justify-center rounded-xl"
                     style={{ backgroundColor: m.iconBg }}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
 import { PackageCheck, Clock, Loader2, CheckCheck, X } from "lucide-react";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import type { ForwarderParcelListRow } from "@/lib/forwarder-dashboard-data";
@@ -29,11 +30,19 @@ function ParcelRow({ parcel }: { parcel: ForwarderParcelListRow }) {
       });
       const j = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
-        setError(j?.error ?? "Erreur, réessaie.");
+        const msg = j?.error ?? "Erreur, réessaie.";
+        setError(msg);
+        toast.error(msg);
         setAction(null);
         return;
       }
-      setDone(kind === "accept" ? "accepted" : "refused");
+      if (kind === "accept") {
+        toast.success(`Colis ${parcel.trackingCode} accepté ✓`);
+        setDone("accepted");
+      } else {
+        toast.error(`Colis ${parcel.trackingCode} refusé`);
+        setDone("refused");
+      }
       router.refresh();
     });
   }
