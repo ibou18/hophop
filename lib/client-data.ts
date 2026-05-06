@@ -189,6 +189,7 @@ export async function getPublishedShipmentsCatalog() {
     select: {
       id: true,
       reference: true,
+      transportMode: true,
       originCountry: true,
       destinationCountry: true,
       destinationCity: true,
