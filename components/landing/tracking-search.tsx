@@ -3,11 +3,14 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import { TRACKING_CODE_PREFIX } from "@/lib/codes";
+import {
+  TRACKING_CODE_PREFIX,
+  TRACKING_CODE_SUFFIX_CHARSET,
+} from "@/lib/codes";
 
-/** Même alphabet que `generateTrackingCode` (lib/codes.ts), en minuscules. */
+/** Même alphabet que `generateTrackingCode` — dérivé de `TRACKING_CODE_SUFFIX_CHARSET`. */
 const ALLOWED_SUFFIX = new Set(
-  "abcdefghjkmnpqrstuvwxyz23456789".split(""),
+  TRACKING_CODE_SUFFIX_CHARSET.toLowerCase().split(""),
 );
 
 function sanitizeSuffix(raw: string): string {
@@ -45,7 +48,7 @@ export function TrackingSearch({ dark = false }: Props) {
   }
 
   function handleChange(value: string) {
-    setSuffix(sanitizeSuffix(value));
+    setSuffix(sanitizeSuffix(value).toUpperCase());
   }
 
   return (
@@ -75,15 +78,15 @@ export function TrackingSearch({ dark = false }: Props) {
         <input
           type="text"
           inputMode="text"
-          autoCapitalize="none"
+          autoCapitalize="characters"
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
           value={suffix}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="ex. zjrrw5"
+          placeholder="ex. ZJRRW5"
           aria-label={`Suffixe du code de suivi après ${TRACKING_CODE_PREFIX}`}
-          className={`min-h-0 min-w-0 flex-1 bg-transparent py-2 pr-4 font-mono text-sm lowercase outline-none placeholder:font-sans ${
+          className={`min-h-0 min-w-0 flex-1 bg-transparent py-2 pr-4 font-mono text-sm uppercase outline-none placeholder:font-sans ${
             dark
               ? "text-white placeholder:text-white/25"
               : "text-hh-nuit placeholder:text-hh-muted/60"

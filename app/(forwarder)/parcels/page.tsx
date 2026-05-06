@@ -9,6 +9,7 @@ import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import { ForwarderParcelsTable } from "@/components/forwarder/forwarder-parcels-table";
 import { ParcelStatus } from "@/app/generated/prisma/enums";
 import { cn } from "@/lib/utils";
+import { isForwarderPrivilegedRole } from "@/lib/parcel-status-workflow";
 
 const FILTER_ORDER: ParcelStatus[] = [
   ParcelStatus.IN_TRANSIT,
@@ -34,6 +35,7 @@ export default async function ParcelsPage({ searchParams }: PageProps) {
   const sp = (await searchParams) ?? {};
   const statusFilter = parseParcelStatusParam(sp.status);
   const parcels = await getForwarderParcels(forwarderId, statusFilter);
+  const canCorrectAnyStatus = isForwarderPrivilegedRole(session.user.forwarderRole);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -72,7 +74,10 @@ export default async function ParcelsPage({ searchParams }: PageProps) {
         ))}
       </div>
 
-      <ForwarderParcelsTable parcels={parcels} />
+      <ForwarderParcelsTable
+        parcels={parcels}
+        canCorrectAnyStatus={canCorrectAnyStatus}
+      />
     </div>
   );
 }

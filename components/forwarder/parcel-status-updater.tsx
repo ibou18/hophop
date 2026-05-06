@@ -4,24 +4,21 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ParcelStatus } from "@/app/generated/prisma/enums";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
+import {
+  ALL_PARCEL_STATUSES_ORDERED,
+  staffSelectableStatuses,
+} from "@/lib/parcel-status-workflow";
 import { Button } from "@/components/ui/button";
-
-const STATUSES: ParcelStatus[] = [
-  "DECLARED",
-  "COLLECTED",
-  "IN_TRANSIT",
-  "ARRIVED",
-  "READY",
-  "DELIVERED",
-  "ISSUE",
-];
 
 export function ParcelStatusUpdater({
   parcelId,
   currentStatus,
+  canCorrectAnyStatus = false,
 }: {
   parcelId: string;
   currentStatus: ParcelStatus;
+  /** OWNER / ADMIN : toutes les transitions : corriger une erreur de statut. */
+  canCorrectAnyStatus?: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<ParcelStatus>(currentStatus);
@@ -52,8 +49,18 @@ export function ParcelStatusUpdater({
     });
   }
 
+  const statusOptions = canCorrectAnyStatus
+    ? ALL_PARCEL_STATUSES_ORDERED
+    : staffSelectableStatuses(currentStatus);
+
   return (
     <div className="space-y-2">
+      {!canCorrectAnyStatus ? (
+        <p className="text-[12px] text-hh-muted">
+          Seules les étapes du flux normal sont proposées. Pour corriger une erreur,
+          connecte-toi avec un compte administrateur (propriétaire ou admin).
+        </p>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
           <label
@@ -69,7 +76,7 @@ export function ParcelStatusUpdater({
             disabled={pending}
             className="h-10 rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40 disabled:opacity-60"
           >
-            {STATUSES.map((s) => (
+            {statusOptions.map((s) => (
               <option key={s} value={s}>
                 {parcelStatusLabelFr(s)}
               </option>

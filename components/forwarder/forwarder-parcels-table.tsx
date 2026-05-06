@@ -39,9 +39,12 @@ function statusBadgeClass(status: ParcelStatus): string {
 export function ForwarderParcelsTable({
   parcels,
   emptyLabel = "Aucun colis pour le moment.",
+  canCorrectAnyStatus = false,
 }: {
   parcels: ForwarderParcelListRow[];
   emptyLabel?: string;
+  /** OWNER / ADMIN : correction libre du statut dans la modale rapide. */
+  canCorrectAnyStatus?: boolean;
 }) {
   const router = useRouter();
   const [quickParcel, setQuickParcel] = useState<ForwarderParcelListRow | null>(null);
@@ -139,6 +142,7 @@ export function ForwarderParcelsTable({
           if (!next) setQuickParcel(null);
         }}
         onStatusUpdated={() => router.refresh()}
+        canCorrectAnyStatus={canCorrectAnyStatus}
       />
     </>
   );

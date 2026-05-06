@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { staffMayTransition } from "@/lib/parcel-status-workflow";
 
 /** Ordre d’affichage des tags de statut (cohérent avec les filtres liste). */
 const STATUS_TAGS_ORDER: ParcelStatus[] = [
@@ -53,11 +54,14 @@ export function ForwarderParcelQuickModal({
   open,
   onOpenChange,
   onStatusUpdated,
+  canCorrectAnyStatus = false,
 }: {
   parcel: ForwarderParcelListRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusUpdated?: () => void;
+  /** OWNER / ADMIN : tous les tags cliquables pour corriger une erreur. */
+  canCorrectAnyStatus?: boolean;
 }) {
   const [status, setStatus] = useState<ParcelStatus | null>(null);
   const [saving, setSaving] = useState<ParcelStatus | null>(null);
@@ -119,6 +123,11 @@ export function ForwarderParcelQuickModal({
           <DialogDescription className="text-left text-[13px] text-hh-muted">
             Modifier le statut sans ouvrir la fiche complète. Les changements sont enregistrés et
             ajoutés au suivi.
+            {!canCorrectAnyStatus ? (
+              <span className="mt-1 block text-[12px] text-hh-muted/90">
+                Hors flux normal : compte administrateur requis.
+              </span>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
 
@@ -207,11 +216,18 @@ export function ForwarderParcelQuickModal({
               {STATUS_TAGS_ORDER.map((s) => {
                 const isCurrent = s === status;
                 const isBusy = saving !== null;
+                const allowed =
+                  canCorrectAnyStatus ||
+                  isCurrent ||
+                  (status !== null && staffMayTransition(status, s));
                 return (
                   <button
                     key={s}
                     type="button"
-                    disabled={isBusy}
+                    title={
+                      allowed ? undefined : "Statut réservé aux administrateurs"
+                    }
+                    disabled={isBusy || !allowed}
                     onClick={() => void applyStatus(s)}
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-60",

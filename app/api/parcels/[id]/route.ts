@@ -14,6 +14,10 @@ import {
   TrackingEventType,
 } from "@/app/generated/prisma/enums";
 import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
+import {
+  isForwarderPrivilegedRole,
+  staffMayTransition,
+} from "@/lib/parcel-status-workflow";
 import { revalidatePath } from "next/cache";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -103,46 +107,30 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const data = parsed.data;
   const { status: newStatus, ...rest } = data;
 
-  // ── State machine guards ──────────────────────────────────────────────────
+  // ── Statut : collaborateurs = flux défini ; OWNER/ADMIN = corrections libres ─
+  const privileged = isForwarderPrivilegedRole(auth.forwarderRole);
   if (newStatus !== undefined && newStatus !== existing.status) {
-    const cur = existing.status;
-    const shipmentStatus = existing.shipment?.status;
-
-    // Irréversible : livré ou en transit ne peut pas être refusé
-    if (
-      newStatus === ParcelStatus.ISSUE &&
-      (cur === ParcelStatus.DELIVERED ||
-        cur === ParcelStatus.IN_TRANSIT ||
-        cur === ParcelStatus.ARRIVED)
-    ) {
-      return jsonError(
-        `Impossible de refuser un colis au statut « ${cur} ».`,
-        422,
-      );
-    }
-
-    // Acceptation (→ COLLECTED) : le colis doit être DECLARED
-    if (newStatus === ParcelStatus.COLLECTED && cur !== ParcelStatus.DECLARED) {
-      return jsonError(
-        `Impossible d'accepter un colis au statut « ${cur} ».`,
-        422,
-      );
-    }
-
-    // Acceptation d'un colis dans un envoi déjà parti : bloquer
-    if (
-      newStatus === ParcelStatus.COLLECTED &&
-      shipmentStatus !== undefined &&
-      shipmentStatus !== null &&
-      [
-        "IN_TRANSIT" as const,
-        "ARRIVED" as const,
-      ].includes(shipmentStatus as "IN_TRANSIT" | "ARRIVED")
-    ) {
-      return jsonError(
-        "Ce colis appartient à un envoi déjà parti. Modifie-le depuis la fiche de l'envoi.",
-        422,
-      );
+    if (!privileged) {
+      if (!staffMayTransition(existing.status, newStatus)) {
+        return jsonError(
+          "Cette transition est réservée aux administrateurs du transitaire.",
+          403,
+        );
+      }
+      const shipmentStatus = existing.shipment?.status;
+      if (
+        newStatus === ParcelStatus.COLLECTED &&
+        shipmentStatus !== undefined &&
+        shipmentStatus !== null &&
+        (
+          ["IN_TRANSIT", "ARRIVED"] as const
+        ).includes(shipmentStatus as "IN_TRANSIT" | "ARRIVED")
+      ) {
+        return jsonError(
+          "Ce colis appartient à un envoi déjà parti. Modifie-le depuis la fiche de l'envoi.",
+          422,
+        );
+      }
     }
   }
   // ─────────────────────────────────────────────────────────────────────────

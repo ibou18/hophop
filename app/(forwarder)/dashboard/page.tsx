@@ -8,6 +8,7 @@ import { ForwarderParcelsTable } from "@/components/forwarder/forwarder-parcels-
 import { ShareProfileButton } from "@/components/forwarder/share-profile-button";
 import { UpcomingShipmentsWidget } from "@/components/forwarder/upcoming-shipments-widget";
 import { ParcelsToConfirmWidget } from "@/components/forwarder/parcels-to-confirm-widget";
+import { isForwarderPrivilegedRole } from "@/lib/parcel-status-workflow";
 
 export default async function DashboardPage({
   searchParams,
@@ -32,6 +33,8 @@ export default async function DashboardPage({
       }),
       getUpcomingShipments(forwarderId, 10),
     ]);
+
+  const canCorrectAnyStatus = isForwarderPrivilegedRole(session.user.forwarderRole);
 
   const BLOCKED_LABELS: Record<string, string> = {
     settings: "les paramètres de l'agence",
@@ -207,6 +210,7 @@ export default async function DashboardPage({
         <ForwarderParcelsTable
           parcels={recentParcels}
           emptyLabel="Aucun colis pour l’instant. Les déclarations clients apparaîtront ici."
+          canCorrectAnyStatus={canCorrectAnyStatus}
         />
       </section>
     </div>

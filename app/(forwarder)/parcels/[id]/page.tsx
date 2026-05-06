@@ -12,7 +12,9 @@ import { itemCategoryLabelFr } from "@/lib/item-category-fr";
 import { trackingEventTypeLabelFr } from "@/lib/tracking-event-type-fr";
 import { CURRENCY_SYMBOL } from "@/lib/pricing";
 import { ParcelStatusUpdater } from "@/components/forwarder/parcel-status-updater";
+import { isForwarderPrivilegedRole } from "@/lib/parcel-status-workflow";
 import { ForwarderParcelDecisionActions } from "@/components/forwarder/forwarder-parcel-decision-actions";
+import { ParcelQrCode } from "@/components/client/parcel-qr-code";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -54,6 +56,7 @@ export default async function ForwarderParcelDetailPage({
 
   const parcel = await getForwarderParcelById(forwarderId, id);
   if (!parcel) notFound();
+  const canCorrectAnyStatus = isForwarderPrivilegedRole(session.user.forwarderRole);
   const availableShipments = await prisma.shipment.findMany({
     where: {
       forwarderId,
@@ -103,6 +106,10 @@ export default async function ForwarderParcelDetailPage({
         </p>
       </div>
 
+      <section className="flex flex-col items-center rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
+        <ParcelQrCode trackingCode={parcel.trackingCode} />
+      </section>
+
       <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
         <h2 className="text-[15px] font-medium text-hh-earth-dk">
           Mettre à jour
@@ -115,6 +122,7 @@ export default async function ForwarderParcelDetailPage({
             key={`${parcel.id}-${parcel.status}-${parcel.updatedAt.toISOString()}`}
             parcelId={parcel.id}
             currentStatus={parcel.status}
+            canCorrectAnyStatus={canCorrectAnyStatus}
           />
         </div>
       </section>
