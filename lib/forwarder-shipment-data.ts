@@ -16,9 +16,19 @@ const shipmentDetailInclude = {
     orderBy: { createdAt: "asc" as const },
     include: {
       client: {
-        select: { id: true, firstName: true, lastName: true, email: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          city: true,
+          country: true,
+        },
       },
       recipient: { select: { city: true, country: true } },
+      vehicle: {
+        select: { id: true, make: true, model: true, year: true },
+      },
     },
   },
   _count: { select: { requests: true } },
@@ -29,13 +39,29 @@ export type ForwarderShipmentDetail = Prisma.ShipmentGetPayload<{
 }>;
 
 const assignableParcelInclude = {
-  client: { select: { firstName: true, lastName: true } },
+  client: {
+    select: {
+      firstName: true,
+      lastName: true,
+      city: true,
+      country: true,
+    },
+  },
   recipient: { select: { city: true, country: true } },
+  vehicle: {
+    select: { id: true, make: true, model: true, year: true },
+  },
 } satisfies Prisma.ParcelInclude;
 
 export type AssignableParcelRow = Prisma.ParcelGetPayload<{
   include: typeof assignableParcelInclude;
 }>;
+
+/** Données minimales pour l’UI d’affectation (liste « ajouter » / « retirer »). */
+export type ParcelAssignmentListRow = Pick<
+  AssignableParcelRow,
+  "id" | "trackingCode" | "client" | "recipient" | "vehicle"
+>;
 
 export async function getForwarderShipments(
   forwarderId: string,
@@ -70,14 +96,29 @@ export async function getForwarderShipmentById(
   });
 }
 
+/** Route de l’envoi pour ne proposer que les colis « compatibles » à l’affectation. */
+export type ShipmentRouteMatch = {
+  originCountry: Country;
+  destinationCountry: Country;
+  acceptsVehicles: boolean;
+};
+
+/**
+ * Colis collectés, non affectés, dont le pays client → pays destinataire correspond
+ * à la route de l’envoi. Les dossiers véhicule sont exclus si l’envoi n’accepte pas les véhicules.
+ */
 export async function getAssignableParcels(
   forwarderId: string,
+  route: ShipmentRouteMatch,
 ): Promise<AssignableParcelRow[]> {
   return prisma.parcel.findMany({
     where: {
       forwarderId,
       status: ParcelStatus.COLLECTED,
       shipmentId: null,
+      client: { country: route.originCountry },
+      recipient: { country: route.destinationCountry },
+      ...(route.acceptsVehicles ? {} : { vehicle: null }),
     },
     orderBy: { createdAt: "desc" },
     take: 150,

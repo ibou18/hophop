@@ -37,20 +37,31 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
   }
 
   const { id } = await params;
-  const [shipment, assignableParcels, requests, otherShipments] =
-    await Promise.all([
-      getForwarderShipmentById(forwarderId, id),
-      getAssignableParcels(forwarderId),
-      getShipmentRequests(forwarderId, id),
-      getOtherShipments(forwarderId, id),
-    ]);
-
+  const shipment = await getForwarderShipmentById(forwarderId, id);
   if (!shipment) notFound();
+
+  const [assignableParcels, requests, otherShipments] = await Promise.all([
+    getAssignableParcels(forwarderId, {
+      originCountry: shipment.originCountry,
+      destinationCountry: shipment.destinationCountry,
+      acceptsVehicles: shipment.acceptsVehicles,
+    }),
+    getShipmentRequests(forwarderId, id),
+    getOtherShipments(forwarderId, id),
+  ]);
 
   const editable = isShipmentEditable(shipment.status);
   const inShipmentRows = shipment.parcels.map((p) => ({
     id: p.id,
     trackingCode: p.trackingCode,
+    client: {
+      firstName: p.client.firstName,
+      lastName: p.client.lastName,
+      city: p.client.city,
+      country: p.client.country,
+    },
+    recipient: p.recipient,
+    vehicle: p.vehicle,
   }));
 
   return (
@@ -160,6 +171,8 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         editable={editable}
         assignableParcels={assignableParcels}
         inShipmentParcels={inShipmentRows}
+        routeSummary={`${countryLabelFr(shipment.originCountry)} → ${countryLabelFr(shipment.destinationCountry)}`}
+        shipmentAcceptsVehicles={shipment.acceptsVehicles}
       />
 
       {requests != null && (

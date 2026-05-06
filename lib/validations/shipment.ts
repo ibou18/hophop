@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { Country } from "@/app/generated/prisma/enums";
 
-const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
+/** Aligné sur l’enum Prisma `Country` (évite les listes en dur incomplètes). */
+const country = z.nativeEnum(Country);
 const transportMode = z.enum(["AIR", "SEA", "ROAD", "CONTAINER", "RORO"] as const);
 const pricingType = z.enum(["WEIGHT_KG", "PER_BOX", "VOLUMETRIC", "FLAT", "PER_VEHICLE"] as const);
 const currency = z.enum(["EUR", "CAD", "XOF", "XAF", "GNF"] as const);

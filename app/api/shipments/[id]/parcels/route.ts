@@ -43,10 +43,37 @@ export async function PATCH(req: Request, ctx: Ctx) {
         id: { in: parcelIds },
         forwarderId: auth.forwarderId,
         status: ParcelStatus.COLLECTED,
+        shipmentId: null,
+      },
+      include: {
+        vehicle: { select: { id: true } },
+        client: { select: { country: true } },
+        recipient: { select: { country: true } },
       },
     });
     if (parcels.length !== parcelIds.length) {
-      return jsonError("Colis invalides (doivent être COLLECTED, même transitaire)", 400);
+      return jsonError(
+        "Colis invalides (statut Collecté, même transitaire, non déjà affectés à un envoi)",
+        400,
+      );
+    }
+
+    for (const p of parcels) {
+      if (
+        p.client.country !== shipment.originCountry ||
+        p.recipient.country !== shipment.destinationCountry
+      ) {
+        return jsonError(
+          "Ce colis ne correspond pas à la route de cet envoi (pays expéditeur / destinataire).",
+          422,
+        );
+      }
+      if (p.vehicle && !shipment.acceptsVehicles) {
+        return jsonError(
+          "Cet envoi n’accepte pas les véhicules : impossible d’affecter ce dossier.",
+          422,
+        );
+      }
     }
 
     // ── Résolution du prix par colis via la tarification du shipment ─────────
