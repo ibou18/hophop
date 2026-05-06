@@ -3,6 +3,9 @@ import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? "ibdiallo.ca@gmail.com").toLowerCase();
+const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 },
@@ -82,6 +85,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
 
     Credentials({
+      id: "admin-credentials",
+      name: "Admin",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        secret: { label: "Secret", type: "password" },
+      },
+      authorize: async (credentials) => {
+        if (!ADMIN_SECRET) return null;
+        const email = (credentials?.email as string | undefined)?.toLowerCase().trim();
+        const secret = credentials?.secret as string | undefined;
+        if (!email || !secret) return null;
+        if (email !== ADMIN_EMAIL) return null;
+        if (secret !== ADMIN_SECRET) return null;
+        return {
+          id: "admin",
+          email: ADMIN_EMAIL,
+          name: "Admin",
+          role: "ADMIN" as const,
+        };
+      },
+    }),
+
+    Credentials({
       id: "client-credentials",
       name: "Client",
       credentials: {
@@ -120,7 +146,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     jwt({ token, user }) {
       if (user && "role" in user) {
         const u = user as import("next-auth").User & {
-          role: "FORWARDER" | "CLIENT";
+          role: "FORWARDER" | "CLIENT" | "ADMIN";
           forwarderId?: string;
           forwarderUserId?: string;
           forwarderRole?: "OWNER" | "ADMIN" | "STAFF";
@@ -137,7 +163,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       if (session.user) {
         const t = token as import("next-auth/jwt").JWT & {
-          role: "FORWARDER" | "CLIENT";
+          role: "FORWARDER" | "CLIENT" | "ADMIN";
           forwarderId?: string;
           forwarderUserId?: string;
           forwarderRole?: "OWNER" | "ADMIN" | "STAFF";
