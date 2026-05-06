@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Country } from "@/app/generated/prisma/enums";
 
 const ISO_TO_COUNTRY: Record<string, Country> = {
@@ -12,7 +12,7 @@ const ISO_TO_COUNTRY: Record<string, Country> = {
   CM: "CM",
 };
 
-type PlaceResolved = {
+export type PlaceResolved = {
   formattedAddress: string;
   latitude: number;
   longitude: number;
@@ -20,56 +20,71 @@ type PlaceResolved = {
   country?: Country;
 };
 
-type MapsNs = {
+type Prediction = { description: string; placeId: string };
+
+type GMaps = {
   maps: {
-    event: { clearInstanceListeners: (obj: object) => void };
     places: {
-      Autocomplete: new (
-        input: HTMLInputElement,
-        opts?: {
-          fields?: string[];
-          componentRestrictions?: { country: string | string[] };
-        },
-      ) => {
-        addListener: (ev: string, fn: () => void) => void;
-        getPlace: () => GPlace | undefined;
-      };
+      AutocompleteService: new () => AutocompleteSvc;
+      PlacesService: new (el: HTMLElement) => PlacesSvc;
+      PlacesServiceStatus: { OK: string };
+      AutocompleteSessionToken: new () => object;
     };
   };
 };
 
-type GPlace = {
-  formatted_address?: string;
-  geometry?: { location?: { lat: () => number; lng: () => number } };
-  address_components?: Array<{
-    short_name: string;
-    long_name: string;
-    types: string[];
-  }>;
+type AutocompleteSvc = {
+  getPlacePredictions: (
+    req: {
+      input: string;
+      types?: string[];
+      componentRestrictions?: { country: string };
+      sessionToken?: object;
+    },
+    cb: (
+      results: Array<{ description: string; place_id: string }> | null,
+      status: string,
+    ) => void,
+  ) => void;
+};
+
+type PlacesSvc = {
+  getDetails: (
+    req: { placeId: string; fields: string[]; sessionToken?: object },
+    cb: (
+      place: {
+        formatted_address?: string;
+        name?: string;
+        geometry?: {
+          location?: { lat: () => number; lng: () => number };
+          viewport?: { getCenter: () => { lat: () => number; lng: () => number } };
+        };
+        address_components?: Array<{
+          short_name: string;
+          long_name: string;
+          types: string[];
+        }>;
+      } | null,
+      status: string,
+    ) => void,
+  ) => void;
 };
 
 let mapsScriptPromise: Promise<void> | null = null;
 
 function loadMapsScript(apiKey: string): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  const w = window as Window & { google?: MapsNs };
+  const w = window as Window & { google?: GMaps };
   if (w.google?.maps?.places) return Promise.resolve();
   if (!mapsScriptPromise) {
     mapsScriptPromise = new Promise((resolve, reject) => {
       const id = "hh-google-maps-places";
       const existing = document.getElementById(id) as HTMLScriptElement | null;
       if (existing) {
-        const ww = window as Window & { google?: MapsNs };
-        if (ww.google?.maps?.places) {
-          resolve();
-          return;
-        }
+        const ww = window as Window & { google?: GMaps };
+        if (ww.google?.maps?.places) { resolve(); return; }
         existing.addEventListener("load", () => resolve(), { once: true });
-        existing.addEventListener(
-          "error",
-          () => reject(new Error("Google Maps script")),
-          { once: true },
-        );
+        existing.addEventListener("error", () => reject(new Error("Google Maps")), { once: true });
         return;
       }
       const script = document.createElement("script");
@@ -77,33 +92,48 @@ function loadMapsScript(apiKey: string): Promise<void> {
       script.async = true;
       script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places`;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Google Maps script"));
+      script.onerror = () => reject(new Error("Google Maps"));
       document.head.appendChild(script);
     });
   }
   return mapsScriptPromise;
 }
 
-function parsePlace(place: GPlace | undefined): PlaceResolved | null {
-  if (!place?.geometry?.location) return null;
-  const lat = place.geometry.location.lat();
-  const lng = place.geometry.location.lng();
-  const formattedAddress = place.formatted_address?.trim();
-  if (!formattedAddress || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return null;
-  }
+function extractPlace(
+  place: {
+    formatted_address?: string;
+    name?: string;
+    geometry?: {
+      location?: { lat: () => number; lng: () => number };
+      viewport?: { getCenter: () => { lat: () => number; lng: () => number } };
+    };
+    address_components?: Array<{ short_name: string; long_name: string; types: string[] }>;
+  } | null,
+  fallbackDescription: string,
+): PlaceResolved | null {
+  if (!place) return null;
+  let point = place.geometry?.location;
+  try {
+    const c = place.geometry?.viewport?.getCenter?.();
+    if (c) point = c;
+  } catch { /* garde location */ }
+  if (!point) return null;
+  const lat = point.lat();
+  const lng = point.lng();
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
 
   let city: string | undefined;
   let countryIso: string | undefined;
   for (const c of place.address_components ?? []) {
     if (c.types.includes("locality")) city = c.long_name;
     if (!city && c.types.includes("postal_town")) city = c.long_name;
+    if (!city && c.types.includes("administrative_area_level_1")) city = c.long_name;
     if (c.types.includes("country")) countryIso = c.short_name;
   }
   const country =
-    countryIso && ISO_TO_COUNTRY[countryIso]
-      ? ISO_TO_COUNTRY[countryIso]
-      : undefined;
+    countryIso && ISO_TO_COUNTRY[countryIso] ? ISO_TO_COUNTRY[countryIso] : undefined;
+  const formattedAddress =
+    place.formatted_address?.trim() || place.name?.trim() || city?.trim() || fallbackDescription;
 
   return {
     formattedAddress,
@@ -115,8 +145,9 @@ function parsePlace(place: GPlace | undefined): PlaceResolved | null {
 }
 
 /**
- * Champ adresse avec autocomplete Google Places (nécessite NEXT_PUBLIC_GOOGLE_MAPS_API_KEY).
- * Sans clé : champ texte simple relié à `value` / `onChange`.
+ * Autocomplete de ville — utilise AutocompleteService + PlacesService (pas le widget Google).
+ * Pas de mutation DOM externe → pas de race condition avec React state.
+ * Sans clé API : champ texte simple.
  */
 export function GooglePlacesAddressField({
   apiKey,
@@ -135,76 +166,105 @@ export function GooglePlacesAddressField({
   disabled?: boolean;
   placeholder?: string;
   inputClassName: string;
-  /** Limite les suggestions Places au pays sélectionné (ISO2 Prisma). */
   restrictCountry?: Country;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const onResolvedRef = useRef(onResolved);
-  onResolvedRef.current = onResolved;
-  const [ready, setReady] = useState(false);
+  const [query, setQuery] = useState(value);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [open, setOpen] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  /** Ne pas utiliser value= contrôlé avec Places Autocomplete : React réécrit le DOM et casse les clics / suggestions. */
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el || !apiKey) return;
-    if (el.value !== value) el.value = value;
-  }, [apiKey, value]);
+  const acSvcRef = useRef<AutocompleteSvc | null>(null);
+  const plSvcRef = useRef<PlacesSvc | null>(null);
+  const dummyRef = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef<object | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onResolvedRef = useRef(onResolved);
+  useEffect(() => { onResolvedRef.current = onResolved; }, [onResolved]);
 
+
+  // Charger script + init services
   useEffect(() => {
-    if (!apiKey || !inputRef.current) return;
-    let cancelled = false;
-    const w0 = window as Window & { google?: MapsNs };
-    let acInstance: InstanceType<MapsNs["maps"]["places"]["Autocomplete"]> | null =
-      null;
+    if (!apiKey || !dummyRef.current) return;
     loadMapsScript(apiKey)
       .then(() => {
-        if (cancelled || !inputRef.current) return;
-        const w = window as Window & { google?: MapsNs };
-        const Places = w.google?.maps?.places;
-        if (!Places) {
-          setLoadErr("API Places indisponible.");
-          return;
-        }
-        const acOpts: {
-          fields: string[];
-          componentRestrictions?: { country: string | string[] };
-        } = {
-          fields: ["formatted_address", "geometry", "address_components"],
-        };
-        if (restrictCountry) {
-          acOpts.componentRestrictions = {
-            country: restrictCountry.toLowerCase(),
-          };
-        }
-        const ac = new Places.Autocomplete(inputRef.current, acOpts);
-        acInstance = ac;
-        ac.addListener("place_changed", () => {
-          const place = ac.getPlace();
-          const parsed = parsePlace(place);
-          if (parsed) onResolvedRef.current(parsed);
-        });
-        setReady(true);
+        const w = window as Window & { google?: GMaps };
+        const P = w.google?.maps?.places;
+        if (!P) { setLoadErr("API Places indisponible."); return; }
+        acSvcRef.current = new P.AutocompleteService();
+        plSvcRef.current = new P.PlacesService(dummyRef.current!);
+        sessionRef.current = new P.AutocompleteSessionToken();
       })
       .catch(() => setLoadErr("Impossible de charger Google Maps."));
+  }, [apiKey]);
 
-    return () => {
-      cancelled = true;
-      const ev = w0.google?.maps?.event;
-      if (acInstance && ev) {
-        try {
-          ev.clearInstanceListeners(acInstance);
-        } catch {
-          /* ignore */
-        }
+  const fetchPredictions = useCallback(
+    (input: string) => {
+      if (!acSvcRef.current || !input.trim()) {
+        setPredictions([]);
+        setOpen(false);
+        return;
       }
-    };
-  }, [apiKey, restrictCountry]);
+      const req: Parameters<AutocompleteSvc["getPlacePredictions"]>[0] = {
+        input,
+        types: ["(cities)"],
+        sessionToken: sessionRef.current ?? undefined,
+      };
+      if (restrictCountry) req.componentRestrictions = { country: restrictCountry.toLowerCase() };
+      acSvcRef.current.getPlacePredictions(req, (results, status) => {
+        if (status === "OK" && results?.length) {
+          setPredictions(results.map((r) => ({ description: r.description, placeId: r.place_id })));
+          setOpen(true);
+        } else {
+          setPredictions([]);
+          setOpen(false);
+        }
+      });
+    },
+    [restrictCountry],
+  );
+
+  const handleChange = useCallback(
+    (v: string) => {
+      setQuery(v);
+      onChangeText(v);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchPredictions(v), 250);
+    },
+    [onChangeText, fetchPredictions],
+  );
+
+  const handleSelect = useCallback(
+    (pred: Prediction) => {
+      setQuery(pred.description);
+      onChangeText(pred.description);
+      setPredictions([]);
+      setOpen(false);
+
+      if (!plSvcRef.current) return;
+      plSvcRef.current.getDetails(
+        {
+          placeId: pred.placeId,
+          fields: ["geometry", "address_components", "formatted_address", "name"],
+          sessionToken: sessionRef.current ?? undefined,
+        },
+        (place, status) => {
+          const w = window as Window & { google?: GMaps };
+          const OK = w.google?.maps?.places?.PlacesServiceStatus?.OK ?? "OK";
+          if (status !== OK) return;
+          const resolved = extractPlace(place, pred.description);
+          if (resolved) onResolvedRef.current(resolved);
+          // Nouveau token pour prochaine session
+          const P = w.google?.maps?.places;
+          if (P) sessionRef.current = new P.AutocompleteSessionToken();
+        },
+      );
+    },
+    [onChangeText],
+  );
 
   if (!apiKey) {
     return (
       <input
-        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChangeText(e.target.value)}
@@ -216,33 +276,34 @@ export function GooglePlacesAddressField({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="relative">
+      <div ref={dummyRef} style={{ display: "none" }} aria-hidden />
       <input
-        ref={inputRef}
         type="text"
-        defaultValue={value}
-        onChange={(e) => onChangeText(e.target.value)}
+        value={query}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
         disabled={disabled}
         placeholder={placeholder}
         autoComplete="off"
         className={inputClassName}
       />
       {loadErr ? (
-        <p className="text-[12px] text-hh-kola">{loadErr}</p>
-      ) : ready ? (
-        <>
-          <p className="text-[11px] text-hh-muted">
-            Choisis une suggestion pour enregistrer la position GPS sur la carte.
-          </p>
-          <p className="text-[11px] text-hh-muted/90">
-            Si rien ne s’affiche au clic, un bloqueur peut bloquer Google Maps (
-            <code className="rounded bg-hh-sand px-1 text-[10px]">gen_204</code>
-            ) — désactive-le pour ce site ou saisis l’adresse à la main.
-          </p>
-        </>
-      ) : (
-        <p className="text-[11px] text-hh-muted">Chargement de la recherche d’adresse…</p>
-      )}
+        <p className="mt-1 text-[12px] text-hh-kola">{loadErr}</p>
+      ) : null}
+      {open && predictions.length > 0 ? (
+        <ul className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-auto rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white shadow-md">
+          {predictions.map((p) => (
+            <li
+              key={p.placeId}
+              onMouseDown={() => handleSelect(p)}
+              className="cursor-pointer px-3 py-2 text-[14px] text-hh-earth-dk hover:bg-hh-sand"
+            >
+              {p.description}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

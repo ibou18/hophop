@@ -356,7 +356,14 @@ model Shipment {
 
   originCountry      Country
   destinationCountry Country
+  originCity         String?
   destinationCity    String?
+
+  /// Latitude / longitude WGS84 (ex. via Google Places au dépôt)
+  originLatitude       Float?
+  originLongitude      Float?
+  destinationLatitude  Float?
+  destinationLongitude Float?
 
   departureDate DateTime?
   arrivalDate   DateTime?
@@ -366,6 +373,19 @@ model Shipment {
 
   // Publié = visible par les clients pour faire une demande d'intégration
   isPublished Boolean @default(false)
+
+  // ── Tarification spécifique à cet envoi ──────────────────────────────────
+  // Si pricingType est renseigné, ces champs sont prioritaires sur la grille
+  // globale ForwarderTariff. Sinon on utilise la règle la plus spécifique
+  // (pays destination + mode de transport) de la grille globale.
+  pricingType   PricingType? // null = utilise la grille globale
+  ratePerKg     Float? // WEIGHT_KG  : prix par kilo
+  ratePerBox    Float? // PER_BOX    : prix par carton
+  flatRate      Float? // FLAT       : prix fixe par colis
+  ratePerVolume Float? // VOLUMETRIC : prix par unité volumétrique
+  volumeDivisor Float        @default(5000) // VOLUMETRIC : diviseur L×l×H
+  minimumCharge Float        @default(0) // Minimum facturé
+  currency      Currency     @default(CAD)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -7,11 +7,27 @@ import { COUNTRY_OPTIONS } from "@/lib/country-label-fr";
 import { Button } from "@/components/ui/button";
 import { isoDateUtcToday } from "@/lib/iso-date-utc";
 import { TransportModeSelector } from "@/components/transport-mode-selector";
+import {
+  GooglePlacesAddressField,
+  type PlaceResolved,
+} from "@/components/maps/google-places-address";
+import {
+  ShipmentPricingSection,
+  DEFAULT_SHIPMENT_PRICING,
+  pricingStateToPayload,
+  type ShipmentPricingState,
+} from "@/components/forwarder/shipment-pricing-section";
+
+const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 type Props = {
-  /** Fourni par la page RSC pour éviter tout décalage SSR / client sur la date du jour. */
   defaultDepartureDate: string;
 };
+
+function cityLabel(place: PlaceResolved | null, fallback: string): string | undefined {
+  if (place) return place.city?.trim() || place.formattedAddress.split(",")[0]?.trim() || place.formattedAddress;
+  return fallback.trim() || undefined;
+}
 
 export function NewShipmentForm({ defaultDepartureDate }: Props) {
   const router = useRouter();
@@ -20,39 +36,68 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
   const [originCountry, setOriginCountry] = useState<Country>("CA");
   const [destinationCountry, setDestinationCountry] = useState<Country>("GN");
   const [transportMode, setTransportMode] = useState<TransportMode>("AIR");
-  const [destinationCity, setDestinationCity] = useState("");
+  const [originCityInput, setOriginCityInput] = useState("");
+  const [originPlace, setOriginPlace] = useState<PlaceResolved | null>(null);
+  const [destinationCityInput, setDestinationCityInput] = useState("");
+  const [destinationPlace, setDestinationPlace] = useState<PlaceResolved | null>(null);
   const [notes, setNotes] = useState("");
   const minDate = defaultDepartureDate || isoDateUtcToday();
   const [departureDate, setDepartureDate] = useState(minDate);
+  const [pricing, setPricing] = useState<ShipmentPricingState>(DEFAULT_SHIPMENT_PRICING);
+
+  const inputClass =
+    "h-10 w-full max-w-md rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none placeholder:text-hh-muted/70 focus-visible:ring-2 focus-visible:ring-hh-saffron/40";
 
   function submit(e: React.FormEvent): void {
     e.preventDefault();
     setError(null);
+
+    if (mapsApiKey) {
+      if (!originPlace) {
+        setError("Ville de départ : sélectionne une suggestion dans la liste pour enregistrer le GPS.");
+        return;
+      }
+      if (!destinationPlace) {
+        setError("Ville d&apos;arrivée : sélectionne une suggestion dans la liste pour enregistrer le GPS.");
+        return;
+      }
+    }
+
+    if (originPlace?.country && originPlace.country !== originCountry) {
+      setError("Le lieu de départ ne correspond pas au pays d'origine sélectionné.");
+      return;
+    }
+    if (destinationPlace?.country && destinationPlace.country !== destinationCountry) {
+      setError("La ville d'arrivée ne correspond pas au pays de destination sélectionné.");
+      return;
+    }
+
+    const payload = {
+      originCountry,
+      destinationCountry,
+      transportMode,
+      originCity: cityLabel(originPlace, originCityInput),
+      destinationCity: cityLabel(destinationPlace, destinationCityInput),
+      ...(originPlace ? { originLatitude: originPlace.latitude, originLongitude: originPlace.longitude } : {}),
+      ...(destinationPlace ? { destinationLatitude: destinationPlace.latitude, destinationLongitude: destinationPlace.longitude } : {}),
+      departureDate,
+      notes: notes.trim() || undefined,
+      ...pricingStateToPayload(pricing),
+    };
+
     startTransition(async () => {
       const res = await fetch("/api/shipments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({
-          originCountry,
-          destinationCountry,
-          transportMode,
-          destinationCity: destinationCity.trim() || undefined,
-          departureDate,
-          notes: notes.trim() || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
-      const json = (await res.json().catch(() => null)) as
-        | { id?: string; error?: string }
-        | null;
+      const json = (await res.json().catch(() => null)) as { id?: string; error?: string } | null;
       if (!res.ok) {
         setError(json?.error ?? `Création impossible (${res.status})`);
         return;
       }
-      if (json?.id) {
-        router.push(`/shipments/${json.id}`);
-        return;
-      }
+      if (json?.id) { router.push(`/shipments/${json.id}`); return; }
       setError("Réponse inattendue du serveur.");
     });
   }
@@ -66,47 +111,104 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
         <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
           Mode de transport
         </p>
-        <TransportModeSelector
-          value={transportMode}
-          onChange={setTransportMode}
-          disabled={pending}
-        />
+        <TransportModeSelector value={transportMode} onChange={setTransportMode} disabled={pending} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
-            Pays d’origine
+            Pays d&apos;origine
           </label>
           <select
             value={originCountry}
-            onChange={(e) => setOriginCountry(e.target.value as Country)}
+            onChange={(e) => {
+              setOriginCountry(e.target.value as Country);
+              setOriginCityInput("");
+              setOriginPlace(null);
+            }}
             disabled={pending}
             className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
           >
             {COUNTRY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </div>
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+            Ville de départ
+          </label>
+          <GooglePlacesAddressField
+            key={originCountry}
+            apiKey={mapsApiKey}
+            value={originCityInput}
+            onChangeText={(v) => {
+              setOriginCityInput(v);
+              if (!v.trim()) setOriginPlace(null);
+            }}
+            onResolved={(p) => {
+              setOriginPlace(p);
+              setOriginCityInput(p.city ?? p.formattedAddress.split(",")[0]?.trim() ?? p.formattedAddress);
+            }}
+            disabled={pending}
+            placeholder="ex. Montréal"
+            inputClassName={inputClass}
+            restrictCountry={originCountry}
+          />
+          {originPlace ? (
+            <p className="text-[11px] text-green-600">
+              GPS enregistré ({originPlace.latitude.toFixed(4)}, {originPlace.longitude.toFixed(4)})
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
             Pays de destination
           </label>
           <select
             value={destinationCountry}
-            onChange={(e) => setDestinationCountry(e.target.value as Country)}
+            onChange={(e) => {
+              setDestinationCountry(e.target.value as Country);
+              setDestinationCityInput("");
+              setDestinationPlace(null);
+            }}
             disabled={pending}
             className="h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
           >
             {COUNTRY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
+            Ville d&apos;arrivée
+          </label>
+          <GooglePlacesAddressField
+            key={destinationCountry}
+            apiKey={mapsApiKey}
+            value={destinationCityInput}
+            onChangeText={(v) => {
+              setDestinationCityInput(v);
+              if (!v.trim()) setDestinationPlace(null);
+            }}
+            onResolved={(p) => {
+              setDestinationPlace(p);
+              setDestinationCityInput(p.city ?? p.formattedAddress.split(",")[0]?.trim() ?? p.formattedAddress);
+            }}
+            disabled={pending}
+            placeholder="ex. Conakry"
+            inputClassName={inputClass}
+            restrictCountry={destinationCountry}
+          />
+          {destinationPlace ? (
+            <p className="text-[11px] text-green-600">
+              GPS enregistré ({destinationPlace.latitude.toFixed(4)}, {destinationPlace.longitude.toFixed(4)})
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -115,7 +217,7 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
           htmlFor="departure-date"
           className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
         >
-          Date d’envoi
+          Date d&apos;envoi
         </label>
         <input
           id="departure-date"
@@ -129,27 +231,15 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
           className="h-10 w-full max-w-xs rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
         />
         <p className="text-[12px] text-hh-muted">
-          Passée cette date (UTC), l’envoi ne sera plus proposé sur la vitrine ni dans le catalogue
-          client.
+          Passée cette date (UTC), l&apos;envoi ne sera plus proposé sur la vitrine ni dans le catalogue client.
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <label
-          htmlFor="dest-city"
-          className="text-[11px] font-medium uppercase tracking-wide text-hh-muted"
-        >
-          Ville de destination (optionnel)
-        </label>
-        <input
-          id="dest-city"
-          value={destinationCity}
-          onChange={(e) => setDestinationCity(e.target.value)}
-          disabled={pending}
-          placeholder="ex. Conakry"
-          className="h-10 w-full max-w-md rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none placeholder:text-hh-muted/70 focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
-        />
-      </div>
+      <ShipmentPricingSection
+        value={pricing}
+        onChange={setPricing}
+        disabled={pending}
+      />
 
       <div className="space-y-1.5">
         <label
@@ -176,7 +266,7 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
           disabled={pending}
           className="bg-hh-saffron text-white hover:bg-hh-saffron-dk"
         >
-          {pending ? "Création…" : "Créer l’envoi"}
+          {pending ? "Création…" : "Créer l'envoi"}
         </Button>
       </div>
     </form>

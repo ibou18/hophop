@@ -18,6 +18,7 @@ import { ShipmentParcelsAssignment } from "@/components/forwarder/shipment-parce
 import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
 import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
 import { ShipmentShareBlock } from "@/components/forwarder/shipment-share-block";
+import { ShipmentPricingEditor } from "@/components/forwarder/shipment-pricing-editor";
 import { TransportModeBadge } from "@/components/transport-mode-selector";
 import type { Metadata } from "next";
 
@@ -127,6 +128,21 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         destinationCountry={shipment.destinationCountry}
         forwarderName={shipment.forwarder.name}
         isPublished={shipment.isPublished}
+        parcelCount={shipment.parcels.length}
+        shipmentStatus={shipment.status}
+      />
+
+      <ShipmentPricingEditor
+        shipmentId={shipment.id}
+        editable={editable}
+        pricingType={shipment.pricingType}
+        ratePerKg={shipment.ratePerKg}
+        ratePerBox={shipment.ratePerBox}
+        flatRate={shipment.flatRate}
+        ratePerVolume={shipment.ratePerVolume}
+        volumeDivisor={shipment.volumeDivisor}
+        minimumCharge={shipment.minimumCharge}
+        currency={shipment.currency}
       />
 
       <ShipmentDetailActions
@@ -151,7 +167,10 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         />
       )}
 
-      <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
+      <section
+        id="colis-du-lot"
+        className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm"
+      >
         <h2 className="text-[15px] font-medium text-hh-earth-dk">
           Colis du lot ({shipment.parcels.length})
         </h2>

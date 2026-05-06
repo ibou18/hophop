@@ -1,6 +1,19 @@
 import type { ForwarderTariff } from "@/app/generated/prisma/client";
 import type { Country, PricingType, Currency, TransportMode } from "@/app/generated/prisma/enums";
 
+// ── Tarification issue d'un Shipment ─────────────────────────────────────────
+// Sous-ensemble des champs Shipment nécessaires au calcul de prix.
+export interface ShipmentPricingFields {
+  pricingType: PricingType | null;
+  ratePerKg: number | null;
+  ratePerBox: number | null;
+  flatRate: number | null;
+  ratePerVolume: number | null;
+  volumeDivisor: number;
+  minimumCharge: number;
+  currency: Currency;
+}
+
 export interface PricingInput {
   weightKg?: number | null;
   lengthCm?: number | null;
@@ -120,12 +133,51 @@ export function calculatePrice(
 }
 
 /**
+ * Calcule le prix à partir des champs de tarification d'un Shipment.
+ * Même logique que calculatePrice(tariff, input) mais sans l'id du tarif.
+ */
+export function calculatePriceFromShipment(
+  pricing: ShipmentPricingFields,
+  input: PricingInput,
+): Omit<PricingResult, "tariffId"> | null {
+  if (!pricing.pricingType) return null;
+
+  // Déléguer à calculatePrice en construisant un objet compatible ForwarderTariff
+  const fakeTariff = {
+    id: "__shipment__",
+    pricingType: pricing.pricingType,
+    ratePerKg: pricing.ratePerKg,
+    ratePerBox: pricing.ratePerBox,
+    flatRate: pricing.flatRate,
+    ratePerVolume: pricing.ratePerVolume,
+    volumeDivisor: pricing.volumeDivisor,
+    minimumCharge: pricing.minimumCharge,
+    currency: pricing.currency,
+  } as ForwarderTariff;
+
+  const result = calculatePrice(fakeTariff, input);
+  if (!result) return null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { tariffId: _id, ...rest } = result;
+  return rest;
+}
+
+/**
  * Point d'entrée principal : résout le tarif puis calcule le prix.
+ * Priorité : tarification spécifique du shipment → grille globale ForwarderTariff.
  */
 export function resolveAndCalculate(
   tariffs: ForwarderTariff[],
   input: PricingInput,
+  shipmentPricing?: ShipmentPricingFields | null,
 ): PricingResult | null {
+  // 1. Tarification propre au shipment (priorité absolue)
+  if (shipmentPricing?.pricingType) {
+    const result = calculatePriceFromShipment(shipmentPricing, input);
+    if (result) return { ...result, tariffId: "__shipment__" };
+  }
+
+  // 2. Grille globale ForwarderTariff
   const tariff = resolveTariff(tariffs, input.destinationCountry, input.transportMode);
   if (!tariff) return null;
   return calculatePrice(tariff, input);

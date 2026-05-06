@@ -2,19 +2,61 @@ import { z } from "zod";
 
 const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
 const transportMode = z.enum(["AIR", "SEA", "ROAD"] as const);
+const pricingType = z.enum(["WEIGHT_KG", "PER_BOX", "VOLUMETRIC", "FLAT"] as const);
+const currency = z.enum(["EUR", "CAD", "XOF", "XAF", "GNF"] as const);
+
+/** Champs communs de tarification d'un envoi (optionnels). */
+const shipmentPricingFields = {
+  pricingType: pricingType.nullable().optional(),
+  ratePerKg: z.number().positive().nullable().optional(),
+  ratePerBox: z.number().positive().nullable().optional(),
+  flatRate: z.number().positive().nullable().optional(),
+  ratePerVolume: z.number().positive().nullable().optional(),
+  volumeDivisor: z.number().positive().optional(),
+  minimumCharge: z.number().nonnegative().optional(),
+  currency: currency.optional(),
+};
+
+const latSchema = z.number().finite().min(-90).max(90);
+const lngSchema = z.number().finite().min(-180).max(180);
 
 export const createShipmentSchema = z
   .object({
     originCountry: country,
     destinationCountry: country,
     transportMode: transportMode.default("AIR"),
+    originCity: z.string().optional(),
     destinationCity: z.string().optional(),
+    originLatitude: latSchema.optional(),
+    originLongitude: lngSchema.optional(),
+    destinationLatitude: latSchema.optional(),
+    destinationLongitude: lngSchema.optional(),
     departureDate: z.coerce.date({
       message: "La date d’envoi est requise",
     }),
     arrivalDate: z.coerce.date().optional(),
     notes: z.string().optional(),
+    ...shipmentPricingFields,
   })
+  .refine(
+    (data) => {
+      const hasLat = data.originLatitude !== undefined;
+      const hasLng = data.originLongitude !== undefined;
+      return hasLat === hasLng;
+    },
+    { message: "Latitude et longitude de départ requises ensemble", path: ["originLatitude"] },
+  )
+  .refine(
+    (data) => {
+      const hasLat = data.destinationLatitude !== undefined;
+      const hasLng = data.destinationLongitude !== undefined;
+      return hasLat === hasLng;
+    },
+    {
+      message: "Latitude et longitude de destination requises ensemble",
+      path: ["destinationLatitude"],
+    },
+  )
   .refine(
     (data) => {
       const dep = data.departureDate.getTime();
@@ -47,11 +89,18 @@ export const patchShipmentSchema = z.object({
     .enum(["DRAFT", "CONFIRMED", "IN_TRANSIT", "ARRIVED", "CLOSED"] as const)
     .optional(),
   transportMode: transportMode.optional(),
+  originCity: z.string().nullable().optional(),
   destinationCity: z.string().nullable().optional(),
+  originLatitude: latSchema.nullable().optional(),
+  originLongitude: lngSchema.nullable().optional(),
+  destinationLatitude: latSchema.nullable().optional(),
+  destinationLongitude: lngSchema.nullable().optional(),
   departureDate: z.coerce.date().nullable().optional(),
   arrivalDate: z.coerce.date().nullable().optional(),
   notes: z.string().nullable().optional(),
   isPublished: z.boolean().optional(),
+  // Tarification spécifique à l'envoi
+  ...shipmentPricingFields,
 });
 
 export const patchShipmentParcelsSchema = z.object({

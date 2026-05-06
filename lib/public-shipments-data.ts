@@ -9,7 +9,13 @@ export type PublicUpcomingShipment = {
   destinationCountry: string;
   destinationCity: string | null;
   departureDate: Date;
-  parcelCount: number;
+  // Tarification de l'envoi (null = non définie publiquement)
+  pricingType: "WEIGHT_KG" | "PER_BOX" | "VOLUMETRIC" | "FLAT" | null;
+  ratePerKg: number | null;
+  ratePerBox: number | null;
+  flatRate: number | null;
+  ratePerVolume: number | null;
+  currency: string;
   forwarder: {
     code5: string;
     name: string;
@@ -32,7 +38,12 @@ export async function getPublicUpcomingShipments(
       destinationCountry: true,
       destinationCity: true,
       departureDate: true,
-      _count: { select: { parcels: true } },
+      pricingType: true,
+      ratePerKg: true,
+      ratePerBox: true,
+      flatRate: true,
+      ratePerVolume: true,
+      currency: true,
       forwarder: {
         select: { code5: true, name: true, city: true },
       },
@@ -49,7 +60,12 @@ export async function getPublicUpcomingShipments(
       destinationCountry: r.destinationCountry,
       destinationCity: r.destinationCity,
       departureDate: r.departureDate!,
-      parcelCount: r._count.parcels,
+      pricingType: r.pricingType,
+      ratePerKg: r.ratePerKg,
+      ratePerBox: r.ratePerBox,
+      flatRate: r.flatRate,
+      ratePerVolume: r.ratePerVolume,
+      currency: r.currency,
       forwarder: r.forwarder,
     }));
 }

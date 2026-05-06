@@ -3,7 +3,7 @@ import {
   Plane,
   Ship,
   Truck,
-  Package,
+  Tag,
   ArrowRight,
   CalendarDays,
 } from "lucide-react";
@@ -11,7 +11,8 @@ import { differenceInCalendarDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { PublicUpcomingShipment } from "@/lib/public-shipments-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
-import type { Country, TransportMode } from "@/app/generated/prisma/enums";
+import { CURRENCY_SYMBOL } from "@/lib/pricing";
+import type { Country, Currency, PricingType, TransportMode } from "@/app/generated/prisma/enums";
 
 const COUNTRY_FLAG: Record<string, string> = {
   CA: "🇨🇦",
@@ -54,6 +55,21 @@ const MODE: Record<
     bar: "#fbbf24",
   },
 };
+
+function formatPricing(s: PublicUpcomingShipment): string | null {
+  if (!s.pricingType) return null;
+  const sym = CURRENCY_SYMBOL[s.currency as Currency] ?? s.currency;
+  switch (s.pricingType as PricingType) {
+    case "WEIGHT_KG":
+      return s.ratePerKg != null ? `${s.ratePerKg} ${sym} / kg` : null;
+    case "PER_BOX":
+      return s.ratePerBox != null ? `${s.ratePerBox} ${sym} / carton` : null;
+    case "FLAT":
+      return s.flatRate != null ? `${s.flatRate} ${sym} / colis` : null;
+    case "VOLUMETRIC":
+      return s.ratePerVolume != null ? `${s.ratePerVolume} ${sym} / u.vol` : null;
+  }
+}
 
 function Countdown({ date }: { date: Date }) {
   const days = differenceInCalendarDays(date, new Date());
@@ -111,6 +127,7 @@ export function UpcomingDepartures({
             const { Icon } = m;
             const days = differenceInCalendarDays(s.departureDate, new Date());
             const isUrgent = days <= 3;
+            const pricing = formatPricing(s);
 
             return (
               <Link
@@ -164,7 +181,7 @@ export function UpcomingDepartures({
                   </p>
                 </div>
 
-                {/* Bottom: forwarder + date + parcel count */}
+                {/* Bottom: forwarder + date + tarif */}
                 <div className="mt-auto flex items-end justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[12px] font-medium text-white/70">
@@ -175,10 +192,12 @@ export function UpcomingDepartures({
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1 rounded-lg bg-white/6 px-2 py-1 text-[11px] text-white/50">
-                    <Package size={10} />
-                    {s.parcelCount} colis
-                  </div>
+                  {pricing && (
+                    <div className="flex shrink-0 items-center gap-1 rounded-lg bg-hh-saffron/10 px-2 py-1 text-[11px] font-semibold text-hh-saffron">
+                      <Tag size={10} />
+                      {pricing}
+                    </div>
+                  )}
                 </div>
 
                 {/* Colored bottom bar */}

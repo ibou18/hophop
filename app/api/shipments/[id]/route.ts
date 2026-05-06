@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonError, jsonOk } from "@/lib/http";
 import { requireForwarder } from "@/lib/require-auth";
 import { patchShipmentSchema } from "@/lib/validations/shipment";
+import { ShipmentStatus } from "@/app/generated/prisma/enums";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -49,4 +50,34 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data: parsed.data,
   });
   return jsonOk(shipment);
+}
+
+export async function DELETE(_req: Request, ctx: Ctx) {
+  const auth = await requireForwarder();
+  if (auth instanceof Response) return auth;
+  const { id } = await ctx.params;
+
+  const existing = await prisma.shipment.findFirst({
+    where: { id, forwarderId: auth.forwarderId },
+    include: { _count: { select: { parcels: true } } },
+  });
+  if (!existing) return jsonError("Introuvable", 404);
+  if (existing.status !== ShipmentStatus.DRAFT) {
+    return jsonError(
+      "Seul un envoi en brouillon peut être supprimé.",
+      409,
+    );
+  }
+  if (existing._count.parcels > 0) {
+    return jsonError(
+      "Retire tous les colis de cet envoi avant de le supprimer (désassignation ou refus des colis selon le cas).",
+      409,
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.shipmentRequest.deleteMany({ where: { shipmentId: id } });
+    await tx.shipment.delete({ where: { id } });
+  });
+  return jsonOk({ ok: true }, 200);
 }
