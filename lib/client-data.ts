@@ -191,6 +191,7 @@ export async function getPublishedShipmentsCatalog() {
       id: true,
       reference: true,
       acceptsVehicles: true,
+      transportMode: true,
       originCountry: true,
       destinationCountry: true,
       destinationCity: true,
