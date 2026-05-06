@@ -5,32 +5,8 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import {
   TRACKING_CODE_PREFIX,
-  TRACKING_CODE_SUFFIX_CHARSET,
+  sanitizeTrackingCodeSuffix,
 } from "@/lib/codes";
-
-/** Même alphabet que `generateTrackingCode` — dérivé de `TRACKING_CODE_SUFFIX_CHARSET`. */
-const ALLOWED_SUFFIX = new Set(
-  TRACKING_CODE_SUFFIX_CHARSET.toLowerCase().split(""),
-);
-
-function sanitizeSuffix(raw: string): string {
-  let s = raw.trim().toLowerCase();
-  if (s.startsWith("hop-")) {
-    s = s.slice(4);
-  } else if (s.startsWith("trs-")) {
-    s = s.slice(4);
-  } else if (s.startsWith("hop")) {
-    s = s.slice(3).replace(/^-/, "");
-  } else if (s.startsWith("trs")) {
-    s = s.slice(3).replace(/^-/, "");
-  }
-  const out: string[] = [];
-  for (const ch of s) {
-    if (ALLOWED_SUFFIX.has(ch)) out.push(ch);
-    if (out.length >= 6) break;
-  }
-  return out.join("");
-}
 
 interface Props {
   dark?: boolean;
@@ -42,13 +18,13 @@ export function TrackingSearch({ dark = false }: Props) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const s = sanitizeSuffix(suffix);
+    const s = sanitizeTrackingCodeSuffix(suffix);
     if (!s) return;
     router.push(`/track/${TRACKING_CODE_PREFIX}${s.toUpperCase()}`);
   }
 
   function handleChange(value: string) {
-    setSuffix(sanitizeSuffix(value).toUpperCase());
+    setSuffix(sanitizeTrackingCodeSuffix(value).toUpperCase());
   }
 
   return (
@@ -95,7 +71,7 @@ export function TrackingSearch({ dark = false }: Props) {
       </div>
       <button
         type="submit"
-        disabled={!sanitizeSuffix(suffix)}
+        disabled={!sanitizeTrackingCodeSuffix(suffix)}
         className={`h-12 px-6 text-sm font-medium text-white transition-all disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-l-none ${
           dark
             ? "rounded-xl bg-hh-saffron hover:bg-hh-saffron/90"

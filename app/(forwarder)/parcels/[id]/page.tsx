@@ -15,6 +15,7 @@ import { ParcelStatusUpdater } from "@/components/forwarder/parcel-status-update
 import { isForwarderPrivilegedRole } from "@/lib/parcel-status-workflow";
 import { ForwarderParcelDecisionActions } from "@/components/forwarder/forwarder-parcel-decision-actions";
 import { ParcelQrCode } from "@/components/client/parcel-qr-code";
+import { VehicleCard } from "@/components/vehicle-card";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -230,6 +231,8 @@ export default async function ForwarderParcelDetailPage({
           </>
         ) : null}
       </section>
+
+      {parcel.vehicle && <VehicleCard vehicle={parcel.vehicle} />}
 
       {parcel.notes ? (
         <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">

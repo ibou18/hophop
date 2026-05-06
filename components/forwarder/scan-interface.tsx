@@ -27,6 +27,11 @@ import {
   ALL_PARCEL_STATUSES_ORDERED,
   isForwarderPrivilegedRole,
 } from "@/lib/parcel-status-workflow";
+import {
+  TRACKING_CODE_PREFIX,
+  fullTrackingCodeFromUserInput,
+  sanitizeTrackingCodeSuffix,
+} from "@/lib/codes";
 
 // ── Types retournés par GET /api/parcels/scan ─────────────────────────────────
 interface ScanParcel {
@@ -125,7 +130,7 @@ export function ScanInterface({
   forwarderRole?: "OWNER" | "ADMIN" | "STAFF" | null;
 } = {}) {
   const [cameraOn, setCameraOn] = useState(false);
-  const [inputCode, setInputCode] = useState("");
+  const [inputSuffix, setInputSuffix] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -137,10 +142,10 @@ export function ScanInterface({
 
   const privileged = isForwarderPrivilegedRole(forwarderRole);
 
-  // Lookup par code
-  async function lookup(code: string) {
-    const clean = code.trim().toUpperCase();
-    if (!clean) return;
+  // Lookup par code (suffixe seul, ou collage HOP-… / TRS-… — comme la landing)
+  const lookup = useCallback(async (raw: string) => {
+    if (!sanitizeTrackingCodeSuffix(raw)) return;
+    const clean = fullTrackingCodeFromUserInput(raw);
     setLoading(true);
     setError(null);
     setResult(null);
@@ -169,17 +174,16 @@ export function ScanInterface({
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   // Callback quand la caméra détecte un code
   const handleDetected = useCallback(
     (code: string) => {
       setCameraOn(false);
-      setInputCode(code);
+      setInputSuffix(sanitizeTrackingCodeSuffix(code).toUpperCase());
       void lookup(code);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [lookup],
   );
 
   // Changer le statut du colis
@@ -235,7 +239,7 @@ export function ScanInterface({
   function reset() {
     setResult(null);
     setError(null);
-    setInputCode("");
+    setInputSuffix("");
     setActionError(null);
     setTargetShipmentId("");
     setCameraOn(false);
@@ -263,21 +267,43 @@ export function ScanInterface({
 
         {/* Input manuel */}
         <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputCode}
-            onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void lookup(inputCode);
-            }}
-            placeholder="HOP-A3F9K2 ou scanner ci-dessous"
-            className="h-11 flex-1 rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 font-mono text-[14px] text-hh-earth-dk outline-none placeholder:font-sans placeholder:text-hh-muted/60 focus-visible:ring-2 focus-visible:ring-hh-saffron/40"
-          />
+          <div className="flex h-11 min-w-0 flex-1 items-center gap-0 rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white shadow-sm focus-within:border-hh-saffron focus-within:ring-2 focus-within:ring-hh-saffron/20">
+            <Search
+              size={15}
+              className="ml-3 shrink-0 text-hh-muted"
+              aria-hidden
+            />
+            <span className="shrink-0 pl-1 font-mono text-[14px] tabular-nums tracking-tight text-hh-earth-dk/70">
+              {TRACKING_CODE_PREFIX}
+            </span>
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="text"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              value={inputSuffix}
+              onChange={(e) =>
+                setInputSuffix(
+                  sanitizeTrackingCodeSuffix(e.target.value).toUpperCase(),
+                )
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void lookup(inputSuffix);
+              }}
+              placeholder="ex. A3F9K2"
+              aria-label={`Suffixe après ${TRACKING_CODE_PREFIX}`}
+              className="min-h-0 min-w-0 flex-1 bg-transparent py-2 pr-3 font-mono text-[14px] uppercase text-hh-earth-dk outline-none placeholder:font-sans placeholder:text-hh-muted/60"
+            />
+          </div>
           <Button
             type="button"
-            disabled={loading || !inputCode.trim()}
-            onClick={() => void lookup(inputCode)}
+            disabled={
+              loading || !sanitizeTrackingCodeSuffix(inputSuffix)
+            }
+            onClick={() => void lookup(inputSuffix)}
             className="bg-hh-saffron text-white hover:bg-hh-saffron-dk disabled:opacity-50"
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}

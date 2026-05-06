@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plane, Ship, Truck, Package, ArrowRight, CalendarClock } from "lucide-react";
+import { Plane, Ship, Truck, Container, Package, ArrowRight, CalendarClock } from "lucide-react";
 import { differenceInCalendarDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { UpcomingShipmentRow } from "@/lib/forwarder-dashboard-data";
@@ -31,6 +31,20 @@ const MODE_CONFIG: Record<
     bg: "bg-amber-50",
     text: "text-amber-700",
     iconBg: "bg-amber-100",
+  },
+  CONTAINER: {
+    Icon: Container,
+    border: "border-l-indigo-400",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    iconBg: "bg-indigo-100",
+  },
+  RORO: {
+    Icon: Ship,
+    border: "border-l-purple-400",
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    iconBg: "bg-purple-100",
   },
 };
 

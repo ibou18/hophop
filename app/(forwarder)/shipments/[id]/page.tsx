@@ -135,11 +135,14 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
       <ShipmentPricingEditor
         shipmentId={shipment.id}
         editable={editable}
+        isMaritime={shipment.transportMode === "SEA"}
+        acceptsVehicles={shipment.acceptsVehicles}
         pricingType={shipment.pricingType}
         ratePerKg={shipment.ratePerKg}
         ratePerBox={shipment.ratePerBox}
         flatRate={shipment.flatRate}
         ratePerVolume={shipment.ratePerVolume}
+        ratePerVehicle={shipment.ratePerVehicle}
         volumeDivisor={shipment.volumeDivisor}
         minimumCharge={shipment.minimumCharge}
         currency={shipment.currency}

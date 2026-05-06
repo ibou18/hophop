@@ -17,6 +17,9 @@ import {
   pricingStateToPayload,
   type ShipmentPricingState,
 } from "@/components/forwarder/shipment-pricing-section";
+import { Car } from "lucide-react";
+import { CURRENCY_LABEL } from "@/lib/pricing";
+import type { Currency } from "@/app/generated/prisma/enums";
 
 const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -28,6 +31,15 @@ function cityLabel(place: PlaceResolved | null, fallback: string): string | unde
   if (place) return place.city?.trim() || place.formattedAddress.split(",")[0]?.trim() || place.formattedAddress;
   return fallback.trim() || undefined;
 }
+
+const inputClass =
+  "h-10 w-full max-w-md rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none placeholder:text-hh-muted/70 focus-visible:ring-2 focus-visible:ring-hh-saffron/40";
+
+const numInputClass =
+  "h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[14px] text-hh-earth-dk outline-none placeholder:text-hh-muted/70 focus-visible:ring-2 focus-visible:ring-hh-saffron/40 disabled:opacity-50";
+
+const selectClass =
+  "h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[14px] text-hh-earth-dk outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40 disabled:opacity-50";
 
 export function NewShipmentForm({ defaultDepartureDate }: Props) {
   const router = useRouter();
@@ -45,8 +57,21 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
   const [departureDate, setDepartureDate] = useState(minDate);
   const [pricing, setPricing] = useState<ShipmentPricingState>(DEFAULT_SHIPMENT_PRICING);
 
-  const inputClass =
-    "h-10 w-full max-w-md rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 text-[15px] text-hh-earth-dk outline-none placeholder:text-hh-muted/70 focus-visible:ring-2 focus-visible:ring-hh-saffron/40";
+  // Vehicle acceptance (maritime only)
+  const [acceptsVehicles, setAcceptsVehicles] = useState(false);
+  const [vehiclePrice, setVehiclePrice] = useState("");
+  const [vehicleCurrency, setVehicleCurrency] = useState<Currency>("CAD");
+
+  const isMaritime = transportMode === "SEA";
+
+  function handleModeChange(m: TransportMode) {
+    setTransportMode(m);
+    setPricing(DEFAULT_SHIPMENT_PRICING);
+    if (m !== "SEA") {
+      setAcceptsVehicles(false);
+      setVehiclePrice("");
+    }
+  }
 
   function submit(e: React.FormEvent): void {
     e.preventDefault();
@@ -58,7 +83,7 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
         return;
       }
       if (!destinationPlace) {
-        setError("Ville d&apos;arrivée : sélectionne une suggestion dans la liste pour enregistrer le GPS.");
+        setError("Ville d'arrivée : sélectionne une suggestion dans la liste pour enregistrer le GPS.");
         return;
       }
     }
@@ -72,6 +97,8 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
       return;
     }
 
+    const pricingPayload = pricingStateToPayload(pricing);
+
     const payload = {
       originCountry,
       destinationCountry,
@@ -82,7 +109,12 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
       ...(destinationPlace ? { destinationLatitude: destinationPlace.latitude, destinationLongitude: destinationPlace.longitude } : {}),
       departureDate,
       notes: notes.trim() || undefined,
-      ...pricingStateToPayload(pricing),
+      acceptsVehicles: isMaritime ? acceptsVehicles : false,
+      ...pricingPayload,
+      // Vehicle price overrides ratePerVehicle when maritime + acceptsVehicles
+      ...(isMaritime && acceptsVehicles && vehiclePrice
+        ? { ratePerVehicle: parseFloat(vehiclePrice), currency: vehicleCurrency }
+        : {}),
     };
 
     startTransition(async () => {
@@ -111,7 +143,11 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
         <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
           Mode de transport
         </p>
-        <TransportModeSelector value={transportMode} onChange={setTransportMode} disabled={pending} />
+        <TransportModeSelector
+          value={transportMode}
+          onChange={handleModeChange}
+          disabled={pending}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -240,6 +276,84 @@ export function NewShipmentForm({ defaultDepartureDate }: Props) {
         onChange={setPricing}
         disabled={pending}
       />
+
+      {/* ── Section véhicule (maritime uniquement) ─────────────────────── */}
+      {isMaritime && (
+        <div className="space-y-4 rounded-[var(--hh-radius-lg)] border border-teal-200 bg-teal-50/50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Car size={16} className="shrink-0 text-teal-700" />
+              <div>
+                <p className="text-[13px] font-medium text-teal-900">
+                  Accepter les véhicules
+                </p>
+                <p className="mt-0.5 text-[12px] text-teal-700/80">
+                  Les clients pourront déclarer un véhicule sur cet envoi maritime (conteneur).
+                </p>
+              </div>
+            </div>
+            {/* Toggle */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={acceptsVehicles}
+              disabled={pending}
+              onClick={() => {
+                const next = !acceptsVehicles;
+                setAcceptsVehicles(next);
+                if (!next) setVehiclePrice("");
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50 ${
+                acceptsVehicles ? "bg-teal-600" : "bg-hh-sand-dk/40"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                  acceptsVehicles ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {acceptsVehicles && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium uppercase tracking-wide text-teal-800">
+                  Prix par véhicule
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={vehiclePrice}
+                  onChange={(e) => setVehiclePrice(e.target.value)}
+                  disabled={pending}
+                  placeholder="ex. 1 500.00"
+                  className={numInputClass}
+                />
+                <p className="text-[11px] text-teal-700/70">
+                  Laisse vide pour confirmer le tarif directement avec le client.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium uppercase tracking-wide text-teal-800">
+                  Devise
+                </label>
+                <select
+                  value={vehicleCurrency}
+                  onChange={(e) => setVehicleCurrency(e.target.value as Currency)}
+                  disabled={pending}
+                  className={selectClass}
+                >
+                  {(Object.keys(CURRENCY_LABEL) as Currency[]).map((k) => (
+                    <option key={k} value={k}>{CURRENCY_LABEL[k]}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <label

@@ -69,8 +69,8 @@ export async function POST(req: Request, ctx: Ctx) {
     apiLog("POST /api/parcels/[id]/upload-images", "no_files", { parcelId });
     return jsonError("Aucun fichier (champ files)", 400);
   }
-  if (files.length > 8) {
-    return jsonError("Maximum 8 fichiers", 400);
+  if (files.length > 10) {
+    return jsonError("Maximum 10 fichiers", 400);
   }
 
   apiLog("POST /api/parcels/[id]/upload-images", "upload_start", {

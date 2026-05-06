@@ -53,7 +53,7 @@ export default async function ClientShipmentsCatalogPage() {
           {rows.map((row) => (
             <li key={row.id}>
               <Link
-                href={`/p/${row.forwarder.code5}?envoi=${row.id}`}
+                href={`/client/declare?forwarder=${row.forwarder.code5}&envoi=${row.id}&mode=${row.acceptsVehicles ? "vehicle" : "parcel"}`}
                 className="block rounded-[var(--hh-radius-lg)] bg-white px-4 py-4 ring-1 ring-hh-sand-dk/20 transition hover:ring-hh-saffron/35"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">

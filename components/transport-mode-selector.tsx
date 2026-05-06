@@ -16,24 +16,21 @@ const MODES: {
     label: "Avion",
     sublabel: "Livraison rapide",
     Icon: Plane,
-    activeClass:
-      "border-sky-400 bg-sky-50 text-sky-700 ring-2 ring-sky-200",
+    activeClass: "border-sky-400 bg-sky-50 text-sky-700 ring-2 ring-sky-200",
   },
   {
     value: "SEA",
     label: "Maritime",
     sublabel: "Économique",
     Icon: Ship,
-    activeClass:
-      "border-teal-400 bg-teal-50 text-teal-700 ring-2 ring-teal-200",
+    activeClass: "border-teal-400 bg-teal-50 text-teal-700 ring-2 ring-teal-200",
   },
   {
     value: "ROAD",
     label: "Route",
     sublabel: "Terrestre",
     Icon: Truck,
-    activeClass:
-      "border-amber-400 bg-amber-50 text-amber-700 ring-2 ring-amber-200",
+    activeClass: "border-amber-400 bg-amber-50 text-amber-700 ring-2 ring-amber-200",
   },
 ];
 
@@ -84,9 +81,7 @@ export function TransportModeSelector({
             onClick={() => onChange(v)}
             className={cn(
               "flex flex-col items-center gap-1.5 rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 bg-white px-5 py-3.5 text-center transition-all disabled:opacity-50",
-              active
-                ? activeClass
-                : "text-hh-muted hover:border-hh-sand-dk/60 hover:bg-hh-sand/30",
+              active ? activeClass : "text-hh-muted hover:border-hh-sand-dk/60 hover:bg-hh-sand/30",
             )}
           >
             <Icon size={20} className={active ? "" : "opacity-60"} />
@@ -108,15 +103,19 @@ export function TransportModeBadge({
   size?: "xs" | "sm";
 }) {
   const m = MODES.find((x) => x.value === mode);
-  if (!m) return null;
-  const { Icon, label, activeClass } = m;
+  // Fallback for CONTAINER/RORO still in DB
+  const fallbacks: Record<string, { label: string; Icon: React.ElementType; activeClass: string }> = {
+    CONTAINER: { label: "Conteneur", Icon: Ship, activeClass: "border-indigo-400 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-200" },
+    RORO:      { label: "RoRo",      Icon: Ship, activeClass: "border-purple-400 bg-purple-50 text-purple-700 ring-2 ring-purple-200" },
+  };
+  const display = m ?? fallbacks[mode as string];
+  if (!display) return null;
+  const { Icon, label, activeClass } = display;
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full font-medium ring-1",
-        size === "xs"
-          ? "px-1.5 py-0.5 text-[10px]"
-          : "px-2 py-0.5 text-[11px]",
+        size === "xs" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[11px]",
         activeClass,
       )}
     >

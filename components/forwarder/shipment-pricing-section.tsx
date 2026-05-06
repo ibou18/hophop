@@ -9,6 +9,7 @@ export interface ShipmentPricingState {
   ratePerBox: string;
   flatRate: string;
   ratePerVolume: string;
+  ratePerVehicle: string;
   volumeDivisor: string;
   minimumCharge: string;
   currency: Currency;
@@ -20,6 +21,7 @@ export const DEFAULT_SHIPMENT_PRICING: ShipmentPricingState = {
   ratePerBox: "",
   flatRate: "",
   ratePerVolume: "",
+  ratePerVehicle: "",
   volumeDivisor: "5000",
   minimumCharge: "0",
   currency: "CAD",
@@ -28,13 +30,13 @@ export const DEFAULT_SHIPMENT_PRICING: ShipmentPricingState = {
 /** Convertit l'état du formulaire en payload API (champs nullables). */
 export function pricingStateToPayload(s: ShipmentPricingState) {
   if (!s.pricingType) {
-    // Pas de tarification spécifique → on efface les champs existants
     return {
       pricingType: null,
       ratePerKg: null,
       ratePerBox: null,
       flatRate: null,
       ratePerVolume: null,
+      ratePerVehicle: null,
       volumeDivisor: 5000,
       minimumCharge: 0,
     };
@@ -45,6 +47,7 @@ export function pricingStateToPayload(s: ShipmentPricingState) {
     ratePerBox: s.ratePerBox ? parseFloat(s.ratePerBox) : null,
     flatRate: s.flatRate ? parseFloat(s.flatRate) : null,
     ratePerVolume: s.ratePerVolume ? parseFloat(s.ratePerVolume) : null,
+    ratePerVehicle: s.ratePerVehicle ? parseFloat(s.ratePerVehicle) : null,
     volumeDivisor: s.volumeDivisor ? parseFloat(s.volumeDivisor) : 5000,
     minimumCharge: s.minimumCharge ? parseFloat(s.minimumCharge) : 0,
     currency: s.currency,
@@ -77,6 +80,8 @@ function Field({
   );
 }
 
+const PARCEL_PRICING_TYPES: PricingType[] = ["WEIGHT_KG", "PER_BOX", "VOLUMETRIC", "FLAT"];
+
 export function ShipmentPricingSection({
   value,
   onChange,
@@ -94,16 +99,13 @@ export function ShipmentPricingSection({
 
   return (
     <div className="space-y-4 rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-hh-sand/40 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-[13px] font-medium text-hh-earth-dk">
-            Tarification de l&apos;envoi
-          </p>
-          <p className="mt-0.5 text-[12px] text-hh-muted">
-            Prioritaire sur la grille globale. Laisse vide pour utiliser les
-            tarifs configurés.
-          </p>
-        </div>
+      <div>
+        <p className="text-[13px] font-medium text-hh-earth-dk">
+          Tarification des colis
+        </p>
+        <p className="mt-0.5 text-[12px] text-hh-muted">
+          Prioritaire sur la grille globale. Laisse vide pour utiliser les tarifs configurés.
+        </p>
       </div>
 
       <Field label="Méthode de tarification">
@@ -113,8 +115,8 @@ export function ShipmentPricingSection({
           disabled={disabled}
           className={selectClass}
         >
-          <option value="">— Sélectionner une méthode de tarification —</option>
-          {(Object.keys(PRICING_TYPE_LABEL) as PricingType[]).map((k) => (
+          <option value="">— Sélectionner une méthode —</option>
+          {PARCEL_PRICING_TYPES.map((k) => (
             <option key={k} value={k}>
               {PRICING_TYPE_LABEL[k]}
             </option>
@@ -122,112 +124,106 @@ export function ShipmentPricingSection({
         </select>
       </Field>
 
-      {pt && (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {/* Champ principal selon le type */}
-            {pt === "WEIGHT_KG" && (
-              <Field label="Prix par kilo" hint="ex. 4.50">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={value.ratePerKg}
-                  onChange={(e) => set("ratePerKg", e.target.value)}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className={inputClass}
-                />
-              </Field>
-            )}
-            {pt === "PER_BOX" && (
-              <Field label="Prix par carton" hint="ex. 45.00">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={value.ratePerBox}
-                  onChange={(e) => set("ratePerBox", e.target.value)}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className={inputClass}
-                />
-              </Field>
-            )}
-            {pt === "FLAT" && (
-              <Field label="Prix fixe par colis" hint="ex. 30.00">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={value.flatRate}
-                  onChange={(e) => set("flatRate", e.target.value)}
-                  disabled={disabled}
-                  placeholder="0.00"
-                  className={inputClass}
-                />
-              </Field>
-            )}
-            {pt === "VOLUMETRIC" && (
-              <>
-                <Field label="Prix par unité volumétrique" hint="ex. 4.00">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={value.ratePerVolume}
-                    onChange={(e) => set("ratePerVolume", e.target.value)}
-                    disabled={disabled}
-                    placeholder="0.00"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field
-                  label="Diviseur volumétrique"
-                  hint="Standard aérien = 5000, maritime = 1000"
-                >
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={value.volumeDivisor}
-                    onChange={(e) => set("volumeDivisor", e.target.value)}
-                    disabled={disabled}
-                    className={inputClass}
-                  />
-                </Field>
-              </>
-            )}
-
-            <Field label="Minimum facturé" hint="0 = aucun minimum">
+      {pt && pt !== "PER_VEHICLE" && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {pt === "WEIGHT_KG" && (
+            <Field label="Prix par kilo" hint="ex. 4.50">
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                value={value.minimumCharge}
-                onChange={(e) => set("minimumCharge", e.target.value)}
+                value={value.ratePerKg}
+                onChange={(e) => set("ratePerKg", e.target.value)}
                 disabled={disabled}
                 placeholder="0.00"
                 className={inputClass}
               />
             </Field>
-
-            <Field label="Devise">
-              <select
-                value={value.currency}
-                onChange={(e) => set("currency", e.target.value as Currency)}
+          )}
+          {pt === "PER_BOX" && (
+            <Field label="Prix par carton" hint="ex. 45.00">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={value.ratePerBox}
+                onChange={(e) => set("ratePerBox", e.target.value)}
                 disabled={disabled}
-                className={selectClass}
-              >
-                {(Object.keys(CURRENCY_LABEL) as Currency[]).map((k) => (
-                  <option key={k} value={k}>
-                    {CURRENCY_LABEL[k]}
-                  </option>
-                ))}
-              </select>
+                placeholder="0.00"
+                className={inputClass}
+              />
             </Field>
-          </div>
-        </>
+          )}
+          {pt === "FLAT" && (
+            <Field label="Prix fixe par colis" hint="ex. 30.00">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={value.flatRate}
+                onChange={(e) => set("flatRate", e.target.value)}
+                disabled={disabled}
+                placeholder="0.00"
+                className={inputClass}
+              />
+            </Field>
+          )}
+          {pt === "VOLUMETRIC" && (
+            <>
+              <Field label="Prix par unité volumétrique" hint="ex. 4.00">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={value.ratePerVolume}
+                  onChange={(e) => set("ratePerVolume", e.target.value)}
+                  disabled={disabled}
+                  placeholder="0.00"
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Diviseur volumétrique" hint="Aérien = 5000, maritime = 1000">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={value.volumeDivisor}
+                  onChange={(e) => set("volumeDivisor", e.target.value)}
+                  disabled={disabled}
+                  className={inputClass}
+                />
+              </Field>
+            </>
+          )}
+
+          <Field label="Minimum facturé" hint="0 = aucun minimum">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={value.minimumCharge}
+              onChange={(e) => set("minimumCharge", e.target.value)}
+              disabled={disabled}
+              placeholder="0.00"
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Devise">
+            <select
+              value={value.currency}
+              onChange={(e) => set("currency", e.target.value as Currency)}
+              disabled={disabled}
+              className={selectClass}
+            >
+              {(Object.keys(CURRENCY_LABEL) as Currency[]).map((k) => (
+                <option key={k} value={k}>
+                  {CURRENCY_LABEL[k]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
       )}
     </div>
   );

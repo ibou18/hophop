@@ -56,6 +56,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       ratePerBox: shipment.ratePerBox,
       flatRate: shipment.flatRate,
       ratePerVolume: shipment.ratePerVolume,
+      ratePerVehicle: shipment.ratePerVehicle,
       volumeDivisor: shipment.volumeDivisor,
       minimumCharge: shipment.minimumCharge,
       currency: shipment.currency,

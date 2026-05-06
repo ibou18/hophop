@@ -18,6 +18,7 @@ import { ParcelStatusBadge } from "@/components/client/parcel-status-badge";
 import { TrackingTimeline } from "@/components/client/tracking-timeline";
 import { ParcelQrCode } from "@/components/client/parcel-qr-code";
 import { JoinShipmentPanel } from "@/components/client/join-shipment-panel";
+import { VehicleCard } from "@/components/vehicle-card";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -83,6 +84,13 @@ export default async function ClientParcelDetailPage({ params }: Props) {
             {parcel.recipient.phone && ` · ${parcel.recipient.phone}`}
           </p>
         </div>
+
+        {/* Véhicule */}
+        {parcel.vehicle && (
+          <div className="border-t border-hh-sand-dk/15 pt-3">
+            <VehicleCard vehicle={parcel.vehicle} />
+          </div>
+        )}
 
         {/* Content summary */}
         {parcel.items.length > 0 && (

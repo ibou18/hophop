@@ -3,6 +3,7 @@ import {
   Plane,
   Ship,
   Truck,
+  Container,
   Tag,
   ArrowRight,
   CalendarDays,
@@ -59,6 +60,20 @@ const MODE: Record<
     iconBg: "rgba(245,158,11,0.12)",
     bar: "#fbbf24",
   },
+  CONTAINER: {
+    Icon: Container,
+    label: "Conteneur",
+    iconColor: "#4338ca",
+    iconBg: "rgba(99,102,241,0.12)",
+    bar: "#818cf8",
+  },
+  RORO: {
+    Icon: Ship,
+    label: "RoRo",
+    iconColor: "#7c3aed",
+    iconBg: "rgba(139,92,246,0.12)",
+    bar: "#a78bfa",
+  },
 };
 
 function formatPricing(s: PublicUpcomingShipment): string | null {
@@ -72,9 +87,9 @@ function formatPricing(s: PublicUpcomingShipment): string | null {
     case "FLAT":
       return s.flatRate != null ? `${s.flatRate} ${sym} / colis` : null;
     case "VOLUMETRIC":
-      return s.ratePerVolume != null
-        ? `${s.ratePerVolume} ${sym} / u.vol`
-        : null;
+      return s.ratePerVolume != null ? `${s.ratePerVolume} ${sym} / u.vol` : null;
+    case "PER_VEHICLE":
+      return s.ratePerVehicle != null ? `${s.ratePerVehicle} ${sym} / véhicule` : null;
   }
 }
 

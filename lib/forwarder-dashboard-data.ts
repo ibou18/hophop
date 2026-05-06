@@ -130,6 +130,7 @@ export function parseParcelStatusParam(
 const parcelDetailInclude = {
   items: true,
   recipient: true,
+  vehicle: true,
   client: {
     select: {
       id: true,

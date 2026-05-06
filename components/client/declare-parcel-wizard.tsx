@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import type { Recipient } from "@/app/generated/prisma/client";
-import type { Country, Currency, PricingType, TransportMode } from "@/app/generated/prisma/enums";
+import type { Country, TransportMode } from "@/app/generated/prisma/enums";
 import type { ClientForwarderRow } from "@/lib/client-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
@@ -32,6 +32,9 @@ import {
   type ShipmentPricingFields,
 } from "@/lib/pricing";
 import { TRANSPORT_MODE_LABEL } from "@/lib/transport-mode";
+import type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
+
+export type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,25 +114,6 @@ type PriceEstimateView = {
   hasPricing: boolean;
   result: PricingResult | null;
   missingHint: string | null;
-};
-
-export type TargetShipmentSummary = {
-  reference: string;
-  originCountry: Country;
-  destinationCountry: Country;
-  destinationCity: string | null;
-  departureDate: string | null;
-  arrivalDate: string | null;
-  transportMode?: TransportMode;
-  // Tarification propre à l’envoi (pour estimation côté client)
-  pricingType?: PricingType | null;
-  ratePerKg?: number | null;
-  ratePerBox?: number | null;
-  flatRate?: number | null;
-  ratePerVolume?: number | null;
-  volumeDivisor?: number;
-  minimumCharge?: number;
-  currency?: Currency;
 };
 
 function ParcelPriceEstimateBlock({
@@ -272,6 +256,7 @@ export function DeclareParcelWizard({
       ratePerBox: s.ratePerBox ?? null,
       flatRate: s.flatRate ?? null,
       ratePerVolume: s.ratePerVolume ?? null,
+      ratePerVehicle: s.ratePerVehicle ?? null,
       volumeDivisor: s.volumeDivisor ?? 5000,
       minimumCharge: s.minimumCharge ?? 0,
       currency: s.currency ?? "EUR",

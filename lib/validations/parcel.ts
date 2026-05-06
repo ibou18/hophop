@@ -17,18 +17,44 @@ const parcelItem = z.object({
   notes: z.string().optional(),
 });
 
-export const createParcelSchema = z.object({
-  recipientId: z.string().uuid(),
-  forwarderId: z.string().uuid(),
-  weightKg: z.number().positive().optional(),
-  lengthCm: z.number().positive().optional(),
-  widthCm: z.number().positive().optional(),
-  heightCm: z.number().positive().optional(),
-  description: z.string().optional(),
-  declaredValue: z.number().nonnegative().optional(),
-  price: z.number().nonnegative().optional(),
-  items: z.array(parcelItem).min(1),
+export const vehicleSchema = z.object({
+  make:          z.string().min(1, "Marque requise"),
+  model:         z.string().min(1, "Modèle requis"),
+  year:          z.number().int().min(1900).max(new Date().getFullYear() + 1),
+  color:         z.string().optional(),
+  vin:           z.string().optional(),
+  plate:         z.string().optional(),
+  fuelType:      z.enum(["GASOLINE", "DIESEL", "ELECTRIC", "HYBRID", "OTHER"]).default("GASOLINE"),
+  condition:     z.enum(["RUNNING", "NON_RUNNING"]).default("RUNNING"),
+  hasKeys:       z.boolean().default(true),
+  inspectionNote: z.string().optional(),
 });
+
+export const createParcelSchema = z
+  .object({
+    recipientId: z.string().uuid(),
+    forwarderId: z.string().uuid(),
+    weightKg: z.number().positive().optional(),
+    lengthCm: z.number().positive().optional(),
+    widthCm: z.number().positive().optional(),
+    heightCm: z.number().positive().optional(),
+    description: z.string().optional(),
+    declaredValue: z.number().nonnegative().optional(),
+    price: z.number().nonnegative().optional(),
+    items: z.array(parcelItem).min(1).optional(),
+    /** Envoi publié (lien déclaration) — sert au calcul tarif véhicule côté serveur uniquement. */
+    shipmentId: z.string().uuid().optional(),
+    // Présent uniquement pour les déclarations véhicule
+    vehicle: vehicleSchema.optional(),
+  })
+  .refine(
+    (d) => d.items && d.items.length > 0 || d.vehicle !== undefined,
+    { message: "Fournir au moins un article ou un véhicule", path: ["items"] },
+  )
+  .refine((d) => !d.shipmentId || d.vehicle !== undefined, {
+    message: "Référence d'envoi réservée à la déclaration véhicule.",
+    path: ["shipmentId"],
+  });
 
 /** Après création du colis : enregistrer les URLs S3 (upload déjà effectué). */
 export const attachParcelImagesSchema = z.object({

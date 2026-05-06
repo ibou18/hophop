@@ -149,8 +149,23 @@ enum ItemCategory {
 
 enum TransportMode {
   AIR // Avion
-  SEA // Maritime (bateau)
+  SEA // Maritime (bateau) — colis classiques
   ROAD // Route / terrestre
+  CONTAINER // Maritime en conteneur fermé — véhicules
+  RORO // Roll-on/Roll-off — véhicules conduits à bord
+}
+
+enum VehicleFuelType {
+  GASOLINE // Essence
+  DIESEL // Diesel
+  ELECTRIC // Électrique
+  HYBRID // Hybride
+  OTHER // Autre / inconnu
+}
+
+enum VehicleCondition {
+  RUNNING // Fonctionnel (démarre et roule)
+  NON_RUNNING // En panne (ne démarre pas)
 }
 
 enum PricingType {
@@ -158,6 +173,7 @@ enum PricingType {
   PER_BOX // Tarif forfaitaire par carton
   VOLUMETRIC // Poids volumétrique (L×l×H ÷ diviseur)
   FLAT // Prix fixe par colis
+  PER_VEHICLE // Prix fixe par véhicule (CONTAINER / RORO)
 }
 
 enum Currency {
@@ -389,18 +405,19 @@ model Shipment {
   // Publié = visible par les clients pour faire une demande d'intégration
   isPublished Boolean @default(false)
 
+  // Envoi maritime acceptant les véhicules (conteneur) — ouvre l'option véhicule côté client
+  acceptsVehicles Boolean @default(false)
+
   // ── Tarification spécifique à cet envoi ──────────────────────────────────
-  // Si pricingType est renseigné, ces champs sont prioritaires sur la grille
-  // globale ForwarderTariff. Sinon on utilise la règle la plus spécifique
-  // (pays destination + mode de transport) de la grille globale.
-  pricingType   PricingType? // null = utilise la grille globale
-  ratePerKg     Float? // WEIGHT_KG  : prix par kilo
-  ratePerBox    Float? // PER_BOX    : prix par carton
-  flatRate      Float? // FLAT       : prix fixe par colis
-  ratePerVolume Float? // VOLUMETRIC : prix par unité volumétrique
-  volumeDivisor Float        @default(5000) // VOLUMETRIC : diviseur L×l×H
-  minimumCharge Float        @default(0) // Minimum facturé
-  currency      Currency     @default(CAD)
+  pricingType    PricingType? // null = utilise la grille globale
+  ratePerKg      Float? // WEIGHT_KG  : prix par kilo
+  ratePerBox     Float? // PER_BOX    : prix par carton
+  flatRate       Float? // FLAT       : prix fixe par colis
+  ratePerVolume  Float? // VOLUMETRIC : prix par unité volumétrique
+  ratePerVehicle Float? // prix fixe par véhicule (quand acceptsVehicles = true)
+  volumeDivisor  Float        @default(5000)
+  minimumCharge  Float        @default(0)
+  currency       Currency     @default(CAD)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -468,8 +485,41 @@ model Parcel {
   trackingEvents  TrackingEvent[]
   notifications   Notification[]
   shipmentRequest ShipmentRequest?
+  vehicle         Vehicle? // Présent uniquement si le colis est un véhicule
 
   @@map("parcels")
+}
+
+// ─────────────────────────────────────────────
+// VEHICLE — Véhicule rattaché à un colis
+// Utilisé pour les envois CONTAINER et RORO
+// ─────────────────────────────────────────────
+
+model Vehicle {
+  id       String @id @default(uuid())
+  parcelId String @unique // 1 colis = 1 véhicule
+
+  make  String // Marque (Toyota, Ford, Mercedes…)
+  model String // Modèle (Camry, F-150, Classe C…)
+  year  Int // Année de fabrication
+  color String?
+  vin   String? // Vehicle Identification Number
+  plate String? // Numéro de plaque d'immatriculation
+
+  fuelType  VehicleFuelType  @default(GASOLINE)
+  condition VehicleCondition @default(RUNNING)
+  hasKeys   Boolean          @default(true)
+
+  // État avant embarquement
+  inspectionNote String?
+  inspectedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+
+  @@map("vehicles")
 }
 
 // ─────────────────────────────────────────────

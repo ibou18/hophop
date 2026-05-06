@@ -13,6 +13,7 @@ export interface ShipmentPricingFields {
   ratePerBox: number | null;
   flatRate: number | null;
   ratePerVolume: number | null;
+  ratePerVehicle: number | null;
   volumeDivisor: number;
   minimumCharge: number;
   currency: Currency;
@@ -93,6 +94,13 @@ export function calculatePrice(
       raw = volumetricWeight * pricing.ratePerVolume;
       break;
     }
+    case "PER_VEHICLE": {
+      if (pricing.ratePerVehicle == null || !Number.isFinite(pricing.ratePerVehicle)) {
+        return null;
+      }
+      raw = pricing.ratePerVehicle;
+      break;
+    }
   }
 
   if (raw === null) return null;
@@ -104,12 +112,54 @@ export function calculatePrice(
   };
 }
 
+/** Champs shipment nécessaires pour tarif véhicule (PER_VEHICLE / ratePerVehicle). */
+export type ShipmentVehicleTariffInput = {
+  ratePerKg: number | null;
+  ratePerBox: number | null;
+  flatRate: number | null;
+  ratePerVolume: number | null;
+  ratePerVehicle: number | null;
+  volumeDivisor: number;
+  minimumCharge: number;
+  currency: Currency;
+  destinationCountry: Country;
+  transportMode: TransportMode;
+};
+
+/** Prix transport véhicule depuis `ratePerVehicle` + devise/minimum de l'envoi. Null si pas de tarif véhicule. */
+export function vehicleTariffFromShipment(
+  shipment: ShipmentVehicleTariffInput,
+): PricingResult | null {
+  if (
+    shipment.ratePerVehicle == null ||
+    !Number.isFinite(shipment.ratePerVehicle)
+  ) {
+    return null;
+  }
+  const pricing: ShipmentPricingFields = {
+    pricingType: "PER_VEHICLE",
+    ratePerKg: shipment.ratePerKg,
+    ratePerBox: shipment.ratePerBox,
+    flatRate: shipment.flatRate,
+    ratePerVolume: shipment.ratePerVolume,
+    ratePerVehicle: shipment.ratePerVehicle,
+    volumeDivisor: shipment.volumeDivisor,
+    minimumCharge: shipment.minimumCharge,
+    currency: shipment.currency,
+  };
+  return calculatePrice(pricing, {
+    destinationCountry: shipment.destinationCountry,
+    transportMode: shipment.transportMode,
+  });
+}
+
 /** Label lisible pour l'affichage dans l'UI */
 export const PRICING_TYPE_LABEL: Record<PricingType, string> = {
   WEIGHT_KG: "Au kilo",
   PER_BOX: "Au carton",
   VOLUMETRIC: "Volumétrique",
   FLAT: "Prix fixe",
+  PER_VEHICLE: "Par véhicule",
 };
 
 export const CURRENCY_LABEL: Record<Currency, string> = {

@@ -302,4 +302,6 @@ export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
   AIR: "Aérien ✈",
   SEA: "Maritime ⛵",
   ROAD: "Routier 🚛",
+  CONTAINER: "Conteneur 📦",
+  RORO: "RoRo 🚗",
 };

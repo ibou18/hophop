@@ -1,15 +1,19 @@
 import type { TransportMode } from "@/app/generated/prisma/enums";
 
 export const TRANSPORT_MODE_LABEL: Record<TransportMode, string> = {
-  AIR: "Avion",
-  SEA: "Maritime",
-  ROAD: "Route",
+  AIR:       "Avion",
+  SEA:       "Maritime",
+  ROAD:      "Route",
+  CONTAINER: "Conteneur",
+  RORO:      "RoRo",
 };
 
 export const TRANSPORT_MODE_EMOJI: Record<TransportMode, string> = {
-  AIR: "✈️",
-  SEA: "🚢",
-  ROAD: "🚛",
+  AIR:       "✈️",
+  SEA:       "🚢",
+  ROAD:      "🚛",
+  CONTAINER: "📦",
+  RORO:      "🚗",
 };
 
 /** Tailwind classes for badge bg + text + ring */
@@ -35,6 +39,25 @@ export const TRANSPORT_MODE_BADGE: Record<
     ring: "ring-amber-200",
     dot: "bg-amber-400",
   },
+  CONTAINER: {
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    ring: "ring-indigo-200",
+    dot: "bg-indigo-400",
+  },
+  RORO: {
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    ring: "ring-purple-200",
+    dot: "bg-purple-400",
+  },
 };
 
-export const TRANSPORT_MODES: TransportMode[] = ["AIR", "SEA", "ROAD"];
+export const TRANSPORT_MODES: TransportMode[] = ["AIR", "SEA", "ROAD", "CONTAINER", "RORO"];
+
+/** Modes réservés aux véhicules */
+export const VEHICLE_TRANSPORT_MODES: TransportMode[] = ["CONTAINER", "RORO"];
+
+export function isVehicleMode(mode: TransportMode): boolean {
+  return VEHICLE_TRANSPORT_MODES.includes(mode);
+}

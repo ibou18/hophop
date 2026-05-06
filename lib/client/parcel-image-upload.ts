@@ -9,7 +9,7 @@ export async function uploadParcelImagesViaApi(
   parcelId: string,
   files: File[],
 ): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
-  const slice = files.slice(0, 8);
+  const slice = files.slice(0, 10);
   for (const f of slice) {
     if (f.size > PARCEL_IMAGE_MAX_BYTES) {
       return {

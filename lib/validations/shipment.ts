@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
-const transportMode = z.enum(["AIR", "SEA", "ROAD"] as const);
-const pricingType = z.enum(["WEIGHT_KG", "PER_BOX", "VOLUMETRIC", "FLAT"] as const);
+const transportMode = z.enum(["AIR", "SEA", "ROAD", "CONTAINER", "RORO"] as const);
+const pricingType = z.enum(["WEIGHT_KG", "PER_BOX", "VOLUMETRIC", "FLAT", "PER_VEHICLE"] as const);
 const currency = z.enum(["EUR", "CAD", "XOF", "XAF", "GNF"] as const);
 
 /** Champs communs de tarification d'un envoi (optionnels). */
@@ -12,6 +12,7 @@ const shipmentPricingFields = {
   ratePerBox: z.number().positive().nullable().optional(),
   flatRate: z.number().positive().nullable().optional(),
   ratePerVolume: z.number().positive().nullable().optional(),
+  ratePerVehicle: z.number().positive().nullable().optional(),
   volumeDivisor: z.number().positive().optional(),
   minimumCharge: z.number().nonnegative().optional(),
   currency: currency.optional(),
@@ -36,6 +37,7 @@ export const createShipmentSchema = z
     }),
     arrivalDate: z.coerce.date().optional(),
     notes: z.string().optional(),
+    acceptsVehicles: z.boolean().optional(),
     ...shipmentPricingFields,
   })
   .refine(
@@ -99,7 +101,7 @@ export const patchShipmentSchema = z.object({
   arrivalDate: z.coerce.date().nullable().optional(),
   notes: z.string().nullable().optional(),
   isPublished: z.boolean().optional(),
-  // Tarification spécifique à l'envoi
+  acceptsVehicles: z.boolean().optional(),
   ...shipmentPricingFields,
 });
 

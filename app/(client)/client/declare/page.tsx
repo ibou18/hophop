@@ -8,10 +8,10 @@ import {
   getClientForwarders,
 } from "@/lib/client-data";
 import { clientJoinableShipmentWhere } from "@/lib/shipment-public-visibility";
-import {
-  DeclareParcelWizard,
-  type TargetShipmentSummary,
-} from "@/components/client/declare-parcel-wizard";
+import { DeclareParcelWizard } from "@/components/client/declare-parcel-wizard";
+import type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
+import { DeclareVehicleForm } from "@/components/client/declare-vehicle-form";
+import { DeclareModeToggle } from "@/components/client/declare-mode-toggle";
 
 export const metadata: Metadata = { title: "Déclarer un colis" };
 
@@ -19,7 +19,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type PageProps = {
-  searchParams: Promise<{ forwarder?: string; envoi?: string }>;
+  searchParams: Promise<{ forwarder?: string; envoi?: string; mode?: string }>;
 };
 
 export default async function DeclarePage({ searchParams }: PageProps) {
@@ -40,6 +40,7 @@ export default async function DeclarePage({ searchParams }: PageProps) {
   const forwarderParam =
     typeof sp.forwarder === "string" ? sp.forwarder.trim() : "";
   const envoiParam = typeof sp.envoi === "string" ? sp.envoi.trim() : "";
+  const modeParam = typeof sp.mode === "string" ? sp.mode.trim() : "";
 
   let initialForwarderId: string | undefined;
   if (forwarderParam) {
@@ -80,6 +81,8 @@ export default async function DeclarePage({ searchParams }: PageProps) {
         volumeDivisor: true,
         minimumCharge: true,
         currency: true,
+        ratePerVehicle: true,
+        acceptsVehicles: true,
       },
     });
     if (shipment) {
@@ -96,9 +99,11 @@ export default async function DeclarePage({ searchParams }: PageProps) {
         ratePerBox: shipment.ratePerBox,
         flatRate: shipment.flatRate,
         ratePerVolume: shipment.ratePerVolume,
+        ratePerVehicle: shipment.ratePerVehicle,
         volumeDivisor: shipment.volumeDivisor,
         minimumCharge: shipment.minimumCharge,
         currency: shipment.currency,
+        acceptsVehicles: shipment.acceptsVehicles,
       };
       const stillJoinable = await prisma.shipment.findFirst({
         where: {
@@ -114,15 +119,36 @@ export default async function DeclarePage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <h1 className="mb-6 text-[28px] font-medium leading-tight text-hh-earth-dk">
-        Déclarer un colis
+      <h1 className="mb-2 text-[28px] font-medium leading-tight text-hh-earth-dk">
+        Déclarer un envoi
       </h1>
-      <DeclareParcelWizard
-        recipients={recipients}
-        forwarders={forwarders}
-        initialForwarderId={initialForwarderId}
-        targetShipmentId={targetShipmentId}
-        targetShipmentSummary={targetShipmentSummary}
+      <p className="mb-5 text-[15px] text-hh-muted">
+        Colis classique ou véhicule — sélectionne le type ci-dessous.
+      </p>
+      <DeclareModeToggle
+        initialMode={
+          modeParam === "vehicle" && targetShipmentSummary?.acceptsVehicles
+            ? "vehicle"
+            : "parcel"
+        }
+        parcelContent={
+          <DeclareParcelWizard
+            recipients={recipients}
+            forwarders={forwarders}
+            initialForwarderId={initialForwarderId}
+            targetShipmentId={targetShipmentId}
+            targetShipmentSummary={targetShipmentSummary}
+          />
+        }
+        vehicleContent={
+          <DeclareVehicleForm
+            recipients={recipients}
+            forwarders={forwarders}
+            initialForwarderId={initialForwarderId}
+            targetShipmentId={targetShipmentId}
+            targetShipmentSummary={targetShipmentSummary}
+          />
+        }
       />
     </div>
   );

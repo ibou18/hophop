@@ -15,6 +15,11 @@ import {
   TrackingEventType,
 } from "@/app/generated/prisma/enums";
 import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
+import { clientJoinableShipmentWhere } from "@/lib/shipment-public-visibility";
+import {
+  vehicleTariffFromShipment,
+  type PricingResult,
+} from "@/lib/pricing";
 
 export async function GET() {
   const auth = await requireForwarderOrClient();
@@ -70,7 +75,9 @@ export async function POST(req: Request) {
     clientId: auth.clientId,
     forwarderId: data.forwarderId,
     recipientId: data.recipientId,
-    itemsCount: data.items.length,
+    itemsCount: data.items?.length ?? 0,
+    isVehicle: !!data.vehicle,
+    shipmentId: data.shipmentId,
   });
 
   // Vérifier que le client est bien lié à ce transitaire
@@ -101,6 +108,52 @@ export async function POST(req: Request) {
     });
     return jsonError("Destinataire invalide", 400);
   }
+
+  let vehiclePricing: PricingResult | null = null;
+  if (data.shipmentId && data.vehicle) {
+    const shipment = await prisma.shipment.findFirst({
+      where: {
+        id: data.shipmentId,
+        forwarderId: data.forwarderId,
+        ...clientJoinableShipmentWhere(),
+      },
+      select: {
+        acceptsVehicles: true,
+        ratePerKg: true,
+        ratePerBox: true,
+        flatRate: true,
+        ratePerVolume: true,
+        ratePerVehicle: true,
+        volumeDivisor: true,
+        minimumCharge: true,
+        currency: true,
+        destinationCountry: true,
+        transportMode: true,
+      },
+    });
+    if (!shipment) {
+      return jsonError(
+        "Envoi introuvable ou plus disponible pour une déclaration.",
+        400,
+      );
+    }
+    if (!shipment.acceptsVehicles) {
+      return jsonError("Cet envoi n'accepte pas les véhicules.", 422);
+    }
+    vehiclePricing = vehicleTariffFromShipment(shipment);
+  }
+
+  const resolvedPrice = vehiclePricing
+    ? vehiclePricing.calculatedPrice
+    : data.price ?? null;
+  const resolvedCalculatedPrice = vehiclePricing
+    ? vehiclePricing.calculatedPrice
+    : null;
+  const resolvedPricingType = vehiclePricing
+    ? vehiclePricing.pricingType
+    : null;
+  const resolvedCurrency = vehiclePricing ? vehiclePricing.currency : undefined;
+
   let trackingCode = generateTrackingCode();
   for (let i = 0; i < 15; i++) {
     const clash = await prisma.parcel.findUnique({ where: { trackingCode } });
@@ -121,10 +174,17 @@ export async function POST(req: Request) {
           lengthCm: data.lengthCm ?? null,
           widthCm: data.widthCm ?? null,
           heightCm: data.heightCm ?? null,
-          description: data.description ?? null,
+          description: data.description ?? (data.vehicle ? `${data.vehicle.year} ${data.vehicle.make} ${data.vehicle.model}` : null),
           declaredValue: data.declaredValue ?? null,
-          price: data.price ?? null,
-          items: {
+          price: resolvedPrice,
+          ...(resolvedCalculatedPrice !== null
+            ? { calculatedPrice: resolvedCalculatedPrice }
+            : {}),
+          ...(resolvedPricingType !== null
+            ? { pricingType: resolvedPricingType }
+            : {}),
+          ...(resolvedCurrency !== undefined ? { currency: resolvedCurrency } : {}),
+          items: data.items && data.items.length > 0 ? {
             create: data.items.map((it) => ({
               name: it.name,
               quantity: it.quantity,
@@ -132,9 +192,23 @@ export async function POST(req: Request) {
               weightKg: it.weightKg ?? null,
               notes: it.notes ?? null,
             })),
-          },
+          } : undefined,
+          vehicle: data.vehicle ? {
+            create: {
+              make:           data.vehicle.make,
+              model:          data.vehicle.model,
+              year:           data.vehicle.year,
+              color:          data.vehicle.color ?? null,
+              vin:            data.vehicle.vin ?? null,
+              plate:          data.vehicle.plate ?? null,
+              fuelType:       data.vehicle.fuelType,
+              condition:      data.vehicle.condition,
+              hasKeys:        data.vehicle.hasKeys,
+              inspectionNote: data.vehicle.inspectionNote ?? null,
+            },
+          } : undefined,
         },
-        include: { items: true, recipient: true, images: true },
+        include: { items: true, vehicle: true, recipient: true, images: true },
       });
       await tx.trackingEvent.create({
         data: {

@@ -1,20 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import { publicVitrineShipmentWhere } from "@/lib/shipment-public-visibility";
+import type { TransportMode } from "@/app/generated/prisma/enums";
 
 export type PublicUpcomingShipment = {
   id: string;
   reference: string;
-  transportMode: "AIR" | "SEA" | "ROAD";
+  transportMode: TransportMode;
   originCountry: string;
   destinationCountry: string;
   destinationCity: string | null;
   departureDate: Date;
   // Tarification de l'envoi (null = non définie publiquement)
-  pricingType: "WEIGHT_KG" | "PER_BOX" | "VOLUMETRIC" | "FLAT" | null;
+  pricingType: "WEIGHT_KG" | "PER_BOX" | "VOLUMETRIC" | "FLAT" | "PER_VEHICLE" | null;
   ratePerKg: number | null;
   ratePerBox: number | null;
   flatRate: number | null;
   ratePerVolume: number | null;
+  ratePerVehicle: number | null;
   currency: string;
   forwarder: {
     code5: string;
@@ -43,6 +45,7 @@ export async function getPublicUpcomingShipments(
       ratePerBox: true,
       flatRate: true,
       ratePerVolume: true,
+      ratePerVehicle: true,
       currency: true,
       forwarder: {
         select: { code5: true, name: true, city: true },
@@ -65,6 +68,7 @@ export async function getPublicUpcomingShipments(
       ratePerBox: r.ratePerBox,
       flatRate: r.flatRate,
       ratePerVolume: r.ratePerVolume,
+      ratePerVehicle: r.ratePerVehicle,
       currency: r.currency,
       forwarder: r.forwarder,
     }));

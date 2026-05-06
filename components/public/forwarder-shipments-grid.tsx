@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, useInView } from "motion/react";
-import { Calendar, Package, Plane, Ship, Truck, ArrowRight, Tag } from "lucide-react";
+import { Calendar, Container, Package, Plane, Ship, Truck, ArrowRight, Tag } from "lucide-react";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { CURRENCY_SYMBOL } from "@/lib/pricing";
 import type { Country, Currency, PricingType, ShipmentStatus, TransportMode } from "@/app/generated/prisma/enums";
@@ -77,6 +77,28 @@ const TRANSPORT_CONFIG: Record<
     animateX: [0, 4, 0],
     animateDuration: 1.8,
   },
+  CONTAINER: {
+    Icon: Container,
+    label: "Conteneur",
+    badgeBg: "bg-indigo-50",
+    badgeText: "text-indigo-700",
+    badgeRing: "ring-indigo-200",
+    iconColor: "text-indigo-500",
+    cardAccent: "border-t-indigo-200",
+    animateDuration: 3.0,
+  },
+  RORO: {
+    Icon: Ship,
+    label: "RoRo",
+    badgeBg: "bg-purple-50",
+    badgeText: "text-purple-700",
+    badgeRing: "ring-purple-200",
+    iconColor: "text-purple-500",
+    cardAccent: "border-t-purple-200",
+    animateX: [0, 2, -2, 0],
+    animateY: [0, 2, 1, 0],
+    animateDuration: 3.5,
+  },
 };
 
 export interface ShipmentCardData {
@@ -95,6 +117,7 @@ export interface ShipmentCardData {
   ratePerBox: number | null;
   flatRate: number | null;
   ratePerVolume: number | null;
+  ratePerVehicle: number | null;
   volumeDivisor: number;
   minimumCharge: number;
   currency: Currency;
@@ -128,6 +151,10 @@ function formatPricing(s: ShipmentCardData): { label: string; value: string } | 
     case "VOLUMETRIC":
       return s.ratePerVolume != null
         ? { label: "Volumétrique", value: `${s.ratePerVolume} ${sym} / u.vol` }
+        : null;
+    case "PER_VEHICLE":
+      return s.ratePerVehicle != null
+        ? { label: "Par véhicule", value: `${s.ratePerVehicle} ${sym} / véhicule` }
         : null;
   }
 }
