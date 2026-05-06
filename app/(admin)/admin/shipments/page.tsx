@@ -21,6 +21,11 @@ const STATUS_DOT: Record<ShipmentStatus, string> = {
   CLOSED:     "bg-emerald-400",
 };
 
+const UPCOMING_STATUSES: ShipmentStatus[] = [
+  ShipmentStatus.CONFIRMED,
+  ShipmentStatus.IN_TRANSIT,
+];
+
 export default async function AdminShipmentsPage({
   searchParams,
 }: {
@@ -36,7 +41,7 @@ export default async function AdminShipmentsPage({
 
   const upcoming = shipments.filter(
     (s) =>
-      [ShipmentStatus.CONFIRMED, ShipmentStatus.IN_TRANSIT].includes(s.status) &&
+      UPCOMING_STATUSES.includes(s.status) &&
       s.departureDate &&
       new Date(s.departureDate) >= new Date(),
   );
