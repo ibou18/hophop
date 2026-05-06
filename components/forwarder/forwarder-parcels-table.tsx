@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Car, Package } from "lucide-react";
 import type { ParcelStatus } from "@/app/generated/prisma/enums";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import { countryLabelFr } from "@/lib/country-label-fr";
@@ -19,6 +20,32 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ForwarderParcelQuickModal } from "@/components/forwarder/forwarder-parcel-quick-modal";
+
+function ParcelKindCell({
+  vehicle,
+}: {
+  vehicle: { make: string; model: string; year: number } | null;
+}) {
+  if (vehicle) {
+    return (
+      <div className="space-y-0.5">
+        <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-800 ring-1 ring-indigo-200">
+          <Car className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+          Véhicule
+        </span>
+        <p className="max-w-[200px] truncate text-[11px] text-hh-muted" title={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}>
+          {vehicle.year} {vehicle.make} {vehicle.model}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-hh-sand/70 px-2 py-0.5 text-[11px] font-medium text-hh-earth-dk ring-1 ring-hh-sand-dk/25">
+      <Package className="size-3.5 shrink-0 text-hh-muted" strokeWidth={2} aria-hidden />
+      Colis
+    </span>
+  );
+}
 
 function statusBadgeClass(status: ParcelStatus): string {
   switch (status) {
@@ -64,6 +91,7 @@ export function ForwarderParcelsTable({
           <TableHeader>
             <TableRow className="border-hh-sand-dk/20 hover:bg-transparent">
               <TableHead className="text-hh-muted">Code suivi</TableHead>
+              <TableHead className="text-hh-muted">Type</TableHead>
               <TableHead className="text-hh-muted">Statut</TableHead>
               <TableHead className="text-hh-muted">Client</TableHead>
               <TableHead className="text-hh-muted">Destination</TableHead>
@@ -78,7 +106,11 @@ export function ForwarderParcelsTable({
             {parcels.map((p) => (
               <TableRow
                 key={p.id}
-                className="border-hh-sand-dk/15 hover:bg-hh-sand/40"
+                className={cn(
+                  "border-hh-sand-dk/15 hover:bg-hh-sand/40",
+                  p.vehicle &&
+                    "border-l-[3px] border-l-indigo-400 bg-indigo-50/40 hover:bg-indigo-50/70",
+                )}
               >
                 <TableCell>
                   <Link
@@ -87,6 +119,9 @@ export function ForwarderParcelsTable({
                   >
                     {p.trackingCode}
                   </Link>
+                </TableCell>
+                <TableCell className="align-top">
+                  <ParcelKindCell vehicle={p.vehicle} />
                 </TableCell>
                 <TableCell>
                   <span

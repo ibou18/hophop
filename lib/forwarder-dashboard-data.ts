@@ -32,6 +32,9 @@ const parcelListInclude = {
   },
   recipient: { select: { city: true, country: true, firstName: true, lastName: true } },
   shipment: { select: { id: true, reference: true, status: true } },
+  vehicle: {
+    select: { id: true, make: true, model: true, year: true },
+  },
   images: {
     orderBy: { sortOrder: "asc" as const },
     select: { id: true, url: true, sortOrder: true },

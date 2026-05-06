@@ -22,22 +22,48 @@ export function ShipmentDetailActions({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  type RunToastOpts = {
+    /** Toast Sonner « chargement » pendant l’appel API (ex. départ). */
+    loading?: string;
+    successDescription?: string;
+    /** Durée d’affichage du succès (ms). */
+    duration?: number;
+  };
+
   function run(
     label: string,
     successMsg: string,
     fn: () => Promise<{ ok: boolean; message?: string }>,
+    toastOpts?: RunToastOpts,
   ): void {
     setError(null);
     startTransition(async () => {
-      const r = await fn();
-      if (!r.ok) {
-        const msg = r.message ?? `Impossible : ${label}`;
+      let loadingId: string | number | undefined;
+      if (toastOpts?.loading) {
+        loadingId = toast.loading(toastOpts.loading);
+      }
+      try {
+        const r = await fn();
+        if (loadingId !== undefined) toast.dismiss(loadingId);
+        if (!r.ok) {
+          const msg = r.message ?? `Impossible : ${label}`;
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        toast.success(successMsg, {
+          ...(toastOpts?.successDescription
+            ? { description: toastOpts.successDescription }
+            : {}),
+          ...(toastOpts?.duration != null ? { duration: toastOpts.duration } : {}),
+        });
+        router.refresh();
+      } catch {
+        if (loadingId !== undefined) toast.dismiss(loadingId);
+        const msg = "Erreur réseau";
         setError(msg);
         toast.error(msg);
-        return;
       }
-      toast.success(successMsg);
-      router.refresh();
     });
   }
 
@@ -110,7 +136,19 @@ export function ShipmentDetailActions({
           type="button"
           disabled={pending || !canDispatch}
           className="bg-hh-saffron text-white hover:bg-hh-saffron-dk disabled:opacity-50"
-          onClick={() => run("Départ", "Départ enregistré — envoi en transit ✈", postDispatch)}
+          onClick={() =>
+            run(
+              "Départ",
+              "Départ enregistré — envoi en transit",
+              postDispatch,
+              {
+                loading: "Enregistrement du départ…",
+                successDescription:
+                  "Le lot est passé en transit. Les expéditeurs voient la mise à jour sur le suivi.",
+                duration: 6500,
+              },
+            )
+          }
         >
           Enregistrer le départ
         </Button>

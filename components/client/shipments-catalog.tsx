@@ -13,10 +13,15 @@ import {
   MapPin,
   X,
   Filter,
+  Car,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { countryLabelFr, COUNTRY_OPTIONS } from "@/lib/country-label-fr";
-import type { Country, ShipmentStatus, TransportMode } from "@/app/generated/prisma/enums";
+import type {
+  Country,
+  ShipmentStatus,
+  TransportMode,
+} from "@/app/generated/prisma/enums";
 
 const STATUS_LABEL: Record<ShipmentStatus, string> = {
   DRAFT: "En préparation",
@@ -194,7 +199,7 @@ export function ShipmentsCatalog({ rows }: Props) {
               "h-8 appearance-none rounded-full border pl-3 pr-7 text-[12px] font-medium outline-none transition-all cursor-pointer",
               originFilter
                 ? "border-hh-saffron bg-hh-saffron-lt text-hh-saffron-dk"
-                : "border-hh-sand-dk/40 bg-white text-hh-earth-dk hover:border-hh-saffron/50"
+                : "border-hh-sand-dk/40 bg-white text-hh-earth-dk hover:border-hh-saffron/50",
             )}
           >
             <option value="">🌍 Pays de départ</option>
@@ -206,13 +211,31 @@ export function ShipmentsCatalog({ rows }: Props) {
           </select>
           <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-hh-muted">
             <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-              <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M1 1l4 4 4-4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
         </div>
 
-        <svg width="14" height="10" viewBox="0 0 14 10" fill="none" className="text-hh-muted/50 shrink-0">
-          <path d="M1 5h12M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          width="14"
+          height="10"
+          viewBox="0 0 14 10"
+          fill="none"
+          className="text-hh-muted/50 shrink-0"
+        >
+          <path
+            d="M1 5h12M8 1l4 4-4 4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
 
         {/* Filtre arrivée */}
@@ -224,10 +247,10 @@ export function ShipmentsCatalog({ rows }: Props) {
               "h-8 appearance-none rounded-full border pl-3 pr-7 text-[12px] font-medium outline-none transition-all cursor-pointer",
               destFilter
                 ? "border-hh-saffron bg-hh-saffron-lt text-hh-saffron-dk"
-                : "border-hh-sand-dk/40 bg-white text-hh-earth-dk hover:border-hh-saffron/50"
+                : "border-hh-sand-dk/40 bg-white text-hh-earth-dk hover:border-hh-saffron/50",
             )}
           >
-            <option value="">🏁 Pays d'arrivée</option>
+            <option value="">🏁 Pays d&apos;arrivée</option>
             {destCountries.map((o) => (
               <option key={o.value} value={o.value}>
                 {FLAG[o.value] ?? "🏁"} {o.label}
@@ -236,14 +259,23 @@ export function ShipmentsCatalog({ rows }: Props) {
           </select>
           <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-hh-muted">
             <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-              <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M1 1l4 4 4-4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
         </div>
 
         {hasFilters && (
           <button
-            onClick={() => { setOriginFilter(""); setDestFilter(""); }}
+            onClick={() => {
+              setOriginFilter("");
+              setDestFilter("");
+            }}
             className="flex h-8 items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 text-[12px] font-medium text-red-600 transition hover:bg-red-100"
           >
             <X size={11} />
@@ -259,9 +291,14 @@ export function ShipmentsCatalog({ rows }: Props) {
       {/* Grille de cards */}
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-hh-sand-dk/40 bg-white px-5 py-14 text-center">
-          <Package className="mx-auto mb-3 size-8 text-hh-sand-dk" strokeWidth={1.25} />
+          <Package
+            className="mx-auto mb-3 size-8 text-hh-sand-dk"
+            strokeWidth={1.25}
+          />
           <p className="text-[14px] font-medium text-hh-earth-dk">
-            {hasFilters ? "Aucun envoi pour cette route" : "Aucun envoi ouvert pour le moment"}
+            {hasFilters
+              ? "Aucun envoi pour cette route"
+              : "Aucun envoi ouvert pour le moment"}
           </p>
           <p className="mt-1 text-[13px] text-hh-muted">
             {hasFilters
@@ -281,11 +318,16 @@ export function ShipmentsCatalog({ rows }: Props) {
                 href={`/client/declare?forwarder=${row.forwarder.code5}&envoi=${row.id}&mode=${row.acceptsVehicles ? "vehicle" : "parcel"}`}
                 className={cn(
                   "group relative flex flex-col overflow-hidden rounded-2xl border-t-2 bg-white shadow-sm ring-1 ring-hh-sand-dk/20 transition-all hover:shadow-md hover:ring-hh-saffron/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hh-saffron",
-                  tc.accentBorder
+                  tc.accentBorder,
                 )}
               >
                 {/* Gradient header subtil */}
-                <div className={cn("absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-60", tc.accentBg)} />
+                <div
+                  className={cn(
+                    "absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-60",
+                    tc.accentBg,
+                  )}
+                />
 
                 <div className="relative flex flex-col flex-1 p-4 gap-3">
                   {/* Top row : statut + mode de transport */}
@@ -293,16 +335,23 @@ export function ShipmentsCatalog({ rows }: Props) {
                     <span
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1",
-                        STATUS_BG[row.status]
+                        STATUS_BG[row.status],
                       )}
                     >
-                      <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[row.status])} />
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          STATUS_DOT[row.status],
+                        )}
+                      />
                       {STATUS_LABEL[row.status]}
                     </span>
                     <span
                       className={cn(
                         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
-                        tc.badgeBg, tc.badgeText, tc.badgeRing
+                        tc.badgeBg,
+                        tc.badgeText,
+                        tc.badgeRing,
                       )}
                     >
                       <Icon size={10} />
@@ -313,8 +362,12 @@ export function ShipmentsCatalog({ rows }: Props) {
                   {/* Route */}
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
-                      <span className="text-2xl leading-none">{FLAG[row.originCountry] ?? "🌍"}</span>
-                      <span className="text-[11px] font-semibold text-hh-nuit mt-0.5">{row.originCountry}</span>
+                      <span className="text-2xl leading-none">
+                        {FLAG[row.originCountry] ?? "🌍"}
+                      </span>
+                      <span className="text-[11px] font-semibold text-hh-nuit mt-0.5">
+                        {row.originCountry}
+                      </span>
                       <span className="text-[10px] text-hh-muted truncate max-w-[60px] text-center">
                         {countryLabelFr(row.originCountry)}
                       </span>
@@ -329,10 +382,15 @@ export function ShipmentsCatalog({ rows }: Props) {
                     </div>
 
                     <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
-                      <span className="text-2xl leading-none">{FLAG[row.destinationCountry] ?? "🏁"}</span>
-                      <span className="text-[11px] font-semibold text-hh-nuit mt-0.5">{row.destinationCountry}</span>
+                      <span className="text-2xl leading-none">
+                        {FLAG[row.destinationCountry] ?? "🏁"}
+                      </span>
+                      <span className="text-[11px] font-semibold text-hh-nuit mt-0.5">
+                        {row.destinationCountry}
+                      </span>
                       <span className="text-[10px] text-hh-muted truncate max-w-[60px] text-center">
-                        {row.destinationCity ?? countryLabelFr(row.destinationCountry)}
+                        {row.destinationCity ??
+                          countryLabelFr(row.destinationCountry)}
                       </span>
                     </div>
                   </div>
@@ -360,20 +418,35 @@ export function ShipmentsCatalog({ rows }: Props) {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    {/* <div className="flex items-center gap-1.5">
                       <Package size={11} className="text-hh-muted shrink-0" />
                       <span className="text-[12px] text-hh-muted">
                         {row._count.parcels} colis enregistré{row._count.parcels !== 1 ? "s" : ""}
                       </span>
-                    </div>
+                    </div> */}
                   </div>
+
+                  {/* Badge voiture */}
+                  {row.acceptsVehicles && (
+                    <div className="flex items-center gap-1.5 rounded-xl bg-orange-50 px-3 py-1.5 ring-1 ring-orange-200">
+                      <Car size={13} className="text-orange-500 shrink-0" />
+                      <span className="text-[12px] font-medium text-orange-700">
+                        Accepte les voitures
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* CTA footer */}
                 <div className="border-t border-hh-sand-dk/20 bg-hh-sand/30 px-4 py-2.5 transition-colors group-hover:bg-hh-saffron-lt/50">
                   <div className="flex items-center justify-between text-[12px]">
-                    <span className="font-medium text-hh-saffron-dk">Déclarer sur cet envoi</span>
-                    <ArrowRight size={12} className="text-hh-saffron transition-transform group-hover:translate-x-0.5" />
+                    <span className="font-medium text-hh-saffron-dk">
+                      Déclarer sur cet envoi
+                    </span>
+                    <ArrowRight
+                      size={12}
+                      className="text-hh-saffron transition-transform group-hover:translate-x-0.5"
+                    />
                   </div>
                 </div>
               </Link>
