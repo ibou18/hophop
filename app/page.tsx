@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { HopLogo } from "@/components/auth/hop-logo";
 import { HeroSection } from "@/components/landing/hero-section";
 import { CountryMarquee } from "@/components/landing/country-marquee";
@@ -7,11 +8,84 @@ import { Testimonials } from "@/components/landing/testimonials";
 import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
 import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
 
+const HOME_TITLE = "Hophop | Envoi et suivi colis diaspora Afrique";
+const HOME_DESCRIPTION =
+  "Envoie et suis tes colis entre diaspora et Afrique avec Hophop. Suivi en temps reel, transitaires verifies, livraisons plus sereines.";
+
+export const metadata: Metadata = {
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  keywords: [
+    "envoi colis Afrique",
+    "suivi colis diaspora",
+    "transitaire Afrique",
+    "expedition France Afrique",
+    "livraison colis Afrique",
+    "Hophop",
+  ],
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "Hophop",
+    locale: "fr_FR",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    images: [
+      {
+        url: "/assets/logos/logo-b.png",
+        alt: "Hophop - Envoi et suivi de colis",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    images: ["/assets/logos/logo-b.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+};
+
 export default async function Home() {
   const upcomingShipments = await getPublicUpcomingShipments();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "Hophop",
+        url: "/",
+        logo: "/assets/logos/logo-b.png",
+      },
+      {
+        "@type": "WebSite",
+        name: "Hophop",
+        url: "/",
+        inLanguage: "fr",
+        description: HOME_DESCRIPTION,
+      },
+    ],
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-hh-sand">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ── Nav (sur fond clair désormais) ── */}
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
