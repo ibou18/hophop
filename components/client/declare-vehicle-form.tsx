@@ -72,7 +72,7 @@ export function DeclareVehicleForm({
   // Colis
   const [forwarderId, setForwarderId] = useState(initialForwarderId ?? forwarders[0]?.id ?? "");
   const [recipientId, setRecipientId] = useState(recipients[0]?.id ?? "");
-  const [price,       setPrice]       = useState("");
+  const [declaredValue, setDeclaredValue] = useState("");
 
   const vehicleTariffEstimate = useMemo(() => {
     const s = targetShipmentSummary;
@@ -143,8 +143,8 @@ export function DeclareVehicleForm({
     const payload = {
       forwarderId,
       recipientId,
-      ...(!vehicleTariffEstimate && price.trim()
-        ? { price: parseFloat(price.replace(",", ".")) }
+      ...(declaredValue.trim()
+        ? { declaredValue: parseFloat(declaredValue.replace(",", ".")) }
         : {}),
       ...(targetShipmentId ? { shipmentId: targetShipmentId } : {}),
       vehicle: {
@@ -488,34 +488,36 @@ export function DeclareVehicleForm({
         targetShipmentSummary.ratePerVehicle == null ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-[13px] text-amber-950">
           Cet envoi accepte les véhicules mais n&apos;a pas de{" "}
-          <strong>tarif par véhicule</strong> renseigné. Tu peux indiquer un montant indicatif
-          ci-dessous ou laisser vide.
+          <strong>tarif par véhicule</strong> renseigné. Le transitaire fixera le prix
+          de transport. Renseigne la valeur déclarée du véhicule ci-dessous.
         </div>
       ) : null}
 
-      {/* Prix indicatif si pas de tarif envoi */}
-      {!vehicleTariffEstimate ? (
-        <div className="space-y-1.5">
-          <Label htmlFor="price" className="text-[12px] font-semibold uppercase tracking-wide text-hh-muted">
-            Prix transport indicatif (optionnel)
-          </Label>
-          <Input
-            id="price"
-            type="number"
-            min={0}
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="ex. 1500"
-            disabled={pending}
-            className={inputCls}
-          />
-          <p className="text-[11px] text-hh-muted">
-            Utilisé seulement si aucun tarif automatique depuis l&apos;envoi. La facturation finale
-            peut être ajustée par le transitaire.
-          </p>
-        </div>
-      ) : null}
+      {/* Valeur déclarée du véhicule */}
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="declared-value"
+          className="text-[12px] font-semibold uppercase tracking-wide text-hh-muted"
+        >
+          Valeur déclarée du véhicule (optionnel)
+        </Label>
+        <Input
+          id="declared-value"
+          type="number"
+          min={0}
+          step="0.01"
+          value={declaredValue}
+          onChange={(e) => setDeclaredValue(e.target.value)}
+          placeholder="ex. 8500"
+          disabled={pending}
+          className={inputCls}
+        />
+        <p className="text-[11px] text-hh-muted">
+          Sert à la valeur déclarative (assurance/douane). Le prix transport est
+          calculé automatiquement depuis l&apos;envoi quand disponible, sinon fixé
+          par le transitaire.
+        </p>
+      </div>
 
       {error && (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-[13px] text-red-600">{error}</p>
