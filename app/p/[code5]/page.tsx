@@ -31,8 +31,12 @@ type Props = {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
   const { code5 } = await params;
+  const sp = (await searchParams) ?? {};
   const f = await prisma.forwarder.findUnique({
     where: { code5, isActive: true },
     select: {
@@ -44,9 +48,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       shipments: {
         where: publicVitrineShipmentWhere(),
         select: {
+          id: true,
+          reference: true,
           originCountry: true,
           destinationCountry: true,
           destinationCity: true,
+          departureDate: true,
         },
       },
     },
@@ -61,16 +68,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const base = getAppBaseUrl();
-  const url = `${base}/p/${code5}`;
+  const rawEnvoi = typeof sp.envoi === "string" ? sp.envoi.trim() : "";
+  const highlightedShipment =
+    rawEnvoi && UUID_RE.test(rawEnvoi)
+      ? f.shipments.find((s) => s.id === rawEnvoi)
+      : null;
+  const url = highlightedShipment
+    ? `${base}/p/${code5}?envoi=${encodeURIComponent(highlightedShipment.id)}`
+    : `${base}/p/${code5}`;
   const routes = describeRoutes(f.shipments, 3);
   const country = countryLabelFr(f.country as Country);
+  const shipmentRoute = highlightedShipment
+    ? `${countryLabelFr(highlightedShipment.originCountry as Country)} → ${countryLabelFr(highlightedShipment.destinationCountry as Country)}`
+    : null;
 
-  const titleBase = `${f.name} — Transitaire ${f.city} · ${country}`;
-  const description =
-    f.description ??
-    (routes
-      ? `Envoyez vos colis avec ${f.name}, transitaire à ${f.city}. Routes : ${routes}. ${f.shipments.length} départ${f.shipments.length > 1 ? "s" : ""} publié${f.shipments.length > 1 ? "s" : ""}. Suivi en temps réel sur Hophop.`
-      : `Transitaire à ${f.city}, ${country}. Envoyez vos colis et suivez chaque étape sur Hophop.`);
+  const titleBase = highlightedShipment
+    ? `${f.name} — Envoi ${highlightedShipment.reference} · ${shipmentRoute}`
+    : `${f.name} — Transitaire ${f.city} · ${country}`;
+  const description = highlightedShipment
+    ? `Partage envoi ${highlightedShipment.reference} avec ${f.name}. Route ${shipmentRoute}${highlightedShipment.destinationCity ? ` · ${highlightedShipment.destinationCity}` : ""}. Déclarez vos colis et suivez chaque étape sur Hophop.`
+    : f.description ??
+      (routes
+        ? `Envoyez vos colis avec ${f.name}, transitaire à ${f.city}. Routes : ${routes}. ${f.shipments.length} départ${f.shipments.length > 1 ? "s" : ""} publié${f.shipments.length > 1 ? "s" : ""}. Suivi en temps réel sur Hophop.`
+        : `Transitaire à ${f.city}, ${country}. Envoyez vos colis et suivez chaque étape sur Hophop.`);
 
   return {
     title: titleBase,
@@ -94,11 +114,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       siteName: "Hophop",
       locale: "fr_FR",
+      images: [
+        {
+          url: "/assets/logos/logo-b.png",
+          alt: highlightedShipment
+            ? `Envoi ${highlightedShipment.reference} - ${f.name}`
+            : `${f.name} - Hophop`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: titleBase,
       description,
+      images: ["/assets/logos/logo-b.png"],
     },
     robots: {
       index: true,
