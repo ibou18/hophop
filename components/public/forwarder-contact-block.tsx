@@ -1,8 +1,4 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import { MapPin, Phone, Mail, MessageCircle, ExternalLink } from "lucide-react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 interface Props {
   name: string;
@@ -48,29 +44,12 @@ export function ForwarderContactBlock({
   latitude,
   longitude,
 }: Props) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!rootRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from(rootRef.current!.querySelectorAll<HTMLElement>("[data-contact]"), {
-        scrollTrigger: { trigger: rootRef.current, start: "top 85%", once: true },
-        y: 24,
-        opacity: 0,
-        stagger: 0.1,
-        duration: 0.6,
-        ease: "power3.out",
-      });
-    }, rootRef);
-    return () => ctx.revert();
-  }, []);
-
   const hasMap = !!(address || (latitude != null && longitude != null));
 
   return (
-    <section ref={rootRef} className="border-t border-hh-sand-dk bg-hh-sand px-5 py-14">
+    <section className="border-t border-hh-sand-dk bg-hh-sand px-5 py-14">
       <div className="mx-auto max-w-5xl">
-        <div data-contact className="mb-8">
+        <div className="mb-8">
           <p className="mb-2 text-xs font-medium uppercase tracking-widest text-hh-saffron-dk">
             Contact
           </p>
@@ -83,7 +62,6 @@ export function ForwarderContactBlock({
           {/* Adresse + Maps */}
           {hasMap && (
             <a
-              data-contact
               href={mapsLink({ address, city, country, latitude, longitude })}
               target="_blank"
               rel="noopener noreferrer"
@@ -120,7 +98,6 @@ export function ForwarderContactBlock({
           {/* Téléphone */}
           {phone && (
             <a
-              data-contact
               href={`tel:${phone.replace(/\s/g, "")}`}
               className="group flex flex-col gap-3 rounded-2xl border border-hh-sand-dk bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-hh-saffron/30 hover:shadow-md"
             >
@@ -142,7 +119,6 @@ export function ForwarderContactBlock({
           {/* WhatsApp (utilise le téléphone) */}
           {phone && (
             <a
-              data-contact
               href={whatsappFromPhone(phone)}
               target="_blank"
               rel="noopener noreferrer"
@@ -173,7 +149,6 @@ export function ForwarderContactBlock({
 
           {/* Email */}
           <a
-            data-contact
             href={`mailto:${email}`}
             className="group flex flex-col gap-3 rounded-2xl border border-hh-sand-dk bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-hh-saffron/30 hover:shadow-md"
           >
