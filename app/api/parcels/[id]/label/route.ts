@@ -67,11 +67,6 @@ export async function GET(_req: Request, ctx: Ctx) {
     select: { name: true, code5: true, city: true, country: true },
   });
 
-  const qr = await QRCode.toDataURL(parcel.trackingCode, {
-    width: 240,
-    margin: 1,
-    color: { dark: "#1a1a2e", light: "#ffffff" },
-  });
 
   // Route info — prefer shipment data, fall back to forwarder/recipient
   const originCountry  = parcel.shipment?.originCountry  ?? fwd?.country ?? "";
@@ -87,6 +82,18 @@ export async function GET(_req: Request, ctx: Ctx) {
   const originLine = esc(countryLine(originCountry, originCity));
   const destLine   = esc(countryLine(destCountry, destCity));
 
+  // QR miniature pour les coins (taille réduite)
+  const qrSmall = await QRCode.toDataURL(parcel.trackingCode, {
+    width: 100,
+    margin: 1,
+    color: { dark: "#000000", light: "#ffffff" },
+  });
+  const qrMain = await QRCode.toDataURL(parcel.trackingCode, {
+    width: 260,
+    margin: 1,
+    color: { dark: "#000000", light: "#ffffff" },
+  });
+
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -98,19 +105,20 @@ export async function GET(_req: Request, ctx: Ctx) {
 
     body {
       font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-      background: #f0f0f0;
+      background: #e8e8e8;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 24px 16px 40px;
       gap: 16px;
+      color: #111;
     }
 
-    /* Print button */
+    /* ── Bouton impression ─────────────────────── */
     .print-bar {
       width: 100%;
-      max-width: 520px;
+      max-width: 560px;
       display: flex;
       justify-content: flex-end;
     }
@@ -118,219 +126,241 @@ export async function GET(_req: Request, ctx: Ctx) {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #e8820c;
+      background: #111;
       color: #fff;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 9px 20px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
+      letter-spacing: 0.2px;
     }
-    .btn-print:hover { background: #c96e09; }
+    .btn-print:hover { background: #333; }
 
-    /* Label card */
+    /* ── Carte étiquette ───────────────────────── */
     .label {
       width: 100%;
-      max-width: 520px;
+      max-width: 560px;
       background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      border-radius: 4px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.12);
       overflow: hidden;
+      position: relative;
     }
 
-    /* Header */
+    /* ── QR codes aux coins ────────────────────── */
+    /*
+     * Disposition : 4 petits QR dans les coins.
+     * Le contenu principal est en zone centrale.
+     * Si le document est plié en 2 (h ou v) ou en 4,
+     * au moins un QR reste visible.
+     */
+    .corner-qr {
+      position: absolute;
+      width: 72px;
+      height: 72px;
+      padding: 3px;
+      background: #fff;
+    }
+    .corner-qr img { width: 100%; height: 100%; display: block; }
+    .corner-tl { top: 10px;    left: 10px;  }
+    .corner-tr { top: 10px;    right: 10px; }
+    .corner-bl { bottom: 10px; left: 10px;  }
+    .corner-br { bottom: 10px; right: 10px; }
+
+    /* ── En-tête ───────────────────────────────── */
     .label-header {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 16px 20px 14px;
+      border-bottom: 2px solid #111;
+      padding: 14px 96px 12px; /* marges lat pour ne pas chevaucher les QR */
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
+      background: #fff;
     }
     .brand {
-      font-size: 22px;
-      font-weight: 800;
+      font-size: 20px;
+      font-weight: 900;
       letter-spacing: -0.5px;
-      color: #e8820c;
-    }
-    .fwd-info {
-      text-align: right;
+      color: #111;
+      text-transform: lowercase;
     }
     .fwd-name {
       font-size: 13px;
-      font-weight: 600;
-      color: #fff;
+      font-weight: 700;
+      color: #111;
+      text-align: right;
     }
     .fwd-code {
       font-size: 11px;
-      color: rgba(255,255,255,0.5);
+      color: #888;
       font-family: 'Courier New', monospace;
       margin-top: 2px;
+      text-align: right;
     }
 
-    /* Route banner */
+    /* ── Route ─────────────────────────────────── */
     .route {
-      background: #f8f5f0;
-      border-bottom: 1px solid #e8e0d5;
-      padding: 14px 20px;
+      border-bottom: 1px solid #ddd;
+      padding: 12px 96px;
       display: flex;
       align-items: center;
       gap: 10px;
+      background: #f7f7f7;
     }
-    .route-point {
-      flex: 1;
-      min-width: 0;
-    }
-    .route-label {
-      font-size: 9px;
+    .route-point { flex: 1; min-width: 0; }
+    .route-lbl {
+      font-size: 8px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
       color: #999;
       margin-bottom: 3px;
     }
     .route-place {
       font-size: 14px;
-      font-weight: 700;
-      color: #1a1a2e;
+      font-weight: 800;
+      color: #111;
       line-height: 1.2;
+    }
+    .route-meta {
+      font-size: 11px;
+      color: #777;
+      margin-top: 3px;
     }
     .route-arrow {
       flex-shrink: 0;
-      font-size: 20px;
-      color: #e8820c;
-      padding: 0 4px;
-    }
-    .transport-badge {
-      font-size: 11px;
-      color: #777;
-      margin-top: 4px;
-      font-weight: 500;
+      font-size: 18px;
+      color: #bbb;
+      padding: 0 8px;
+      font-weight: 300;
     }
 
-    /* Body */
+    /* ── Corps ─────────────────────────────────── */
     .label-body {
       padding: 18px 20px;
     }
 
-    /* QR + tracking */
-    .qr-section {
+    /* Tracking + QR central */
+    .tracking-section {
       display: flex;
       align-items: center;
-      gap: 18px;
-      padding-bottom: 18px;
-      border-bottom: 1px dashed #ddd;
-      margin-bottom: 18px;
+      gap: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px dashed #ccc;
+      margin-bottom: 16px;
     }
-    .qr-section img {
-      width: 110px;
-      height: 110px;
-      border-radius: 10px;
-      border: 2px solid #f0f0f0;
-      flex-shrink: 0;
+    .qr-main { flex-shrink: 0; }
+    .qr-main img {
+      width: 120px;
+      height: 120px;
+      display: block;
+      border: 1px solid #e0e0e0;
     }
-    .tracking-block { flex: 1; min-width: 0; }
-    .tracking-label {
-      font-size: 9px;
+    .tracking-info { flex: 1; min-width: 0; }
+    .tracking-lbl {
+      font-size: 8px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
       color: #999;
       margin-bottom: 6px;
     }
     .tracking-code {
       font-family: 'Courier New', monospace;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
-      color: #1a1a2e;
+      color: #111;
       letter-spacing: 1px;
-      word-break: break-all;
-      line-height: 1.1;
+      line-height: 1;
     }
     .tracking-url {
       font-size: 11px;
       color: #aaa;
-      margin-top: 8px;
+      margin-top: 7px;
+      font-family: 'Courier New', monospace;
     }
-    ${departureDate ? `.departure {
+    .shipment-ref {
       margin-top: 8px;
-      font-size: 12px;
-      color: #777;
-    }` : ""}
+      font-size: 11px;
+      color: #666;
+    }
+    .shipment-ref strong { font-weight: 700; color: #333; }
 
-    /* Sender / Recipient */
+    /* Expéditeur / Destinataire */
     .parties {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
+      gap: 12px;
+      margin-bottom: 14px;
     }
     .party-block {
-      padding: 12px;
-      border-radius: 10px;
-      background: #f8f8f8;
+      padding: 10px 12px;
+      border: 1px solid #e0e0e0;
+      background: #fafafa;
     }
     .party-block.recipient {
-      background: #fffbf5;
-      border: 1px solid #f0e8d8;
+      border: 1.5px solid #111;
+      background: #fff;
     }
     .party-role {
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #aaa;
+      letter-spacing: 1.2px;
+      color: #999;
       margin-bottom: 5px;
     }
+    .party-block.recipient .party-role { color: #555; }
     .party-name {
       font-size: 14px;
       font-weight: 700;
-      color: #1a1a2e;
+      color: #111;
     }
     .party-detail {
-      font-size: 12px;
+      font-size: 11px;
       color: #666;
-      margin-top: 3px;
+      margin-top: 2px;
       line-height: 1.4;
     }
     .party-phone {
       font-size: 12px;
-      font-weight: 600;
-      color: #e8820c;
+      font-weight: 700;
+      color: #111;
       margin-top: 4px;
+      font-family: 'Courier New', monospace;
     }
 
     /* Description */
-    .description-block {
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: #f3f4f6;
+    .desc-block {
+      padding: 9px 11px;
+      border: 1px solid #e0e0e0;
+      background: #f7f7f7;
       font-size: 12px;
-      color: #555;
+      color: #444;
     }
-    .description-block strong {
-      font-size: 9px;
+    .desc-block .sec-lbl {
+      font-size: 8px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #aaa;
+      letter-spacing: 1.2px;
+      color: #999;
       display: block;
       margin-bottom: 3px;
     }
 
-    /* Footer */
+    /* ── Pied de page ──────────────────────────── */
     .label-footer {
-      border-top: 1px solid #f0f0f0;
-      padding: 10px 20px;
-      font-size: 10px;
+      border-top: 1px solid #e0e0e0;
+      padding: 78px 96px 10px; /* hauteur pour les QR coins bas */
+      font-size: 9px;
       color: #bbb;
       text-align: center;
+      background: #fff;
     }
 
-    /* ── Print ──────────────────────────────────── */
+    /* ── Impression ────────────────────────────── */
     @media print {
       body { background: #fff; padding: 0; }
       .print-bar { display: none; }
@@ -342,62 +372,71 @@ export async function GET(_req: Request, ctx: Ctx) {
       }
     }
 
-    @page { margin: 12mm; size: A5 portrait; }
+    @page { margin: 8mm; size: A5 portrait; }
   </style>
 </head>
 <body>
 
   <div class="print-bar">
     <button class="btn-print" onclick="window.print()">
-      🖨 Imprimer l'étiquette
+      🖨&nbsp; Imprimer l'étiquette
     </button>
   </div>
 
   <div class="label">
 
-    <!-- Header -->
+    <!-- ── QR coins ── -->
+    <div class="corner-qr corner-tl"><img src="${qrSmall}" alt=""/></div>
+    <div class="corner-qr corner-tr"><img src="${qrSmall}" alt=""/></div>
+    <div class="corner-qr corner-bl"><img src="${qrSmall}" alt=""/></div>
+    <div class="corner-qr corner-br"><img src="${qrSmall}" alt=""/></div>
+
+    <!-- ── En-tête ── -->
     <div class="label-header">
       <span class="brand">hophop</span>
-      <div class="fwd-info">
+      <div>
         <div class="fwd-name">${esc(fwd?.name)}</div>
         <div class="fwd-code">Code ${esc(fwd?.code5)}</div>
       </div>
     </div>
 
-    <!-- Route -->
+    <!-- ── Route ── -->
     <div class="route">
       <div class="route-point">
-        <div class="route-label">Départ</div>
+        <div class="route-lbl">Départ</div>
         <div class="route-place">${originLine}</div>
-        ${transportMode ? `<div class="transport-badge">${esc(TRANSPORT_LABELS[transportMode] ?? transportMode)}</div>` : ""}
+        ${transportMode ? `<div class="route-meta">${esc(TRANSPORT_LABELS[transportMode] ?? transportMode)}</div>` : ""}
       </div>
       <div class="route-arrow">→</div>
       <div class="route-point" style="text-align:right">
-        <div class="route-label">Arrivée</div>
+        <div class="route-lbl">Arrivée</div>
         <div class="route-place">${destLine}</div>
-        ${departureDate ? `<div class="transport-badge">Départ le ${esc(departureDate)}</div>` : ""}
+        ${departureDate ? `<div class="route-meta">Départ le ${esc(departureDate)}</div>` : ""}
       </div>
     </div>
 
-    <!-- Body -->
+    <!-- ── Corps ── -->
     <div class="label-body">
 
-      <!-- QR + Tracking -->
-      <div class="qr-section">
-        <img src="${qr}" alt="QR Code" width="110" height="110"/>
-        <div class="tracking-block">
-          <div class="tracking-label">Code de suivi</div>
+      <!-- Tracking + QR central -->
+      <div class="tracking-section">
+        <div class="qr-main">
+          <img src="${qrMain}" alt="QR Code" width="120" height="120"/>
+        </div>
+        <div class="tracking-info">
+          <div class="tracking-lbl">Code de suivi</div>
           <div class="tracking-code">${esc(parcel.trackingCode)}</div>
           <div class="tracking-url">hophop.ca/track/${esc(parcel.trackingCode)}</div>
-          ${parcel.shipment ? `<div class="departure">Réf. envoi : <strong>${esc(parcel.shipment.reference)}</strong></div>` : ""}
+          ${parcel.shipment ? `<div class="shipment-ref">Réf. envoi : <strong>${esc(parcel.shipment.reference)}</strong></div>` : ""}
         </div>
       </div>
 
-      <!-- Sender & Recipient -->
+      <!-- Expéditeur / Destinataire -->
       <div class="parties">
         <div class="party-block">
           <div class="party-role">Expéditeur</div>
           <div class="party-name">${esc(parcel.client.firstName)} ${esc(parcel.client.lastName)}</div>
+          ${parcel.client.phone ? `<div class="party-detail">${esc(parcel.client.phone)}</div>` : ""}
         </div>
         <div class="party-block recipient">
           <div class="party-role">Destinataire</div>
@@ -407,15 +446,16 @@ export async function GET(_req: Request, ctx: Ctx) {
         </div>
       </div>
 
-      <!-- Description -->
+      <!-- Contenu / description -->
       ${parcel.description ? `
-      <div class="description-block">
-        <strong>Contenu</strong>
+      <div class="desc-block">
+        <span class="sec-lbl">Contenu</span>
         ${esc(parcel.description)}
       </div>` : ""}
 
     </div>
 
+    <!-- ── Pied de page (espace pour QR bas) ── -->
     <div class="label-footer">
       Étiquette générée par hophop.ca · ${new Date().toLocaleDateString("fr-FR")}
     </div>

@@ -19,6 +19,7 @@ import { VehicleCard } from "@/components/vehicle-card";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { ParcelPaymentToggle } from "@/components/forwarder/parcel-payment-toggle";
+import { Printer, Package } from "lucide-react";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -106,6 +107,24 @@ export default async function ForwarderParcelDetailPage({
             </>
           ) : null}
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href={`/api/parcels/${parcel.id}/label`}
+            target="_blank"
+            className="inline-flex h-9 items-center gap-2 rounded-[var(--hh-radius-md)] border border-hh-saffron bg-hh-saffron-lt px-4 text-[13px] font-medium text-hh-saffron-dk hover:bg-hh-saffron/10"
+          >
+            <Printer size={15} strokeWidth={1.5} />
+            Imprimer l&apos;étiquette
+          </Link>
+          <Link
+            href={`/track/${parcel.trackingCode}`}
+            target="_blank"
+            className="inline-flex h-9 items-center gap-2 rounded-[var(--hh-radius-md)] border border-hh-sand-dk bg-white px-4 text-[13px] font-medium text-hh-earth-dk hover:bg-hh-sand"
+          >
+            <Package size={15} strokeWidth={1.5} />
+            Suivi public
+          </Link>
+        </div>
       </div>
 
       <section className="flex flex-col items-center rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
