@@ -6,12 +6,15 @@ import {
   ensureClientForwarderByCode5,
   getClientRecipients,
   getClientForwarders,
+  getPublishedShipmentsCatalog,
 } from "@/lib/client-data";
 import { clientJoinableShipmentWhere } from "@/lib/shipment-public-visibility";
 import { DeclareParcelWizard } from "@/components/client/declare-parcel-wizard";
 import type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
 import { DeclareVehicleForm } from "@/components/client/declare-vehicle-form";
 import { DeclareModeToggle } from "@/components/client/declare-mode-toggle";
+import { ShipmentsCatalog } from "@/components/client/shipments-catalog";
+import { Package } from "lucide-react";
 
 export const metadata: Metadata = { title: "Déclarer un colis" };
 
@@ -41,6 +44,43 @@ export default async function DeclarePage({ searchParams }: PageProps) {
     typeof sp.forwarder === "string" ? sp.forwarder.trim() : "";
   const envoiParam = typeof sp.envoi === "string" ? sp.envoi.trim() : "";
   const modeParam = typeof sp.mode === "string" ? sp.mode.trim() : "";
+
+  // Pas d'envoi ciblé → afficher le catalogue pour choisir d'abord
+  if (!envoiParam) {
+    const rows = await getPublishedShipmentsCatalog();
+    return (
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="mb-6">
+          <p className="mb-1 text-[12px] font-medium uppercase tracking-wider text-hh-saffron">
+            Étape 1 sur 2
+          </p>
+          <h1 className="text-[28px] font-medium leading-tight text-hh-earth-dk">
+            Choisir un envoi
+          </h1>
+          <p className="mt-1.5 text-[15px] text-hh-muted">
+            Sélectionne l&apos;envoi sur lequel tu souhaites embarquer ton colis
+            ou ton véhicule. Tu rempliras les détails à l&apos;étape suivante.
+          </p>
+        </div>
+        {rows.length === 0 ? (
+          <div className="rounded-[var(--hh-radius-lg)] border border-dashed border-hh-sand-dk/40 bg-white px-5 py-14 text-center">
+            <Package
+              className="mx-auto mb-3 size-8 text-hh-sand-dk"
+              strokeWidth={1.25}
+            />
+            <p className="text-[14px] font-medium text-hh-earth-dk">
+              Aucun envoi ouvert pour le moment
+            </p>
+            <p className="mt-1 text-[13px] text-hh-muted">
+              Reviens plus tard ou contacte directement un transitaire.
+            </p>
+          </div>
+        ) : (
+          <ShipmentsCatalog rows={rows} filterCode5={forwarderParam || undefined} />
+        )}
+      </div>
+    );
+  }
 
   let initialForwarderId: string | undefined;
   if (forwarderParam) {
@@ -119,13 +159,19 @@ export default async function DeclarePage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
+      <p className="mb-1 text-[12px] font-medium uppercase tracking-wider text-hh-saffron">
+        Étape 2 sur 2
+      </p>
       <h1 className="mb-2 text-[28px] font-medium leading-tight text-hh-earth-dk">
         Déclarer un envoi
       </h1>
       <p className="mb-5 text-[15px] text-hh-muted">
-        Colis classique ou véhicule — sélectionne le type ci-dessous.
+        {targetShipmentSummary?.acceptsVehicles
+          ? "Colis classique ou véhicule — sélectionne le type ci-dessous."
+          : "Remplis les informations de ton colis ci-dessous."}
       </p>
       <DeclareModeToggle
+        showVehicleTab={targetShipmentSummary?.acceptsVehicles ?? true}
         initialMode={
           modeParam === "vehicle" && targetShipmentSummary?.acceptsVehicles
             ? "vehicle"

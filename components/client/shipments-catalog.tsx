@@ -155,9 +155,11 @@ export type CatalogRow = {
 
 interface Props {
   rows: CatalogRow[];
+  /** Pré-filtre par code5 transitaire (ex. arrivée depuis /client/declare?forwarder=CODE5) */
+  filterCode5?: string;
 }
 
-export function ShipmentsCatalog({ rows }: Props) {
+export function ShipmentsCatalog({ rows, filterCode5 }: Props) {
   const [originFilter, setOriginFilter] = useState<string>("");
   const [destFilter, setDestFilter] = useState<string>("");
 
@@ -173,11 +175,12 @@ export function ShipmentsCatalog({ rows }: Props) {
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
+      if (filterCode5 && r.forwarder.code5 !== filterCode5) return false;
       if (originFilter && r.originCountry !== originFilter) return false;
       if (destFilter && r.destinationCountry !== destFilter) return false;
       return true;
     });
-  }, [rows, originFilter, destFilter]);
+  }, [rows, filterCode5, originFilter, destFilter]);
 
   const hasFilters = originFilter || destFilter;
 

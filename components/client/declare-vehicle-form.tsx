@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition, useEffect, useMemo } from "react";
+import { useRef, useState, useTransition, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Car, CheckCircle, Camera, X, ImageIcon } from "lucide-react";
+import { Car, CheckCircle, Camera, X, ImageIcon, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +17,83 @@ import {
   vehicleTariffFromShipment,
 } from "@/lib/pricing";
 import type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
+import { CAR_MAKES, getModelsForMake, VEHICLE_COLORS } from "@/lib/car-data";
 
 type FuelType = "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID" | "OTHER";
 type Condition = "RUNNING" | "NON_RUNNING";
+
+// ─── Combobox filtré (marque / modèle) ────────────────────────────────────────
+
+function VehicleCombobox({
+  id,
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = value.toLowerCase();
+    return q.length === 0
+      ? options.slice(0, 60)
+      : options.filter((o) => o.toLowerCase().includes(q)).slice(0, 10);
+  }, [value, options]);
+
+  const handleBlur = useCallback((e: React.FocusEvent) => {
+    if (!wrapRef.current?.contains(e.relatedTarget as Node)) setOpen(false);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative" onBlur={handleBlur}>
+      <div className="relative">
+        <input
+          id={id}
+          autoComplete="off"
+          value={value}
+          disabled={disabled}
+          placeholder={placeholder}
+          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          className={cn(inputCls, "pr-8")}
+        />
+        <ChevronDown
+          size={14}
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-hh-muted"
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-hh-sand-dk/30 bg-white shadow-lg">
+          {filtered.map((opt) => (
+            <li key={opt}>
+              <button
+                type="button"
+                tabIndex={0}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-[13px] text-hh-earth-dk hover:bg-hh-saffron-lt/60",
+                  opt === value && "font-medium text-hh-saffron-dk bg-hh-saffron-lt/40",
+                )}
+              >
+                {opt}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const MAX_PHOTOS = 10;
 
@@ -257,34 +331,130 @@ export function DeclareVehicleForm({
 
       {/* Identité du véhicule */}
       <div>
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2">
           <Car className="size-4 text-indigo-600" />
           <h3 className="text-[14px] font-semibold text-hh-earth-dk">Identité du véhicule</h3>
         </div>
+
+        {/* Marque + Modèle + Année */}
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
             <Label htmlFor="make" className="text-[12px] text-hh-muted">Marque *</Label>
-            <Input id="make" value={make} onChange={(e) => setMake(e.target.value)} placeholder="Toyota" required disabled={pending} className={inputCls} />
+            <VehicleCombobox
+              id="make"
+              value={make}
+              onChange={(v) => { setMake(v); setModel(""); }}
+              options={CAR_MAKES}
+              placeholder="Toyota"
+              disabled={pending}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="vmodel" className="text-[12px] text-hh-muted">Modèle *</Label>
-            <Input id="vmodel" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Camry" required disabled={pending} className={inputCls} />
+            <VehicleCombobox
+              id="vmodel"
+              value={model}
+              onChange={setModel}
+              options={getModelsForMake(make).length > 0 ? getModelsForMake(make) : []}
+              placeholder={make ? "Corolla…" : "Choisir la marque d'abord"}
+              disabled={pending}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="year" className="text-[12px] text-hh-muted">Année *</Label>
-            <Input id="year" type="number" min={1900} max={new Date().getFullYear() + 1} value={year} onChange={(e) => setYear(e.target.value)} required disabled={pending} className={inputCls} />
+            <select
+              id="year"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              required
+              disabled={pending}
+              className={inputCls}
+            >
+              {Array.from(
+                { length: new Date().getFullYear() - 1979 + 2 },
+                (_, i) => new Date().getFullYear() + 1 - i,
+              ).map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="color" className="text-[12px] text-hh-muted">Couleur</Label>
-            <Input id="color" value={color} onChange={(e) => setColor(e.target.value)} placeholder="Blanc" disabled={pending} className={inputCls} />
+        </div>
+
+        {/* Couleur — chips visuelles */}
+        <div className="mt-4 space-y-2">
+          <Label className="text-[12px] text-hh-muted">Couleur</Label>
+          <div className="flex flex-wrap gap-2">
+            {VEHICLE_COLORS.map(({ value: v, label, hex }) => (
+              <button
+                key={v}
+                type="button"
+                disabled={pending}
+                onClick={() => setColor(color === v ? "" : v)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition",
+                  color === v
+                    ? "border-indigo-400 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-200"
+                    : "border-hh-sand-dk/30 bg-white text-hh-earth-dk hover:bg-hh-sand/30",
+                )}
+              >
+                <span
+                  className="inline-block size-3 rounded-full border border-black/10 shrink-0"
+                  style={{ background: hex }}
+                />
+                {label}
+              </button>
+            ))}
+            {/* Autre couleur (saisie libre) */}
+            {!VEHICLE_COLORS.some((c) => c.value === color) && color && (
+              <span className="flex items-center gap-1.5 rounded-full border border-hh-saffron bg-hh-saffron-lt px-3 py-1.5 text-[12px] font-medium text-hh-saffron-dk">
+                {color}
+                <button type="button" onClick={() => setColor("")} className="ml-1">
+                  <X size={10} />
+                </button>
+              </span>
+            )}
           </div>
+          {/* Input libre si couleur non listée */}
+          <div className="flex gap-2">
+            <Input
+              value={VEHICLE_COLORS.some((c) => c.value === color) ? "" : color}
+              onChange={(e) => setColor(e.target.value)}
+              placeholder="Autre couleur…"
+              disabled={pending}
+              className={cn(inputCls, "max-w-[200px] text-[13px]")}
+            />
+          </div>
+        </div>
+
+        {/* Immatriculation + VIN */}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="plate" className="text-[12px] text-hh-muted">Immatriculation</Label>
-            <Input id="plate" value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="ABC 1234" disabled={pending} className={cn(inputCls, "font-mono uppercase")} />
+            <Input
+              id="plate"
+              value={plate}
+              onChange={(e) => setPlate(e.target.value.toUpperCase())}
+              placeholder="ABC 1234"
+              disabled={pending}
+              className={cn(inputCls, "font-mono")}
+            />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="vin" className="text-[12px] text-hh-muted">VIN (optionnel)</Label>
-            <Input id="vin" value={vin} onChange={(e) => setVin(e.target.value)} placeholder="1HGCM82633A…" disabled={pending} className={cn(inputCls, "font-mono uppercase")} />
+            <Label htmlFor="vin" className="text-[12px] text-hh-muted">
+              VIN{" "}
+              <span className="normal-case font-normal text-hh-muted/70">(optionnel)</span>
+            </Label>
+            <Input
+              id="vin"
+              value={vin}
+              onChange={(e) => setVin(e.target.value.toUpperCase())}
+              placeholder="1HGCM82633A…"
+              disabled={pending}
+              className={cn(inputCls, "font-mono")}
+            />
+            <p className="text-[11px] text-hh-muted">
+              17 caractères — figurent sur la carte grise ou sous le pare-brise.
+            </p>
           </div>
         </div>
       </div>
