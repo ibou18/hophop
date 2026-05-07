@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { HopLogo } from "@/components/auth/hop-logo";
 import { HeroSection } from "@/components/landing/hero-section";
+import { CountryMarquee } from "@/components/landing/country-marquee";
 import { ScrollSections } from "@/components/landing/scroll-section";
+import { Testimonials } from "@/components/landing/testimonials";
 import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
 import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
 
@@ -10,20 +12,20 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-hh-sand">
-      {/* ── Nav ── */}
+      {/* ── Nav (sur fond clair désormais) ── */}
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <HopLogo href="/" variant="wide" height={36} priority />
           <div className="flex items-center gap-4">
             <Link
               href="/login"
-              className="text-sm font-medium text-white/60 transition hover:text-white"
+              className="text-sm font-medium text-hh-earth-dk/70 transition hover:text-hh-earth-dk"
             >
               Connexion
             </Link>
             <Link
               href="/register"
-              className="inline-flex h-8 items-center rounded-lg border border-hh-saffron/40 bg-hh-saffron/10 px-4 text-sm font-medium text-hh-saffron transition hover:bg-hh-saffron hover:text-white"
+              className="inline-flex h-8 items-center rounded-lg bg-hh-saffron px-4 text-sm font-medium text-white shadow-sm transition hover:bg-hh-saffron/90"
             >
               S&apos;inscrire
             </Link>
@@ -31,13 +33,19 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* ── Animated hero ── */}
+      {/* ── Hero clair animé ── */}
       <HeroSection />
+
+      {/* ── Bandeau pays (marquee) ── */}
+      <CountryMarquee />
 
       {/* ── Prochains départs publics ── */}
       <UpcomingDepartures shipments={upcomingShipments} />
 
-      {/* ── Scroll sections ── */}
+      {/* ── Témoignages diaspora & transitaires ── */}
+      <Testimonials />
+
+      {/* ── Stats + Features + Comment ça marche + CTA final ── */}
       <ScrollSections />
 
       {/* ── Footer ── */}

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ForwarderParcelQuickModal } from "@/components/forwarder/forwarder-parcel-quick-modal";
+import { ParcelPaymentToggle } from "@/components/forwarder/parcel-payment-toggle";
 
 function ParcelKindCell({
   vehicle,
@@ -96,6 +97,7 @@ export function ForwarderParcelsTable({
               <TableHead className="text-hh-muted">Client</TableHead>
               <TableHead className="text-hh-muted">Destination</TableHead>
               <TableHead className="text-hh-muted">Envoi</TableHead>
+              <TableHead className="text-hh-muted">Paiement</TableHead>
               <TableHead className="text-right text-hh-muted">Créé</TableHead>
               <TableHead className="w-[1%] text-right text-hh-muted">
                 Actions
@@ -148,6 +150,13 @@ export function ForwarderParcelsTable({
                 </TableCell>
                 <TableCell className="text-[13px] text-hh-muted">
                   {p.shipment?.reference ?? "—"}
+                </TableCell>
+                <TableCell>
+                  <ParcelPaymentToggle
+                    parcelId={p.id}
+                    isPaid={p.isPaid}
+                    compact
+                  />
                 </TableCell>
                 <TableCell className="text-right text-[12px] text-hh-muted">
                   {formatDistanceToNow(p.createdAt, {

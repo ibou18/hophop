@@ -1,168 +1,266 @@
 "use client";
 
-import { motion } from "motion/react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Plane, Heart, Ship } from "lucide-react";
+import { gsap, SplitText } from "@/lib/gsap";
 import { TrackingSearch } from "./tracking-search";
-import { FloatingParcels } from "./floating-parcels";
-
-const HEADLINE_WORDS = [
-  { text: "Vos colis,", highlight: false },
-  { text: "tracés", highlight: true },
-  { text: "à chaque", highlight: false },
-  { text: "étape.", highlight: false },
-];
-
-const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
-
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.12, delayChildren: 0.2 } },
-};
-
-const word = {
-  hidden: { opacity: 0, y: 40, filter: "blur(8px)" },
-  show: {
-    opacity: 1,
-    y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.6, ease: EASE },
-  },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE } },
-};
 
 export function HeroSection() {
-  return (
-    <section className="relative flex flex-col items-center justify-start overflow-hidden bg-hh-nuit px-5 pt-24 pb-8 sm:pt-28 sm:pb-10">
-      {/* Dot grid background */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-          backgroundSize: "28px 28px",
-        }}
-      />
+  const rootRef = useRef<HTMLElement>(null);
+  const headlineRef = useRef<HTMLHeadingElement>(null);
+  const subRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const trackerRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  const sunRef = useRef<HTMLDivElement>(null);
+  const pathRef = useRef<SVGPathElement>(null);
+  const pictosRef = useRef<HTMLDivElement>(null);
 
-      {/* Radial glow */}
+  useEffect(() => {
+    if (!rootRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // 1) Headline avec SplitText
+      let split: SplitText | null = null;
+      try {
+        split = new SplitText(headlineRef.current!, {
+          type: "words,chars",
+          wordsClass: "inline-block overflow-hidden align-baseline",
+          charsClass: "inline-block",
+        });
+      } catch {
+        // fallback silencieux
+      }
+
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      tl.fromTo(
+        sunRef.current,
+        { scale: 0.4, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 1.4, ease: "power2.out" },
+        0,
+      );
+      tl.fromTo(
+        badgeRef.current,
+        { y: -10, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6 },
+        0.1,
+      );
+
+      if (split?.chars?.length) {
+        tl.from(
+          split.chars,
+          {
+            yPercent: 110,
+            opacity: 0,
+            stagger: 0.018,
+            duration: 0.7,
+            ease: "power3.out",
+          },
+          0.25,
+        );
+      } else {
+        tl.from(headlineRef.current, { y: 30, opacity: 0, duration: 0.8 }, 0.25);
+      }
+
+      tl.from(subRef.current, { y: 18, opacity: 0, duration: 0.7 }, 0.85);
+      tl.from(trackerRef.current, { y: 18, opacity: 0, duration: 0.7 }, 1);
+      tl.from(ctaRef.current, { y: 18, opacity: 0, duration: 0.7 }, 1.15);
+
+      // Pulsation très douce du soleil
+      gsap.to(sunRef.current, {
+        scale: 1.05,
+        duration: 4,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+      });
+
+      // Vague qui se trace une fois (puis statique)
+      if (pathRef.current) {
+        gsap.fromTo(
+          pathRef.current,
+          { drawSVG: "0%" },
+          {
+            drawSVG: "100%",
+            duration: 2.4,
+            delay: 0.4,
+            ease: "power1.inOut",
+          },
+        );
+      }
+
+      // Apparition douce des pictos (statiques)
+      if (pictosRef.current) {
+        gsap.from(
+          pictosRef.current.querySelectorAll<HTMLElement>("[data-picto]"),
+          {
+            opacity: 0,
+            scale: 0.6,
+            stagger: 0.2,
+            duration: 0.6,
+            delay: 1.4,
+            ease: "back.out(2)",
+          },
+        );
+      }
+
+      return () => {
+        split?.revert();
+      };
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section
+      ref={rootRef}
+      className="relative isolate overflow-hidden bg-gradient-to-b from-hh-sand via-white to-hh-sand pt-24 pb-12 sm:pt-32 sm:pb-20"
+    >
+      {/* Soleil chaleureux derrière le titre */}
       <div
+        ref={sunRef}
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="pointer-events-none absolute left-1/2 top-24 -z-10 h-[380px] w-[380px] -translate-x-1/2 rounded-full opacity-90 sm:top-32 sm:h-[520px] sm:w-[520px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(232,130,12,0.12) 0%, transparent 65%)",
+            "radial-gradient(circle, rgba(232,130,12,0.28) 0%, rgba(245,200,120,0.18) 35%, transparent 70%)",
         }}
       />
 
-      {/* Floating parcel cards */}
-      <FloatingParcels />
+      {/* Texture sable très subtile */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.5]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(122,63,4,0.07) 1px, transparent 0)",
+          backgroundSize: "24px 24px",
+        }}
+      />
 
-      {/* Content */}
-      <div className="relative z-10 flex max-w-3xl flex-col items-center gap-7 text-center">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="inline-flex items-center gap-2 rounded-full border border-hh-saffron/25 bg-hh-saffron/10 px-4 py-1.5 text-xs font-medium text-hh-saffron"
+      {/* Vague discrète derrière le texte (pleine largeur, pas trop haute en mobile) */}
+      <svg
+        aria-hidden
+        viewBox="0 0 1400 500"
+        preserveAspectRatio="xMidYMid slice"
+        className="pointer-events-none absolute inset-0 -z-[5] mx-auto h-full w-full"
+      >
+        <defs>
+          <linearGradient id="hop-wave" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#e8820c" stopOpacity="0" />
+            <stop offset="20%" stopColor="#e8820c" stopOpacity="0.35" />
+            <stop offset="80%" stopColor="#c13b1b" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#c13b1b" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          ref={pathRef}
+          d="M 0 280 C 280 160, 560 200, 840 270 S 1200 320, 1400 240"
+          fill="none"
+          stroke="url(#hop-wave)"
+          strokeWidth="1.5"
+          strokeDasharray="4 6"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      {/* Pictos avion + bateau (en HTML, repositionnables en responsive) */}
+      <div
+        ref={pictosRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-[4]"
+      >
+        {/* Avion : visible mobile (plus petit, en bas) + desktop (centré-gauche au-dessus de la vague) */}
+        <div
+          data-picto
+          className="absolute flex items-center justify-center rounded-full border border-hh-saffron/40 bg-white shadow-sm
+                     left-[12%] bottom-6 h-9 w-9
+                     sm:left-[22%] sm:top-[42%] sm:bottom-auto sm:h-12 sm:w-12"
         >
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-hh-saffron opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-hh-saffron" />
-          </span>
-          Plateforme de suivi — CA · FR · GN · SN · CI · CM
-        </motion.div>
+          <Plane
+            size={18}
+            className="-rotate-12 text-hh-saffron sm:size-5"
+            strokeWidth={1.7}
+          />
+        </div>
+
+        {/* Bateau : visible mobile (plus petit, en bas droite) + desktop (centré-droite) */}
+        <div
+          data-picto
+          className="absolute flex items-center justify-center rounded-full border border-hh-kola/40 bg-white shadow-sm
+                     right-[12%] bottom-6 h-9 w-9
+                     sm:right-[22%] sm:top-[52%] sm:bottom-auto sm:h-12 sm:w-12"
+          style={{ borderColor: "rgba(193, 59, 27, 0.4)" }}
+        >
+          <Ship
+            size={18}
+            className="text-[#c13b1b] sm:size-5"
+            strokeWidth={1.7}
+          />
+        </div>
+      </div>
+
+      {/* Contenu central */}
+      <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-6 px-5 text-center sm:gap-7">
+        {/* Badge confiance */}
+        <div
+          ref={badgeRef}
+          className="inline-flex items-center gap-2 rounded-full border border-hh-saffron/30 bg-white/70 px-3 py-1.5 text-[11px] font-medium text-hh-saffron-dk shadow-sm backdrop-blur-sm sm:px-4 sm:text-xs"
+        >
+          <Heart size={12} className="text-hh-saffron" fill="currentColor" />
+          Construit pour la diaspora ouest-africaine
+        </div>
 
         {/* Headline */}
-        <motion.h1
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-5xl font-semibold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl"
+        <h1
+          ref={headlineRef}
+          className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight text-hh-nuit sm:text-6xl lg:text-7xl"
         >
-          {HEADLINE_WORDS.map((w, i) => (
-            <motion.span
-              key={i}
-              variants={word}
-              className={w.highlight ? "text-hh-saffron" : "text-white"}
-            >
-              {w.text}
-            </motion.span>
-          ))}
-        </motion.h1>
+          Vos colis, <span className="text-hh-saffron">en confiance</span>,
+          <br className="hidden sm:block" /> jusqu&rsquo;à la maison.
+        </h1>
 
         {/* Subtitle */}
-        <motion.p
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 0.7 }}
-          className="max-w-xl text-base leading-relaxed text-white/50 sm:text-lg"
+        <p
+          ref={subRef}
+          className="max-w-xl text-[15px] leading-relaxed text-hh-muted sm:text-lg"
         >
-          Hophop connecte transitaires et clients pour un suivi transparent de
-          chaque colis, de la collecte jusqu&rsquo;à la livraison finale.
-        </motion.p>
+          Hophop relie transitaires et familles en Afrique et dans la diaspora.
+          Suivez chaque étape, sans appeler, sans deviner.
+        </p>
 
         {/* Tracking input */}
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 0.9 }}
-          className="w-full max-w-lg"
-        >
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-1.5 backdrop-blur-sm">
-            <TrackingSearch dark />
-          </div>
-          <p className="mt-2.5 text-xs text-white/30">
+        <div ref={trackerRef} className="w-full max-w-lg">
+          <TrackingSearch />
+          <p className="mt-2.5 text-[11px] text-hh-muted/80 sm:text-xs">
             Entrez votre code de suivi — aucune connexion requise
           </p>
-        </motion.div>
+        </div>
 
-        {/* CTAs */}
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          transition={{ delay: 1.05 }}
-          className="flex flex-wrap items-center justify-center gap-4"
+        {/* CTAs (full-width sur mobile, en ligne dès sm) */}
+        <div
+          ref={ctaRef}
+          className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-center"
         >
           <Link
             href="/register"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-hh-saffron px-7 text-sm font-medium text-white shadow-lg shadow-hh-saffron/20 transition-all hover:bg-hh-saffron/90 hover:shadow-hh-saffron/30"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-hh-saffron px-6 text-sm font-medium text-white shadow-md shadow-hh-saffron/25 transition-all hover:-translate-y-0.5 hover:bg-hh-saffron/95 hover:shadow-lg hover:shadow-hh-saffron/30 sm:px-7"
           >
             Créer un compte gratuit
             <ArrowRight size={15} />
           </Link>
           <Link
             href="/login"
-            className="inline-flex h-11 items-center rounded-xl border border-white/10 bg-white/5 px-7 text-sm font-medium text-white/70 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-hh-sand-dk bg-white px-6 text-sm font-medium text-hh-earth-dk transition-all hover:border-hh-saffron/40 hover:bg-hh-saffron-lt sm:px-7"
           >
-            Se connecter
+            <Plane size={14} className="text-hh-saffron" />
+            Je suis transitaire
           </Link>
-        </motion.div>
+        </div>
       </div>
-
-      {/* Scroll indicator */}
-      {/* <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5, duration: 0.8 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-      >
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="flex h-8 w-5 items-start justify-center rounded-full border border-white/20 pt-1.5"
-        >
-          <div className="h-1.5 w-0.5 rounded-full bg-white/40" />
-        </motion.div>
-      </motion.div> */}
     </section>
   );
 }

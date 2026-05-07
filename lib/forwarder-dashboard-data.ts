@@ -110,16 +110,54 @@ export async function getForwarderDashboardKpis(forwarderId: string): Promise<{
 export async function getForwarderParcels(
   forwarderId: string,
   statusFilter?: ParcelStatus,
-): Promise<ForwarderParcelListRow[]> {
-  return prisma.parcel.findMany({
-    where: {
-      forwarderId,
-      ...(statusFilter ? { status: statusFilter } : {}),
-    },
+  query?: string,
+  page = 1,
+  pageSize = 20,
+): Promise<{
+  items: ForwarderParcelListRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}> {
+  const q = query?.trim();
+  const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
+  const safePageSize = Number.isFinite(pageSize)
+    ? Math.min(100, Math.max(1, Math.floor(pageSize)))
+    : 20;
+  const where: Prisma.ParcelWhereInput = {
+    forwarderId,
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(q
+      ? {
+          OR: [
+            { client: { firstName: { contains: q, mode: "insensitive" } } },
+            { client: { lastName: { contains: q, mode: "insensitive" } } },
+            { client: { email: { contains: q, mode: "insensitive" } } },
+            { client: { phone: { contains: q, mode: "insensitive" } } },
+          ],
+        }
+      : {}),
+  };
+
+  const total = await prisma.parcel.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const clampedPage = Math.min(safePage, totalPages);
+  const skip = (clampedPage - 1) * safePageSize;
+  const items = await prisma.parcel.findMany({
+    where,
     orderBy: { createdAt: "desc" },
-    take: 300,
+    skip,
+    take: safePageSize,
     include: parcelListInclude,
   });
+  return {
+    items,
+    total,
+    page: clampedPage,
+    pageSize: safePageSize,
+    totalPages,
+  };
 }
 
 export function parseParcelStatusParam(

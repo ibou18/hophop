@@ -18,6 +18,7 @@ import { ParcelQrCode } from "@/components/client/parcel-qr-code";
 import { VehicleCard } from "@/components/vehicle-card";
 import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
+import { ParcelPaymentToggle } from "@/components/forwarder/parcel-payment-toggle";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -209,9 +210,13 @@ export default async function ForwarderParcelDetailPage({
               </dd>
             </>
           ) : null}
-          <dt className="text-hh-muted">Payé</dt>
-          <dd className="text-hh-earth-dk">{parcel.isPaid ? "Oui" : "Non"}</dd>
         </dl>
+        <div className="mt-4 border-t border-hh-sand-dk/20 pt-4">
+          <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-hh-muted">
+            Paiement
+          </p>
+          <ParcelPaymentToggle parcelId={parcel.id} isPaid={parcel.isPaid} />
+        </div>
 
         {parcel.items.length > 0 ? (
           <>

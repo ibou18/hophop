@@ -5,6 +5,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import iconMark from "@/assets/logos/logo.png";
+import { getAppBaseUrl } from "@/lib/mail/app-url";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -19,11 +20,39 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getAppBaseUrl()),
   title: {
-    default: "Hophop",
+    default: "Hophop — Suivi de colis & transitaires",
     template: "%s | Hophop",
   },
-  description: "Suivi de colis et gestion transitaire",
+  description:
+    "Hophop relie transitaires et familles en Afrique et dans la diaspora. Suivez vos colis en temps réel, du départ à la livraison.",
+  applicationName: "Hophop",
+  authors: [{ name: "Hophop" }],
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: "Hophop",
+    title: "Hophop — Suivi de colis & transitaires",
+    description:
+      "La plateforme de suivi pensée pour la diaspora ouest-africaine. Vos colis tracés à chaque étape.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hophop — Suivi de colis & transitaires",
+    description:
+      "La plateforme de suivi pensée pour la diaspora ouest-africaine.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [{ url: iconMark.src, type: "image/png" }],
   },
