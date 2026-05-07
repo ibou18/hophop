@@ -122,15 +122,20 @@ function formatDate(d: Date | null): string {
 }
 
 const FLAG: Record<string, string> = {
+  BE: "🇧🇪",
+  BF: "🇧🇫",
   CA: "🇨🇦",
-  FR: "🇫🇷",
-  GN: "🇬🇳",
-  SN: "🇸🇳",
+  CH: "🇨🇭",
   CI: "🇨🇮",
   CM: "🇨🇲",
-  TG: "🇹🇬",
-  BF: "🇧🇫",
+  FR: "🇫🇷",
+  GM: "🇬🇲",
+  GN: "🇬🇳",
+  ML: "🇲🇱",
   NG: "🇳🇬",
+  SN: "🇸🇳",
+  TG: "🇹🇬",
+  US: "🇺🇸",
 };
 
 export type CatalogRow = {

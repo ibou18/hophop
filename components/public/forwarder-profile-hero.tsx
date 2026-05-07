@@ -14,17 +14,19 @@ import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { ForwarderProfileCta } from "./forwarder-profile-cta";
 
 const FLAG: Record<string, string> = {
+  BE: "🇧🇪",
+  BF: "🇧🇫",
   CA: "🇨🇦",
-  FR: "🇫🇷",
-  GN: "🇬🇳",
-  SN: "🇸🇳",
+  CH: "🇨🇭",
   CI: "🇨🇮",
   CM: "🇨🇲",
-  ML: "🇲🇱",
+  FR: "🇫🇷",
   GM: "🇬🇲",
-  TG: "🇹🇬",
-  BF: "🇧🇫",
+  GN: "🇬🇳",
+  ML: "🇲🇱",
   NG: "🇳🇬",
+  SN: "🇸🇳",
+  TG: "🇹🇬",
   US: "🇺🇸",
 };
 

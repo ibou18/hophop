@@ -10,17 +10,20 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const FLAG: Record<string, string> = {
+  BE: "🇧🇪",
+  BF: "🇧🇫",
   CA: "🇨🇦",
-  FR: "🇫🇷",
-  GN: "🇬🇳",
-  SN: "🇸🇳",
+  CH: "🇨🇭",
   CI: "🇨🇮",
   CM: "🇨🇲",
-  ML: "🇲🇱",
+  FR: "🇫🇷",
   GM: "🇬🇲",
-  TG: "🇹🇬",
-  BF: "🇧🇫",
+  GN: "🇬🇳",
+  ML: "🇲🇱",
   NG: "🇳🇬",
+  SN: "🇸🇳",
+  TG: "🇹🇬",
+  US: "🇺🇸",
 };
 
 export default async function Image({

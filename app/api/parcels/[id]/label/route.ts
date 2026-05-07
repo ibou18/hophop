@@ -15,11 +15,36 @@ function esc(s: string | null | undefined): string {
 }
 
 const COUNTRY_LABELS: Record<string, string> = {
-  CA: "Canada", FR: "France", GN: "Guinée", SN: "Sénégal",
-  CI: "Côte d'Ivoire", CM: "Cameroun", TG: "Togo", BF: "Burkina Faso", NG: "Nigeria",
+  BE: "Belgique",
+  BF: "Burkina Faso",
+  CA: "Canada",
+  CH: "Suisse",
+  CI: "Côte d'Ivoire",
+  CM: "Cameroun",
+  FR: "France",
+  GM: "Gambie",
+  GN: "Guinée",
+  ML: "Mali",
+  NG: "Nigeria",
+  SN: "Sénégal",
+  TG: "Togo",
+  US: "États-Unis",
 };
 const COUNTRY_FLAGS: Record<string, string> = {
-  CA: "🇨🇦", FR: "🇫🇷", GN: "🇬🇳", SN: "🇸🇳", CI: "🇨🇮", CM: "🇨🇲", TG: "🇹🇬", BF: "🇧🇫", NG: "🇳🇬",
+  BE: "🇧🇪",
+  BF: "🇧🇫",
+  CA: "🇨🇦",
+  CH: "🇨🇭",
+  CI: "🇨🇮",
+  CM: "🇨🇲",
+  FR: "🇫🇷",
+  GM: "🇬🇲",
+  GN: "🇬🇳",
+  ML: "🇲🇱",
+  NG: "🇳🇬",
+  SN: "🇸🇳",
+  TG: "🇹🇬",
+  US: "🇺🇸",
 };
 
 function countryLine(code: string, city: string | null | undefined): string {

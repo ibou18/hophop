@@ -12,6 +12,9 @@ const COUNTRIES = [
   { flag: "🇬🇲", name: "Gambie" },
   { flag: "🇧🇫", name: "Burkina Faso" },
   { flag: "🇹🇬", name: "Togo" },
+  { flag: "🇧🇪", name: "Belgique" },
+  { flag: "🇨🇭", name: "Suisse" },
+  { flag: "🇺🇸", name: "États-Unis" },
   { flag: "🇫🇷", name: "France" },
   { flag: "🇨🇦", name: "Canada" },
 ];

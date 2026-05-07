@@ -34,6 +34,11 @@ enum Country {
   TG // Togo
   BF // Burkina Faso
   NG // Nigeria
+  BE // Belgique
+  CH // Suisse
+  US // États-Unis
+  GM // Gambie
+  ML // Mali
   // Ajouter d'autres pays ici sans toucher à la structure
 }
 

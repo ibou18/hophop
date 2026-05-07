@@ -25,14 +25,20 @@ import type {
 } from "@/app/generated/prisma/enums";
 
 const COUNTRY_FLAG: Record<string, string> = {
+  BE: "🇧🇪",
+  BF: "🇧🇫",
   CA: "🇨🇦",
-  FR: "🇫🇷",
-  GN: "🇬🇳",
-  SN: "🇸🇳",
+  CH: "🇨🇭",
   CI: "🇨🇮",
   CM: "🇨🇲",
-  ML: "🇲🇱",
+  FR: "🇫🇷",
   GM: "🇬🇲",
+  GN: "🇬🇳",
+  ML: "🇲🇱",
+  NG: "🇳🇬",
+  SN: "🇸🇳",
+  TG: "🇹🇬",
+  US: "🇺🇸",
 };
 
 const MODE: Record<

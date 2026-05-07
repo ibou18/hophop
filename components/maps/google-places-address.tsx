@@ -4,12 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Country } from "@/app/generated/prisma/enums";
 
 const ISO_TO_COUNTRY: Record<string, Country> = {
+  BE: "BE",
+  BF: "BF",
   CA: "CA",
-  FR: "FR",
-  GN: "GN",
-  SN: "SN",
+  CH: "CH",
   CI: "CI",
   CM: "CM",
+  FR: "FR",
+  GM: "GM",
+  GN: "GN",
+  ML: "ML",
+  NG: "NG",
+  SN: "SN",
+  TG: "TG",
+  US: "US",
 };
 
 export type PlaceResolved = {
