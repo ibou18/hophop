@@ -130,6 +130,7 @@ function StatsBlock() {
 
       gsap.from(ref.current!.querySelectorAll<HTMLElement>("[data-stat]"), {
         scrollTrigger: { trigger: ref.current, start: "top 85%", once: true },
+        immediateRender: false,
         y: 30,
         opacity: 0,
         stagger: 0.1,
@@ -179,6 +180,7 @@ function FeaturesBlock() {
     const ctx = gsap.context(() => {
       gsap.from(ref.current!.querySelectorAll<HTMLElement>("[data-fade]"), {
         scrollTrigger: { trigger: ref.current, start: "top 80%", once: true },
+        immediateRender: false,
         y: 24,
         opacity: 0,
         stagger: 0.08,
@@ -190,6 +192,7 @@ function FeaturesBlock() {
         ref.current!.querySelectorAll<HTMLElement>("[data-feature-card]"),
         {
           scrollTrigger: { trigger: ref.current, start: "top 70%", once: true },
+          immediateRender: false,
           y: 36,
           opacity: 0,
           stagger: 0.08,
@@ -260,6 +263,7 @@ function HowItWorksBlock() {
     const ctx = gsap.context(() => {
       gsap.from(ref.current!.querySelectorAll<HTMLElement>("[data-fade]"), {
         scrollTrigger: { trigger: ref.current, start: "top 80%", once: true },
+        immediateRender: false,
         y: 24,
         opacity: 0,
         stagger: 0.08,
@@ -269,6 +273,7 @@ function HowItWorksBlock() {
 
       gsap.from(ref.current!.querySelectorAll<HTMLElement>("[data-step]"), {
         scrollTrigger: { trigger: ref.current, start: "top 70%", once: true },
+        immediateRender: false,
         y: 40,
         opacity: 0,
         stagger: 0.15,
@@ -384,6 +389,7 @@ function FinalCTABlock() {
       if (card) {
         gsap.from(card, {
           scrollTrigger: { trigger: ref.current, start: "top 80%", once: true },
+          immediateRender: false,
           y: 60,
           opacity: 0,
           duration: 0.9,
