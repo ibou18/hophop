@@ -316,6 +316,12 @@ model Client {
   passwordHash String?
   otpSecret    String? // Pour auth par téléphone (OTP)
 
+  /// Token de réclamation de compte (généré par le forwarder lors de l'invitation)
+  claimToken           String?   @unique
+  claimTokenExpiresAt  DateTime?
+  /// Forwarder qui a créé ce compte (null = auto-inscription)
+  createdByForwarderId String?
+
   // Préférences
   locale   String @default("fr")
   timezone String @default("America/Toronto")

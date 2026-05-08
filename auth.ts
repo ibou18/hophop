@@ -129,6 +129,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             isActive: true,
           },
         });
+        if (client && !client.passwordHash) {
+          // Compte créé par un transitaire, non encore activé
+          throw new Error("ACCOUNT_NOT_CLAIMED");
+        }
         if (!client?.passwordHash) return null;
         const ok = await compare(password, client.passwordHash);
         if (!ok) return null;

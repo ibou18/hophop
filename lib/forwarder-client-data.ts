@@ -12,6 +12,8 @@ const clientListSelect = {
   city: true,
   authMethod: true,
   createdAt: true,
+  passwordHash: true,
+  claimToken: true,
   _count: { select: { parcels: true, recipients: true } },
 } satisfies Prisma.ClientSelect;
 

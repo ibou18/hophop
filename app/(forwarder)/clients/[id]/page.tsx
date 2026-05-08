@@ -7,6 +7,7 @@ import { getForwarderClientById } from "@/lib/forwarder-client-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { authMethodLabelFr } from "@/lib/auth-method-fr";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
+import { ResendInviteButton } from "@/components/forwarder/resend-invite-button";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ id: string }> };
@@ -45,6 +46,17 @@ export default async function ForwarderClientDetailPage({ params }: Props) {
           Inscrit le{" "}
           {format(client.createdAt, "d MMMM yyyy", { locale: fr })}
         </p>
+        {!client.passwordHash && client.email ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-hh-saffron/30 bg-hh-saffron/10 px-4 py-3">
+            <p className="flex-1 text-[13px] text-hh-earth-dk/80">
+              <span className="font-semibold text-hh-saffron-dk">
+                Compte non activé.
+              </span>{" "}
+              Ce client n&apos;a pas encore défini son mot de passe.
+            </p>
+            <ResendInviteButton clientId={client.id} />
+          </div>
+        ) : null}
       </div>
 
       <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">

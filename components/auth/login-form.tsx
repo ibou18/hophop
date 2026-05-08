@@ -50,6 +50,7 @@ export function LoginForm() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notClaimedEmail, setNotClaimedEmail] = useState<string | null>(null);
 
   const [adminMode, setAdminMode] = useState(false);
 
@@ -86,6 +87,7 @@ export function LoginForm() {
   async function onClientSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setNotClaimedEmail(null);
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get("email") ?? "").trim().toLowerCase();
     const phone = String(fd.get("phone") ?? "").trim();
@@ -103,6 +105,10 @@ export function LoginForm() {
     });
     setLoading(false);
     if (res?.error) {
+      if (res.error === "ACCOUNT_NOT_CLAIMED") {
+        setNotClaimedEmail(email || null);
+        return;
+      }
       setError("Identifiants incorrects ou compte inactif.");
       return;
     }
@@ -321,7 +327,23 @@ export function LoginForm() {
                   className={cn(authInputClass)}
                 />
               </div>
-              {error && tab === "client" ? (
+              {notClaimedEmail ? (
+                <div
+                  className="rounded-xl border border-hh-saffron/30 bg-hh-saffron/10 px-4 py-3 text-[13px]"
+                  role="alert"
+                >
+                  <p className="font-semibold text-hh-saffron-dk">
+                    Compte non encore activé
+                  </p>
+                  <p className="mt-1 text-hh-earth-dk/70">
+                    Votre compte a été créé par votre transitaire. Vérifiez
+                    votre boîte mail pour trouver le lien d&apos;activation, ou
+                    contactez votre transitaire pour qu&apos;il vous renvoie
+                    l&apos;invitation.
+                  </p>
+                </div>
+              ) : null}
+              {error && tab === "client" && !notClaimedEmail ? (
                 <p className="text-[13px] text-hh-kola" role="alert">
                   {error}
                 </p>
