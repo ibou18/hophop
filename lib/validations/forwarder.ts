@@ -7,6 +7,15 @@ const country = z.enum(Country);
 const emptyPhone = (v: unknown) =>
   typeof v === "string" && v.trim() === "" ? undefined : v;
 
+const emptyToUndefined = (v: unknown) =>
+  typeof v === "string" && v.trim() === "" ? undefined : v;
+
+const numOrUndefined = (v: unknown) => {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 export const forwarderRegistrationFieldsSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -18,8 +27,20 @@ export const forwarderRegistrationFieldsSchema = z.object({
     }),
   phone: z.preprocess(emptyPhone, z.string().optional()),
   country: country,
-  city: z.string().min(1),
-  address: z.string().optional(),
+  city: z
+    .string()
+    .trim()
+    .min(1, { message: "Ville requise" }),
+  address: z
+    .string()
+    .trim()
+    .min(1, { message: "Adresse requise" }),
+  addressFormatted: z.preprocess(
+    emptyToUndefined,
+    z.string().optional(),
+  ),
+  latitude: z.preprocess(numOrUndefined, z.number().finite().optional()),
+  longitude: z.preprocess(numOrUndefined, z.number().finite().optional()),
   description: z.string().optional(),
 });
 
@@ -37,6 +58,26 @@ export const createForwarderSchema = forwarderRegistrationFieldsSchema
         code: "custom",
         message: "Numéro invalide pour ce pays",
         path: ["phone"],
+      });
+    }
+  })
+  .superRefine((data, ctx) => {
+    const lat = data.latitude;
+    const lng = data.longitude;
+    if ((lat == null) !== (lng == null)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Latitude et longitude doivent être fournies ensemble.",
+        path: ["latitude"],
+      });
+      return;
+    }
+    if (lat == null) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Choisis une adresse dans les suggestions Google pour enregistrer la position exacte du siège.",
+        path: ["address"],
       });
     }
   })

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 export function ShipmentPublishToggle({
   shipmentId,
@@ -48,23 +48,16 @@ export function ShipmentPublishToggle({
             {isPublished ? "Oui" : "Non"}
           </span>
         </span>
-        <Button
-          type="button"
+        <Switch
           disabled={pending}
-          variant="outline"
-          className={
+          checked={isPublished}
+          onCheckedChange={toggle}
+          aria-label={
             isPublished
-              ? "border-hh-kola/40 text-hh-kola hover:bg-hh-kola/5"
-              : "border-hh-savane/40 text-hh-savane-dk hover:bg-hh-savane/5"
+              ? "Dépublier cet envoi pour les clients"
+              : "Publier cet envoi pour les clients"
           }
-          onClick={toggle}
-        >
-          {pending
-            ? "…"
-            : isPublished
-              ? "Dépublier"
-              : "Publier pour les clients"}
-        </Button>
+        />
       </div>
       {error && <p className="text-[13px] text-hh-kola">{error}</p>}
     </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Car, Package } from "lucide-react";
+import { Car, Link2, MessageCircle, Package } from "lucide-react";
 import type {
   AssignableParcelRow,
   ParcelAssignmentListRow,
@@ -13,7 +13,10 @@ import type { Country } from "@/app/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function formatRouteEndpoint(city: string | null | undefined, country: Country): string {
+function formatRouteEndpoint(
+  city: string | null | undefined,
+  country: Country,
+): string {
   const c = city?.trim();
   return c ? `${c} · ${countryLabelFr(country)}` : countryLabelFr(country);
 }
@@ -42,7 +45,11 @@ function ParcelRouteLines({ row }: { row: ParcelAssignmentListRow }) {
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-hh-sand/80 px-2 py-0.5 text-[11px] font-medium text-hh-earth-dk ring-1 ring-hh-sand-dk/25">
-            <Package className="size-3.5 shrink-0 text-hh-muted" strokeWidth={2} aria-hidden />
+            <Package
+              className="size-3.5 shrink-0 text-hh-muted"
+              strokeWidth={2}
+              aria-hidden
+            />
             Colis
           </span>
         )}
@@ -58,6 +65,8 @@ export function ShipmentParcelsAssignment({
   inShipmentParcels,
   routeSummary,
   shipmentAcceptsVehicles,
+  forwarderCode5,
+  shipmentReference,
 }: {
   shipmentId: string;
   editable: boolean;
@@ -66,6 +75,8 @@ export function ShipmentParcelsAssignment({
   /** Route de l’envoi (ex. France → Guinée) — affichée dans l’aide et l’état vide. */
   routeSummary: string;
   shipmentAcceptsVehicles: boolean;
+  forwarderCode5: string;
+  shipmentReference: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -96,7 +107,10 @@ export function ShipmentParcelsAssignment({
     return { ok: true };
   }
 
-  function toggle(setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) {
+  function toggle(
+    setter: React.Dispatch<React.SetStateAction<Set<string>>>,
+    id: string,
+  ) {
     setter((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -131,6 +145,33 @@ export function ShipmentParcelsAssignment({
     });
   }
 
+  const sharePath = `/p/${forwarderCode5}?envoi=${encodeURIComponent(shipmentId)}`;
+  const shareUrl =
+    typeof window !== "undefined" ? `${window.location.origin}${sharePath}` : sharePath;
+
+  async function copyShareLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // noop
+    }
+  }
+
+  function openWhatsAppShare() {
+    const text = encodeURIComponent(
+      [
+        "Bonjour 👋",
+        "",
+        `📦 Envoi ${shipmentReference}`,
+        `🧭 Trajet: ${routeSummary}`,
+        "",
+        "Déclarez vos colis ici :",
+        shareUrl,
+      ].join("\n"),
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+  }
+
   if (!editable) return null;
 
   return (
@@ -140,19 +181,41 @@ export function ShipmentParcelsAssignment({
           Ajouter des colis au lot
         </h2>
         <p className="mt-1 text-[13px] text-hh-muted">
-          Colis au statut « Collecté », non affectés, dont la route correspond à cet
-          envoi :{" "}
+          Colis au statut « Collecté », non affectés, dont la route correspond à
+          cet envoi :{" "}
           <span className="font-medium text-hh-earth-dk">{routeSummary}</span>
           {shipmentAcceptsVehicles
             ? " (colis classiques ou véhicules)."
             : " (colis classiques uniquement — pas de dossiers véhicule)."}
         </p>
         {assignableParcels.length === 0 ? (
-          <p className="mt-4 rounded-[var(--hh-radius-md)] border border-dashed border-hh-sand-dk/40 bg-hh-sand/30 px-4 py-6 text-center text-[13px] text-hh-muted">
-            Aucun colis collecté ne correspond à cette route pour le moment. Vérifie
-            les pays de l’expéditeur et du destinataire sur les fiches colis, ou crée
-            un envoi dont la route correspond au colis.
-          </p>
+          <div className="mt-4 rounded-[var(--hh-radius-md)] border border-dashed border-hh-sand-dk/40 bg-hh-sand/30 px-4 py-6 text-center">
+            <p className="text-[13px] text-hh-muted">
+              Aucun colis collecté ne correspond à cette route pour le moment.
+            </p>
+            <p className="mt-1 text-[12px] text-hh-muted">
+              Partage ce lien pour commencer à recevoir des demandes sur cet envoi.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-hh-sand-dk/40"
+                onClick={() => void copyShareLink()}
+              >
+                <Link2 className="size-4" />
+                Copier le lien
+              </Button>
+              <Button
+                type="button"
+                className="bg-[#25D366] text-white hover:bg-[#1fbb59]"
+                onClick={openWhatsAppShare}
+              >
+                <MessageCircle className="size-4" />
+                WhatsApp
+              </Button>
+            </div>
+          </div>
         ) : (
           <ul className="mt-4 max-h-[28rem] space-y-3 overflow-y-auto rounded-[var(--hh-radius-md)] border border-hh-sand-dk/20 p-3">
             {assignableParcels.map((p) => (
@@ -160,7 +223,9 @@ export function ShipmentParcelsAssignment({
                 key={p.id}
                 className={cn(
                   "rounded-[var(--hh-radius-md)] border border-transparent px-2 py-2 transition-colors",
-                  p.vehicle ? "border-indigo-100 bg-indigo-50/40" : "bg-hh-sand/25",
+                  p.vehicle
+                    ? "border-indigo-100 bg-indigo-50/40"
+                    : "bg-hh-sand/25",
                 )}
               >
                 <div className="flex items-start gap-2 text-[14px]">
@@ -174,7 +239,10 @@ export function ShipmentParcelsAssignment({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <label htmlFor={`assign-${p.id}`} className="cursor-pointer">
+                      <label
+                        htmlFor={`assign-${p.id}`}
+                        className="cursor-pointer"
+                      >
                         <span className="font-mono font-medium text-hh-saffron-dk">
                           {p.trackingCode}
                         </span>
@@ -200,7 +268,9 @@ export function ShipmentParcelsAssignment({
         <Button
           type="button"
           className="mt-3 bg-hh-saffron text-white hover:bg-hh-saffron-dk"
-          disabled={pending || assignIds.size === 0 || assignableParcels.length === 0}
+          disabled={
+            pending || assignIds.size === 0 || assignableParcels.length === 0
+          }
           onClick={runAssign}
         >
           Affecter à cet envoi
@@ -221,7 +291,9 @@ export function ShipmentParcelsAssignment({
                 key={p.id}
                 className={cn(
                   "rounded-[var(--hh-radius-md)] border border-transparent px-2 py-2",
-                  p.vehicle ? "border-indigo-100 bg-indigo-50/40" : "bg-hh-sand/25",
+                  p.vehicle
+                    ? "border-indigo-100 bg-indigo-50/40"
+                    : "bg-hh-sand/25",
                 )}
               >
                 <div className="flex items-start gap-2 text-[14px]">

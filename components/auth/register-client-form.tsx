@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,15 +45,29 @@ export function RegisterClientForm() {
       lastName: "",
       email: "",
       phone: "",
-      address: "",
       city: "",
       country: "CA",
       authMethod: "EMAIL",
       password: "",
+      cityLatitude: undefined as number | undefined,
+      cityLongitude: undefined as number | undefined,
     },
   });
 
   const country = form.watch("country");
+  const prevCountryRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevCountryRef.current === null) {
+      prevCountryRef.current = country;
+      return;
+    }
+    if (prevCountryRef.current !== country) {
+      prevCountryRef.current = country;
+      form.setValue("city", "");
+      form.setValue("cityLatitude", undefined, { shouldDirty: true });
+      form.setValue("cityLongitude", undefined, { shouldDirty: true });
+    }
+  }, [country, form]);
 
   const onPhoneNationalChange = useCallback(
     (v: string) => {
@@ -93,10 +108,13 @@ export function RegisterClientForm() {
         country: values.country,
         authMethod: values.authMethod,
         password: values.password,
-        ...(values.address?.trim()
-          ? { address: values.address.trim() }
+        city: values.city,
+        ...(values.cityLatitude != null && values.cityLongitude != null
+          ? {
+              cityLatitude: values.cityLatitude,
+              cityLongitude: values.cityLongitude,
+            }
           : {}),
-        ...(values.city?.trim() ? { city: values.city.trim() } : {}),
       }),
     });
     const payload = (await res.json().catch(() => ({}))) as {
@@ -203,9 +221,78 @@ export function RegisterClientForm() {
               ))}
             </select>
             <p className="text-[11px] text-hh-muted">
-              Choisis d’abord ton pays : indicatif téléphone et suggestions
-              d’adresse s’alignent dessus.
+              Choisis d’abord ton pays : indicatif téléphone et suggestions de
+              ville s’alignent dessus.
             </p>
+          </div>
+
+          <div className="space-y-2 w-full">
+            <Label
+              htmlFor="city"
+              className="text-[13px] font-medium text-hh-muted"
+            >
+              Ville <span className="text-hh-kola">*</span>
+            </Label>
+            <GooglePlacesAddressField
+              key={country}
+              id="city"
+              required
+              apiKey={mapsApiKey}
+              value={form.watch("city") ?? ""}
+              predictionTypes={["(cities)"]}
+              onChangeText={(v) => {
+                form.setValue("city", v, { shouldDirty: true });
+                form.setValue("cityLatitude", undefined, { shouldDirty: true });
+                form.setValue("cityLongitude", undefined, {
+                  shouldDirty: true,
+                });
+              }}
+              onResolved={(data) => {
+                const cityName =
+                  data.city ??
+                  data.formattedAddress.split(",")[0]?.trim() ??
+                  data.formattedAddress;
+                form.setValue("city", cityName, { shouldDirty: true });
+                form.setValue("cityLatitude", data.latitude, {
+                  shouldDirty: true,
+                });
+                form.setValue("cityLongitude", data.longitude, {
+                  shouldDirty: true,
+                });
+                if (data.country)
+                  form.setValue("country", data.country, { shouldDirty: true });
+              }}
+              disabled={form.formState.isSubmitting}
+              placeholder={
+                mapsApiKey ? "ex. Montréal, Conakry…" : "Nom de la ville"
+              }
+              restrictCountry={country}
+              inputClassName={cn(authInputClass)}
+            />
+            {/* {mapsApiKey ? (
+              <p className="text-[11px] text-hh-muted">
+                Obligatoire. Choisis une ville dans la liste pour enregistrer le
+                centre-ville (GPS), comme pour les envois.
+              </p>
+            ) : (
+              <p className="text-[11px] text-hh-muted">
+                Obligatoire — saisie libre (sans carte, pas de GPS).
+              </p>
+            )} */}
+            {/* {form.watch("cityLatitude") != null &&
+            form.watch("cityLongitude") != null ? (
+              <p className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+                <MapPin size={12} className="shrink-0" aria-hidden />
+                Centre-ville enregistré&nbsp;:{" "}
+                {Number(form.watch("cityLatitude")).toFixed(5)},{" "}
+                {Number(form.watch("cityLongitude")).toFixed(5)}
+              </p>
+            ) : null} */}
+            {form.formState.errors.city ? (
+              <p className="text-[11px] text-hh-kola">
+                {form.formState.errors.city.message}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -271,56 +358,6 @@ export function RegisterClientForm() {
                 </p>
               ) : null}
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="address"
-              className="text-[13px] font-medium text-hh-muted"
-            >
-              Adresse (optionnel)
-            </Label>
-            <GooglePlacesAddressField
-              apiKey={mapsApiKey}
-              value={form.watch("address") ?? ""}
-              onChangeText={(v) =>
-                form.setValue("address", v, { shouldDirty: true })
-              }
-              onResolved={(data) => {
-                form.setValue("address", data.formattedAddress, {
-                  shouldDirty: true,
-                });
-                if (data.city)
-                  form.setValue("city", data.city, { shouldDirty: true });
-                if (data.country)
-                  form.setValue("country", data.country, { shouldDirty: true });
-              }}
-              disabled={form.formState.isSubmitting}
-              placeholder={
-                mapsApiKey ? "Rechercher une adresse…" : "Adresse libre"
-              }
-              restrictCountry={country}
-              inputClassName={cn(authInputClass)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="city"
-              className="text-[13px] font-medium text-hh-muted"
-            >
-              Ville
-            </Label>
-            <Input
-              id="city"
-              className={cn(authInputClass)}
-              {...form.register("city")}
-            />
-            {form.formState.errors.city ? (
-              <p className="text-[11px] text-hh-kola">
-                {form.formState.errors.city.message}
-              </p>
-            ) : null}
           </div>
 
           {apiError ? (

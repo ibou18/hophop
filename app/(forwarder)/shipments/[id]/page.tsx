@@ -19,6 +19,7 @@ import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-t
 import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
 import { ShipmentShareBlock } from "@/components/forwarder/shipment-share-block";
 import { ShipmentPricingEditor } from "@/components/forwarder/shipment-pricing-editor";
+import { ShipmentBasicInfoEditor } from "@/components/forwarder/shipment-basic-info-editor";
 import { TransportModeBadge } from "@/components/transport-mode-selector";
 import type { Metadata } from "next";
 
@@ -92,9 +93,21 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
       </div>
 
       <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
-        <h2 className="text-[13px] font-medium uppercase tracking-wide text-hh-muted">
-          Calendrier
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[13px] font-medium uppercase tracking-wide text-hh-muted">
+            Calendrier
+          </h2>
+          <ShipmentBasicInfoEditor
+            shipmentId={shipment.id}
+            editable={editable}
+            originCity={shipment.originCity}
+            destinationCity={shipment.destinationCity}
+            departureDate={shipment.departureDate}
+            arrivalDate={shipment.arrivalDate}
+            notes={shipment.notes}
+            notifyClientsOnChange={shipment.parcels.length > 0}
+          />
+        </div>
         <dl className="mt-3 grid gap-2 text-[14px] sm:grid-cols-2">
           <dt className="text-hh-muted">Départ</dt>
           <dd className="text-hh-earth-dk">
@@ -157,6 +170,7 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         volumeDivisor={shipment.volumeDivisor}
         minimumCharge={shipment.minimumCharge}
         currency={shipment.currency}
+        notifyClientsOnChange={shipment.parcels.length > 0}
       />
 
       <ShipmentDetailActions
@@ -173,6 +187,8 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         inShipmentParcels={inShipmentRows}
         routeSummary={`${countryLabelFr(shipment.originCountry)} → ${countryLabelFr(shipment.destinationCountry)}`}
         shipmentAcceptsVehicles={shipment.acceptsVehicles}
+        forwarderCode5={shipment.forwarder.code5}
+        shipmentReference={shipment.reference}
       />
 
       {requests != null && (

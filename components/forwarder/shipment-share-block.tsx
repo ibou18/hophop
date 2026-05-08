@@ -60,7 +60,10 @@ export function ShipmentShareBlock({
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const canDeleteDraft = shipmentStatus === ShipmentStatus.DRAFT;
+  const canDelete =
+    (shipmentStatus === ShipmentStatus.DRAFT ||
+      shipmentStatus === ShipmentStatus.CONFIRMED) &&
+    parcelCount === 0;
 
   const sharePath = `/p/${code5}?envoi=${encodeURIComponent(shipmentId)}`;
   const fullUrl = origin ? `${origin}${sharePath}` : sharePath;
@@ -68,7 +71,16 @@ export function ShipmentShareBlock({
   const buildShareText = useCallback(
     (absoluteUrl: string) => {
       const route = `${countryLabelFr(originCountry)} → ${countryLabelFr(destinationCountry)}`;
-      return `Envoi ${reference} (${route}) avec ${forwarderName} — Déclarez vos colis sur Hophop :\n${absoluteUrl}`;
+      return [
+        "Bonjour 👋",
+        "",
+        `📦 Envoi ${reference}`,
+        `🧭 Trajet: ${route}`,
+        `🏢 Transitaire: ${forwarderName}`,
+        "",
+        "Déclarez vos colis ici :",
+        absoluteUrl,
+      ].join("\n");
     },
     [originCountry, destinationCountry, reference, forwarderName],
   );
@@ -127,13 +139,13 @@ export function ShipmentShareBlock({
     });
   }
 
-  const deleteSection = canDeleteDraft ? (
+  const deleteSection = canDelete ? (
     <div className="mt-5 border-t border-hh-sand-dk/20 pt-4">
       <p className="text-[11px] font-medium uppercase tracking-wide text-hh-muted">
         Suppression
       </p>
       <p className="mt-1 text-[13px] text-hh-muted">
-        Envois en brouillon uniquement. Aucun colis ne doit rester assigné à ce lot.
+        Supprime envoi vide (brouillon ou confirmé). Aucun colis ne doit être assigné.
       </p>
       <Button
         type="button"

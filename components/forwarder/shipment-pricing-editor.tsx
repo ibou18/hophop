@@ -28,6 +28,7 @@ export interface ShipmentPricingProps {
   volumeDivisor: number;
   minimumCharge: number;
   currency: Currency;
+  notifyClientsOnChange?: boolean;
 }
 
 function formatRate(type: PricingType, props: ShipmentPricingProps): string {
@@ -108,6 +109,12 @@ export function ShipmentPricingEditor(props: ShipmentPricingProps) {
     return (
       <div className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm space-y-4">
         <h2 className="text-[15px] font-medium text-hh-earth-dk">Tarification de l&apos;envoi</h2>
+        {props.notifyClientsOnChange ? (
+          <p className="rounded-[var(--hh-radius-md)] border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+            Attention: modification de ce formulaire enverra email aux clients qui ont
+            un colis dans cet envoi.
+          </p>
+        ) : null}
 
         <ShipmentPricingSection
           value={pricingState}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Country } from "@/app/generated/prisma/enums";
+import { cn } from "@/lib/utils";
 
 const ISO_TO_COUNTRY: Record<string, Country> = {
   BE: "BE",
@@ -65,7 +66,9 @@ type PlacesSvc = {
         name?: string;
         geometry?: {
           location?: { lat: () => number; lng: () => number };
-          viewport?: { getCenter: () => { lat: () => number; lng: () => number } };
+          viewport?: {
+            getCenter: () => { lat: () => number; lng: () => number };
+          };
         };
         address_components?: Array<{
           short_name: string;
@@ -90,9 +93,16 @@ function loadMapsScript(apiKey: string): Promise<void> {
       const existing = document.getElementById(id) as HTMLScriptElement | null;
       if (existing) {
         const ww = window as Window & { google?: GMaps };
-        if (ww.google?.maps?.places) { resolve(); return; }
+        if (ww.google?.maps?.places) {
+          resolve();
+          return;
+        }
         existing.addEventListener("load", () => resolve(), { once: true });
-        existing.addEventListener("error", () => reject(new Error("Google Maps")), { once: true });
+        existing.addEventListener(
+          "error",
+          () => reject(new Error("Google Maps")),
+          { once: true },
+        );
         return;
       }
       const script = document.createElement("script");
@@ -115,16 +125,24 @@ function extractPlace(
       location?: { lat: () => number; lng: () => number };
       viewport?: { getCenter: () => { lat: () => number; lng: () => number } };
     };
-    address_components?: Array<{ short_name: string; long_name: string; types: string[] }>;
+    address_components?: Array<{
+      short_name: string;
+      long_name: string;
+      types: string[];
+    }>;
   } | null,
   fallbackDescription: string,
 ): PlaceResolved | null {
   if (!place) return null;
   let point = place.geometry?.location;
-  try {
-    const c = place.geometry?.viewport?.getCenter?.();
-    if (c) point = c;
-  } catch { /* garde location */ }
+  if (!point) {
+    try {
+      const c = place.geometry?.viewport?.getCenter?.();
+      if (c) point = c;
+    } catch {
+      /* noop */
+    }
+  }
   if (!point) return null;
   const lat = point.lat();
   const lng = point.lng();
@@ -135,13 +153,27 @@ function extractPlace(
   for (const c of place.address_components ?? []) {
     if (c.types.includes("locality")) city = c.long_name;
     if (!city && c.types.includes("postal_town")) city = c.long_name;
-    if (!city && c.types.includes("administrative_area_level_1")) city = c.long_name;
+    if (
+      !city &&
+      (c.types.includes("sublocality") ||
+        c.types.includes("sublocality_level_1"))
+    )
+      city = c.long_name;
+    if (!city && c.types.includes("administrative_area_level_2"))
+      city = c.long_name;
+    if (!city && c.types.includes("administrative_area_level_1"))
+      city = c.long_name;
     if (c.types.includes("country")) countryIso = c.short_name;
   }
   const country =
-    countryIso && ISO_TO_COUNTRY[countryIso] ? ISO_TO_COUNTRY[countryIso] : undefined;
+    countryIso && ISO_TO_COUNTRY[countryIso]
+      ? ISO_TO_COUNTRY[countryIso]
+      : undefined;
   const formattedAddress =
-    place.formatted_address?.trim() || place.name?.trim() || city?.trim() || fallbackDescription;
+    place.formatted_address?.trim() ||
+    place.name?.trim() ||
+    city?.trim() ||
+    fallbackDescription;
 
   return {
     formattedAddress,
@@ -166,6 +198,10 @@ export function GooglePlacesAddressField({
   placeholder,
   inputClassName,
   restrictCountry,
+  /** Types Places Autocomplete : `geocode` = rues/adresses ; `(cities)` = villes seulement */
+  predictionTypes = ["geocode"],
+  id,
+  required,
 }: {
   apiKey: string | undefined;
   value: string;
@@ -175,8 +211,10 @@ export function GooglePlacesAddressField({
   placeholder?: string;
   inputClassName: string;
   restrictCountry?: Country;
+  predictionTypes?: string[];
+  id?: string;
+  required?: boolean;
 }) {
-  const [query, setQuery] = useState(value);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [open, setOpen] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -187,9 +225,9 @@ export function GooglePlacesAddressField({
   const sessionRef = useRef<object | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onResolvedRef = useRef(onResolved);
-  useEffect(() => { onResolvedRef.current = onResolved; }, [onResolved]);
-
-
+  useEffect(() => {
+    onResolvedRef.current = onResolved;
+  }, [onResolved]);
   // Charger script + init services
   useEffect(() => {
     if (!apiKey || !dummyRef.current) return;
@@ -197,7 +235,10 @@ export function GooglePlacesAddressField({
       .then(() => {
         const w = window as Window & { google?: GMaps };
         const P = w.google?.maps?.places;
-        if (!P) { setLoadErr("API Places indisponible."); return; }
+        if (!P) {
+          setLoadErr("API Places indisponible.");
+          return;
+        }
         acSvcRef.current = new P.AutocompleteService();
         plSvcRef.current = new P.PlacesService(dummyRef.current!);
         sessionRef.current = new P.AutocompleteSessionToken();
@@ -214,13 +255,19 @@ export function GooglePlacesAddressField({
       }
       const req: Parameters<AutocompleteSvc["getPlacePredictions"]>[0] = {
         input,
-        types: ["(cities)"],
+        types: predictionTypes,
         sessionToken: sessionRef.current ?? undefined,
       };
-      if (restrictCountry) req.componentRestrictions = { country: restrictCountry.toLowerCase() };
+      if (restrictCountry)
+        req.componentRestrictions = { country: restrictCountry.toLowerCase() };
       acSvcRef.current.getPlacePredictions(req, (results, status) => {
         if (status === "OK" && results?.length) {
-          setPredictions(results.map((r) => ({ description: r.description, placeId: r.place_id })));
+          setPredictions(
+            results.map((r) => ({
+              description: r.description,
+              placeId: r.place_id,
+            })),
+          );
           setOpen(true);
         } else {
           setPredictions([]);
@@ -228,12 +275,11 @@ export function GooglePlacesAddressField({
         }
       });
     },
-    [restrictCountry],
+    [restrictCountry, predictionTypes],
   );
 
   const handleChange = useCallback(
     (v: string) => {
-      setQuery(v);
       onChangeText(v);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => fetchPredictions(v), 250);
@@ -243,7 +289,6 @@ export function GooglePlacesAddressField({
 
   const handleSelect = useCallback(
     (pred: Prediction) => {
-      setQuery(pred.description);
       onChangeText(pred.description);
       setPredictions([]);
       setOpen(false);
@@ -252,7 +297,12 @@ export function GooglePlacesAddressField({
       plSvcRef.current.getDetails(
         {
           placeId: pred.placeId,
-          fields: ["geometry", "address_components", "formatted_address", "name"],
+          fields: [
+            "geometry",
+            "address_components",
+            "formatted_address",
+            "name",
+          ],
           sessionToken: sessionRef.current ?? undefined,
         },
         (place, status) => {
@@ -274,27 +324,33 @@ export function GooglePlacesAddressField({
     return (
       <input
         type="text"
+        id={id}
+        required={required}
+        aria-required={required}
         value={value}
         onChange={(e) => onChangeText(e.target.value)}
         disabled={disabled}
         placeholder={placeholder}
-        className={inputClassName}
+        className={cn("w-full min-w-0", inputClassName)}
       />
     );
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full min-w-0">
       <div ref={dummyRef} style={{ display: "none" }} aria-hidden />
       <input
         type="text"
-        value={query}
+        id={id}
+        required={required}
+        aria-required={required}
+        value={value}
         onChange={(e) => handleChange(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         disabled={disabled}
         placeholder={placeholder}
         autoComplete="off"
-        className={inputClassName}
+        className={cn("w-full min-w-0 px-4", inputClassName)}
       />
       {loadErr ? (
         <p className="mt-1 text-[12px] text-hh-kola">{loadErr}</p>

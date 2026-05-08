@@ -30,8 +30,19 @@ export const clientRegistrationFieldsSchema = z.object({
     emptyToUndefined,
     z.string().min(1, { message: "Téléphone requis" }),
   ),
-  address: z.string().optional(),
-  city: z.string().optional(),
+  city: z
+    .string()
+    .trim()
+    .min(1, { message: "Ville requise" }),
+  /** Centre-ville — si la ville est choisie dans les suggestions Google Places */
+  cityLatitude: z.preprocess(
+    (v) => (v === null || v === "" ? undefined : v),
+    z.number().finite().optional(),
+  ),
+  cityLongitude: z.preprocess(
+    (v) => (v === null || v === "" ? undefined : v),
+    z.number().finite().optional(),
+  ),
   country: country,
   authMethod: z.enum(["EMAIL", "PHONE"]).default("EMAIL"),
   password: z
@@ -55,6 +66,17 @@ export const createClientSchema = clientRegistrationFieldsSchema
         code: "custom",
         message: "Numéro invalide pour ce pays",
         path: ["phone"],
+      });
+    }
+  })
+  .superRefine((data, ctx) => {
+    const lat = data.cityLatitude;
+    const lng = data.cityLongitude;
+    if ((lat == null) !== (lng == null)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Latitude et longitude doivent être fournies ensemble.",
+        path: ["cityLatitude"],
       });
     }
   })

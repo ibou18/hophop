@@ -66,6 +66,12 @@ export default async function DashboardPage({
         </div>
         {forwarder && (
           <div className="flex flex-col gap-2 sm:items-end">
+            <Link
+              href="/shipments/new"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-[var(--hh-radius-md)] bg-hh-saffron px-4 text-[14px] font-medium text-white transition-colors hover:bg-hh-saffron-dk"
+            >
+              Créer un envoi
+            </Link>
             <div className="flex items-center gap-1.5 text-xs font-medium text-hh-muted">
               <Share2 size={12} />
               Ma page publique

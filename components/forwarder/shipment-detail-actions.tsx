@@ -55,7 +55,9 @@ export function ShipmentDetailActions({
           ...(toastOpts?.successDescription
             ? { description: toastOpts.successDescription }
             : {}),
-          ...(toastOpts?.duration != null ? { duration: toastOpts.duration } : {}),
+          ...(toastOpts?.duration != null
+            ? { duration: toastOpts.duration }
+            : {}),
         });
         router.refresh();
       } catch {
@@ -116,7 +118,8 @@ export function ShipmentDetailActions({
       <h2 className="text-[15px] font-medium text-hh-earth-dk">Actions</h2>
       <p className="text-[13px] text-hh-muted">
         Confirme l’envoi, ajoute des colis collectés au lot, puis enregistre le
-        départ. À l’arrivée, marque l’envoi comme arrivé.
+        départ. À l’arrivée, marque l’envoi comme arrivé. Suppression du brouillon
+        disponible dans le bloc « Partager cet envoi ».
       </p>
       <div className="flex flex-wrap gap-2">
         {canConfirm ? (
@@ -126,7 +129,9 @@ export function ShipmentDetailActions({
             variant="outline"
             className="border-hh-sand-dk/40"
             onClick={() =>
-              run("Confirmation", "Envoi confirmé ✓", () => patchStatus(ShipmentSt.CONFIRMED))
+              run("Confirmation", "Envoi confirmé ✓", () =>
+                patchStatus(ShipmentSt.CONFIRMED),
+              )
             }
           >
             Confirmer l’envoi
@@ -157,16 +162,18 @@ export function ShipmentDetailActions({
           disabled={pending || !canArrive}
           variant="secondary"
           className="bg-hh-earth-lt text-hh-earth-dk hover:bg-hh-sand-dk/40 disabled:opacity-50"
-          onClick={() => run("Arrivée", "Envoi marqué arrivé à destination ✓", postArrive)}
+          onClick={() =>
+            run("Arrivée", "Envoi marqué arrivé à destination ✓", postArrive)
+          }
         >
           Marquer arrivé à destination
         </Button>
       </div>
       {!canDispatch &&
       (status === ShipmentSt.DRAFT || status === ShipmentSt.CONFIRMED) ? (
-        <p className="text-[12px] text-hh-muted">
-          Ajoute au moins un colis au statut « Collecté » pour pouvoir enregistrer
-          le départ.
+        <p className="text-[12px] text-hh-muted text-red-500">
+          Ajoute au moins un colis au statut « Collecté » pour pouvoir
+          enregistrer le départ.
         </p>
       ) : null}
       {error ? <p className="text-[13px] text-hh-kola">{error}</p> : null}

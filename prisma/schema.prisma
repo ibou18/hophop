@@ -308,6 +308,10 @@ model Client {
   city      String?
   country   Country // ex: CA, FR, GN...
 
+  /// Centre-ville WGS84 — si la ville est choisie via Google Places (type « villes »)
+  cityLatitude  Float?
+  cityLongitude Float?
+
   authMethod   AuthMethod @default(EMAIL)
   passwordHash String?
   otpSecret    String? // Pour auth par téléphone (OTP)

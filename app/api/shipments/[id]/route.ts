@@ -3,6 +3,8 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { requireForwarder } from "@/lib/require-auth";
 import { patchShipmentSchema } from "@/lib/validations/shipment";
 import { ShipmentStatus } from "@/app/generated/prisma/enums";
+import { getAppBaseUrl } from "@/lib/mail/app-url";
+import { getDefaultFromAddress, getResendClient } from "@/lib/mail/resend";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -43,12 +45,89 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
   const existing = await prisma.shipment.findFirst({
     where: { id, forwarderId: auth.forwarderId },
+    include: {
+      forwarder: { select: { name: true } },
+      parcels: {
+        select: {
+          trackingCode: true,
+          client: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!existing) return jsonError("Introuvable", 404);
   const shipment = await prisma.shipment.update({
     where: { id },
     data: parsed.data,
   });
+
+  const FORM_FIELDS = new Set([
+    "transportMode",
+    "originCity",
+    "destinationCity",
+    "originLatitude",
+    "originLongitude",
+    "destinationLatitude",
+    "destinationLongitude",
+    "departureDate",
+    "arrivalDate",
+    "notes",
+    "acceptsVehicles",
+    "pricingType",
+    "ratePerKg",
+    "ratePerBox",
+    "flatRate",
+    "ratePerVolume",
+    "ratePerVehicle",
+    "volumeDivisor",
+    "minimumCharge",
+    "currency",
+  ]);
+
+  const changedFormKeys = Object.keys(parsed.data).filter((k) =>
+    FORM_FIELDS.has(k),
+  );
+
+  if (changedFormKeys.length > 0 && existing.parcels.length > 0) {
+    const recipients = Array.from(
+      new Set(
+        existing.parcels
+          .map((p) => p.client.email?.trim().toLowerCase())
+          .filter((e): e is string => Boolean(e)),
+      ),
+    );
+
+    const resend = getResendClient();
+    if (resend && recipients.length > 0) {
+      const base = getAppBaseUrl();
+      const detailsUrl = `${base}/shipments/${id}`;
+      const subject = `Mise à jour de l'envoi ${shipment.reference}`;
+      const fieldsHuman = changedFormKeys.join(", ");
+      await Promise.allSettled(
+        recipients.map((to) =>
+          resend.emails.send({
+            from: getDefaultFromAddress(),
+            to,
+            subject,
+            text: [
+              `Bonjour,`,
+              ``,
+              `L'envoi ${shipment.reference} a été modifié par ${existing.forwarder.name}.`,
+              `Champs modifiés: ${fieldsHuman}.`,
+              ``,
+              `Consulter: ${detailsUrl}`,
+            ].join("\n"),
+          }),
+        ),
+      );
+    }
+  }
   return jsonOk(shipment);
 }
 
@@ -62,9 +141,12 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     include: { _count: { select: { parcels: true } } },
   });
   if (!existing) return jsonError("Introuvable", 404);
-  if (existing.status !== ShipmentStatus.DRAFT) {
+  if (
+    existing.status !== ShipmentStatus.DRAFT &&
+    existing.status !== ShipmentStatus.CONFIRMED
+  ) {
     return jsonError(
-      "Seul un envoi en brouillon peut être supprimé.",
+      "Suppression autorisée uniquement pour un envoi brouillon ou confirmé.",
       409,
     );
   }

@@ -103,9 +103,6 @@ export function ShipmentPricingSection({
         <p className="text-[13px] font-medium text-hh-earth-dk">
           Tarification des colis
         </p>
-        <p className="mt-0.5 text-[12px] text-hh-muted">
-          Prioritaire sur la grille globale. Laisse vide pour utiliser les tarifs configurés.
-        </p>
       </div>
 
       <Field label="Méthode de tarification">
