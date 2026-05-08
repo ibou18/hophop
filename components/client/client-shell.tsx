@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  LifeBuoy,
   Package,
   PlusCircle,
   Settings,
@@ -56,6 +57,13 @@ export function ClientShell({
           </span>
         </Link>
         <div className="flex items-center gap-3">
+          <a
+            href="mailto:contact@hopop.ca"
+            className="hidden items-center gap-1.5 text-[12px] font-medium text-hh-saffron-dk underline-offset-2 hover:underline sm:inline-flex"
+          >
+            <LifeBuoy size={14} />
+            Support
+          </a>
           <span className="hidden text-[13px] text-hh-muted sm:block">
             {user.name}
           </span>
@@ -100,6 +108,13 @@ export function ClientShell({
             })}
           </div>
           <div className="mt-auto px-3">
+            <a
+              href="mailto:contact@hopop.ca"
+              className="mb-3 flex items-center gap-2 rounded-[var(--hh-radius-md)] border border-hh-sand-dk/35 bg-white px-3 py-2 text-[13px] font-medium text-hh-saffron-dk transition hover:bg-hh-saffron-lt/40"
+            >
+              <LifeBuoy size={16} strokeWidth={1.7} />
+              Contacter le support
+            </a>
             <div className="rounded-[var(--hh-radius-md)] bg-hh-saffron-lt/50 px-3 py-3">
               <p className="text-[13px] font-medium text-hh-earth-dk">{user.name}</p>
               <p className="mt-0.5 text-[11px] text-hh-muted">{user.email}</p>
@@ -139,6 +154,13 @@ export function ClientShell({
             </Link>
           );
         })}
+        <a
+          href="mailto:contact@hopop.ca"
+          className="flex flex-1 flex-col items-center gap-1 py-2"
+        >
+          <LifeBuoy size={20} strokeWidth={1.5} className="text-hh-muted" />
+          <span className="text-[10px] font-medium text-hh-muted">Support</span>
+        </a>
       </nav>
     </div>
   );

@@ -12,7 +12,6 @@ export async function GET(req: Request) {
 
   const clients = await prisma.client.findMany({
     where: {
-      forwarders: { some: { forwarderId: auth.forwarderId } },
       isActive: true,
       OR: [
         { email: { contains: q, mode: "insensitive" } },

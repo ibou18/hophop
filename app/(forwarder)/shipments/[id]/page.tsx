@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -11,7 +10,6 @@ import {
   isShipmentEditable,
 } from "@/lib/forwarder-shipment-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
-import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import { ShipmentParcelsAssignment } from "@/components/forwarder/shipment-parcels-assignment";
 import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
 import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
@@ -21,6 +19,11 @@ import { ShipmentBasicInfoEditor } from "@/components/forwarder/shipment-basic-i
 import { ForwarderAddParcelButton } from "@/components/forwarder/forwarder-add-parcel-button";
 import { ShipmentHero, type ShipmentHeroKpis } from "@/components/forwarder/shipment-hero";
 import { ShipmentDetailTabs } from "@/components/forwarder/shipment-detail-tabs";
+import {
+  ShipmentParcelsRichList,
+  type RichParcelRow,
+} from "@/components/forwarder/shipment-parcels-rich-list";
+import { CollapsibleSection } from "@/components/forwarder/collapsible-section";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ id: string }> };
@@ -64,6 +67,28 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
     recipient: p.recipient,
     vehicle: p.vehicle,
   }));
+
+  const richParcelRows: RichParcelRow[] = shipment.parcels.map((p) => ({
+    id: p.id,
+    trackingCode: p.trackingCode,
+    status: p.status,
+    weightKg: p.weightKg != null ? Number(p.weightKg) : null,
+    price: p.price != null ? Number(p.price) : null,
+    calculatedPrice: p.calculatedPrice != null ? Number(p.calculatedPrice) : null,
+    currency: p.currency,
+    isPaid: p.isPaid,
+    client: {
+      firstName: p.client.firstName,
+      lastName: p.client.lastName,
+      city: p.client.city,
+      country: p.client.country,
+    },
+    recipient: { city: p.recipient.city, country: p.recipient.country },
+    vehicle: p.vehicle,
+  }));
+
+  const canCorrectAnyStatus =
+    session.user.forwarderRole === "OWNER" || session.user.forwarderRole === "ADMIN";
 
   // ─── KPIs synthétiques ───────────────────────────────────────────────────
   const kpis: ShipmentHeroKpis = (() => {
@@ -134,14 +159,14 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
               id="colis-du-lot"
               className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-[15px] font-medium text-hh-earth-dk">
-                    Fiches colis ({shipment.parcels.length})
+                    Fiches colis
                   </h2>
                   <p className="mt-1 text-[13px] text-hh-muted">
-                    Clique sur une ligne pour la fiche complète (contenu, photos,
-                    contacts, historique).
+                    Recherche, filtre, et action en masse. Clique sur le code
+                    pour ouvrir la fiche.
                   </p>
                 </div>
                 <ForwarderAddParcelButton
@@ -149,42 +174,11 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
                   forwarderCode5={shipment.forwarder.code5}
                 />
               </div>
-              {shipment.parcels.length === 0 ? (
-                <p className="mt-3 text-[14px] text-hh-muted">
-                  Aucun colis pour l’instant. Utilise la zone d’assignation
-                  ci-dessus ou ajoute un colis client.
-                </p>
-              ) : (
-                <ul className="mt-4 divide-y divide-hh-sand-dk/15">
-                  {shipment.parcels.map((p) => (
-                    <li key={p.id} className="py-2 first:pt-0">
-                      <Link
-                        href={`/parcels/${p.id}?fromShipment=${shipment.id}`}
-                        className="group flex flex-col gap-1 rounded-[var(--hh-radius-md)] px-2 py-2 transition-colors hover:bg-hh-sand/50 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div>
-                          <span className="font-mono text-[14px] font-medium text-hh-saffron-dk group-hover:underline">
-                            {p.trackingCode}
-                          </span>
-                          <p className="text-[13px] text-hh-muted">
-                            {p.client.firstName} {p.client.lastName}
-                            {" · "}
-                            {p.recipient.city}, {p.recipient.country}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-3">
-                          <span className="text-[12px] font-medium text-hh-earth-dk">
-                            {parcelStatusLabelFr(p.status)}
-                          </span>
-                          <span className="hidden text-[12px] font-medium text-hh-saffron-dk group-hover:underline sm:inline">
-                            Fiche →
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <ShipmentParcelsRichList
+                shipmentId={shipment.id}
+                parcels={richParcelRows}
+                canCorrectAnyStatus={canCorrectAnyStatus}
+              />
             </section>
           </>
         }
@@ -202,22 +196,39 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
           )
         }
         pricingContent={
-          <ShipmentPricingEditor
-            shipmentId={shipment.id}
-            editable={editable}
-            isMaritime={shipment.transportMode === "SEA"}
-            acceptsVehicles={shipment.acceptsVehicles}
-            pricingType={shipment.pricingType}
-            ratePerKg={shipment.ratePerKg}
-            ratePerBox={shipment.ratePerBox}
-            flatRate={shipment.flatRate}
-            ratePerVolume={shipment.ratePerVolume}
-            ratePerVehicle={shipment.ratePerVehicle}
-            volumeDivisor={shipment.volumeDivisor}
-            minimumCharge={shipment.minimumCharge}
-            currency={shipment.currency}
-            notifyClientsOnChange={shipment.parcels.length > 0}
-          />
+          <CollapsibleSection
+            title="Tarification"
+            description="Configure les règles de prix appliquées aux colis de cet envoi."
+            defaultOpen
+            badge={
+              shipment.pricingType ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                  Configurée
+                </span>
+              ) : (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                  Non configurée
+                </span>
+              )
+            }
+          >
+            <ShipmentPricingEditor
+              shipmentId={shipment.id}
+              editable={editable}
+              isMaritime={shipment.transportMode === "SEA"}
+              acceptsVehicles={shipment.acceptsVehicles}
+              pricingType={shipment.pricingType}
+              ratePerKg={shipment.ratePerKg}
+              ratePerBox={shipment.ratePerBox}
+              flatRate={shipment.flatRate}
+              ratePerVolume={shipment.ratePerVolume}
+              ratePerVehicle={shipment.ratePerVehicle}
+              volumeDivisor={shipment.volumeDivisor}
+              minimumCharge={shipment.minimumCharge}
+              currency={shipment.currency}
+              notifyClientsOnChange={shipment.parcels.length > 0}
+            />
+          </CollapsibleSection>
         }
         shareContent={
           <>
@@ -227,17 +238,23 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
                 isPublished={shipment.isPublished}
               />
             </section>
-            <ShipmentShareBlock
-              code5={shipment.forwarder.code5}
-              shipmentId={shipment.id}
-              reference={shipment.reference}
-              originCountry={shipment.originCountry}
-              destinationCountry={shipment.destinationCountry}
-              forwarderName={shipment.forwarder.name}
-              isPublished={shipment.isPublished}
-              parcelCount={shipment.parcels.length}
-              shipmentStatus={shipment.status}
-            />
+            <CollapsibleSection
+              title="Partager cet envoi"
+              description="Lien public, QR code, suppression du brouillon."
+              defaultOpen
+            >
+              <ShipmentShareBlock
+                code5={shipment.forwarder.code5}
+                shipmentId={shipment.id}
+                reference={shipment.reference}
+                originCountry={shipment.originCountry}
+                destinationCountry={shipment.destinationCountry}
+                forwarderName={shipment.forwarder.name}
+                isPublished={shipment.isPublished}
+                parcelCount={shipment.parcels.length}
+                shipmentStatus={shipment.status}
+              />
+            </CollapsibleSection>
           </>
         }
         infoContent={

@@ -24,29 +24,42 @@ export function ShipmentDetailTabs({
 }) {
   return (
     <Tabs defaultValue="parcels" className="w-full">
+      {/* Tabs classiques — bordure pleine largeur, underline épais saffron sur l'actif */}
       <TabsList
         variant="line"
-        className="-mx-1 flex w-full justify-start overflow-x-auto rounded-none border-b border-hh-sand-dk/20 bg-transparent p-0"
+        className="flex h-auto w-full items-stretch gap-0 rounded-none border-b border-hh-sand-dk/30 bg-transparent p-0"
       >
-        <TabTrigger value="parcels" icon={<Package size={14} strokeWidth={1.8} />}>
-          Colis
-          {parcelCount > 0 ? <Counter>{parcelCount}</Counter> : null}
-        </TabTrigger>
-        <TabTrigger value="requests" icon={<MessageCircle size={14} strokeWidth={1.8} />}>
-          Demandes
-          {pendingRequestsCount > 0 ? (
-            <Counter highlight>{pendingRequestsCount}</Counter>
-          ) : null}
-        </TabTrigger>
-        <TabTrigger value="pricing" icon={<Tag size={14} strokeWidth={1.8} />}>
-          Tarif
-        </TabTrigger>
-        <TabTrigger value="share" icon={<Share2 size={14} strokeWidth={1.8} />}>
-          Partage
-        </TabTrigger>
-        <TabTrigger value="info" icon={<Calendar size={14} strokeWidth={1.8} />}>
-          Infos
-        </TabTrigger>
+        <TabTrigger
+          value="parcels"
+          label="Colis"
+          icon={<Package size={18} strokeWidth={2} />}
+          counter={parcelCount > 0 ? <Counter>{parcelCount}</Counter> : null}
+        />
+        <TabTrigger
+          value="requests"
+          label="Demandes"
+          icon={<MessageCircle size={18} strokeWidth={2} />}
+          counter={
+            pendingRequestsCount > 0 ? (
+              <Counter highlight>{pendingRequestsCount}</Counter>
+            ) : null
+          }
+        />
+        <TabTrigger
+          value="pricing"
+          label="Tarif"
+          icon={<Tag size={18} strokeWidth={2} />}
+        />
+        <TabTrigger
+          value="share"
+          label="Partage"
+          icon={<Share2 size={18} strokeWidth={2} />}
+        />
+        <TabTrigger
+          value="info"
+          label="Infos"
+          icon={<Calendar size={18} strokeWidth={2} />}
+        />
       </TabsList>
 
       <TabsContent value="parcels" className="mt-5 flex flex-col gap-5">
@@ -71,24 +84,36 @@ export function ShipmentDetailTabs({
 function TabTrigger({
   value,
   icon,
-  children,
+  label,
+  counter,
 }: {
   value: string;
   icon: ReactNode;
-  children: ReactNode;
+  label: string;
+  counter?: ReactNode;
 }) {
   return (
     <TabsTrigger
       value={value}
+      aria-label={label}
+      title={label}
       className={cn(
-        "relative inline-flex h-10 items-center gap-1.5 rounded-none border-b-2 border-transparent px-3 text-[13px] font-medium text-hh-muted transition-colors hover:text-hh-earth-dk",
-        "data-[state=active]:border-hh-saffron data-[state=active]:text-hh-earth-dk data-[state=active]:bg-transparent data-[state=active]:shadow-none",
+        // Base — onglet plat, underline transparent au repos
+        "group/tab relative inline-flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-none border-0 border-b-[3px] border-transparent bg-transparent px-2 sm:px-3 pt-2.5 pb-2 -mb-px text-[13px] font-medium text-hh-muted whitespace-nowrap transition-colors",
+        // Hover
+        "hover:bg-hh-sand/50 hover:text-hh-earth-dk",
+        // Focus
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hh-saffron/40 focus-visible:ring-inset",
+        // Actif — underline saffron épais + fond saffron léger + texte foncé bold
+        "data-[state=active]:border-b-hh-saffron data-[state=active]:bg-hh-saffron-lt/40 data-[state=active]:text-hh-saffron-dk data-[state=active]:font-semibold data-[state=active]:shadow-none",
       )}
     >
-      <span className="text-hh-muted/80 group-data-[state=active]/tabs-trigger:text-hh-saffron-dk">
+      <span className="shrink-0 text-hh-muted transition-colors group-hover/tab:text-hh-earth-dk group-data-[state=active]/tab:text-hh-saffron-dk">
         {icon}
       </span>
-      {children}
+      {/* Label : caché en mobile, visible dès sm (≥640px) */}
+      <span className="hidden sm:inline">{label}</span>
+      {counter}
     </TabsTrigger>
   );
 }
@@ -97,10 +122,10 @@ function Counter({ children, highlight }: { children: ReactNode; highlight?: boo
   return (
     <span
       className={cn(
-        "ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
+        "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
         highlight
-          ? "bg-hh-saffron text-white"
-          : "bg-hh-sand-dk/30 text-hh-earth-dk",
+          ? "bg-hh-saffron text-white shadow-sm"
+          : "bg-hh-sand-dk/40 text-hh-earth-dk",
       )}
     >
       {children}

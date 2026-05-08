@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  LifeBuoy,
   Package,
   ScanLine,
   Settings,
@@ -152,6 +153,18 @@ export function ForwarderShell({
 
         <SidebarFooter className="border-t border-hh-sand-dk/15">
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Contacter le support"
+                className="text-[14px] font-normal text-hh-earth-dk hover:bg-hh-saffron/10"
+              >
+                <a href="mailto:contact@hopop.ca">
+                  <LifeBuoy className="shrink-0 text-hh-saffron-dk" />
+                  <span>Support</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <div className="flex flex-col gap-0.5 px-2 py-1.5 group-data-[collapsible=icon]:hidden">
                 <div className="flex items-center gap-2">

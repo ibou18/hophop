@@ -6,6 +6,7 @@ import {
   BarChart3,
   Building2,
   LayoutDashboard,
+  LifeBuoy,
   Truck,
   Users,
 } from "lucide-react";
@@ -122,6 +123,18 @@ export function AdminShell({
 
         <SidebarFooter className="border-t border-slate-700/50">
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Contacter le support"
+                className="text-[14px] font-normal text-slate-200 hover:bg-violet-500/15 hover:text-white"
+              >
+                <a href="mailto:contact@hopop.ca">
+                  <LifeBuoy className="shrink-0 text-violet-400" />
+                  <span>Support</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <div className="flex flex-col gap-0.5 px-2 py-1.5 group-data-[collapsible=icon]:hidden">
                 <p className="truncate text-[13px] font-medium text-slate-200">Admin</p>

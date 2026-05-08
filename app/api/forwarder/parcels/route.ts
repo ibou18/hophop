@@ -77,13 +77,20 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
-  // Vérifier que le client est lié à ce transitaire
-  const link = await prisma.clientForwarder.findUnique({
+  // Vérifier que le client existe, et le lier au transitaire si ce n'est pas encore fait
+  const clientExists = await prisma.client.findUnique({
+    where: { id: data.clientId, isActive: true },
+    select: { id: true },
+  });
+  if (!clientExists) return jsonError("Client introuvable", 404);
+
+  await prisma.clientForwarder.upsert({
     where: {
       clientId_forwarderId: { clientId: data.clientId, forwarderId: auth.forwarderId },
     },
+    create: { clientId: data.clientId, forwarderId: auth.forwarderId },
+    update: {},
   });
-  if (!link) return jsonError("Client introuvable ou non lié", 403);
 
   // Vérifier que le shipment appartient à ce transitaire
   const shipment = await prisma.shipment.findFirst({
