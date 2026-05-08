@@ -8,9 +8,9 @@ import { Testimonials } from "@/components/landing/testimonials";
 import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
 import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
 
-const HOME_TITLE = "Hophop | Envoi et suivi colis diaspora Afrique";
+const HOME_TITLE = "hOpOp | Envoi et suivi colis diaspora Afrique";
 const HOME_DESCRIPTION =
-  "Envoie et suis tes colis entre diaspora et Afrique avec Hophop. Suivi en temps reel, transitaires verifies, livraisons plus sereines.";
+  "Envoie et suis tes colis entre diaspora et Afrique avec hOpOp. Suivi en temps reel, transitaires verifies, livraisons plus sereines.";
 
 export const metadata: Metadata = {
   title: HOME_TITLE,
@@ -24,19 +24,19 @@ export const metadata: Metadata = {
     "transitaire Afrique",
     "expedition France Afrique",
     "livraison colis Afrique",
-    "Hophop",
+    "hOpOp",
   ],
   openGraph: {
     type: "website",
     url: "/",
-    siteName: "Hophop",
+    siteName: "hOpOp",
     locale: "fr_FR",
     title: HOME_TITLE,
     description: HOME_DESCRIPTION,
     images: [
       {
         url: "/assets/logos/logo-b.png",
-        alt: "Hophop - Envoi et suivi de colis",
+        alt: "hOpOp - Envoi et suivi de colis",
       },
     ],
   },
@@ -66,13 +66,13 @@ export default async function Home() {
     "@graph": [
       {
         "@type": "Organization",
-        name: "Hophop",
+        name: "hOpOp",
         url: "/",
         logo: "/assets/logos/logo-b.png",
       },
       {
         "@type": "WebSite",
-        name: "Hophop",
+        name: "hOpOp",
         url: "/",
         inLanguage: "fr",
         description: HOME_DESCRIPTION,
@@ -145,7 +145,7 @@ export default async function Home() {
               </Link>
             </nav>
             <p className="text-xs text-hh-muted">
-              © {new Date().getFullYear()} Hophop — Chaleureux, fiable.
+              © {new Date().getFullYear()} hOpOp — Chaleureux, fiable.
             </p>
           </div>
         </div>

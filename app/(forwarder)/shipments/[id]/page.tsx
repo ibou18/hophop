@@ -20,6 +20,7 @@ import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-
 import { ShipmentShareBlock } from "@/components/forwarder/shipment-share-block";
 import { ShipmentPricingEditor } from "@/components/forwarder/shipment-pricing-editor";
 import { ShipmentBasicInfoEditor } from "@/components/forwarder/shipment-basic-info-editor";
+import { ForwarderAddParcelButton } from "@/components/forwarder/forwarder-add-parcel-button";
 import { TransportModeBadge } from "@/components/transport-mode-selector";
 import type { Metadata } from "next";
 
@@ -203,13 +204,21 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         id="colis-du-lot"
         className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm"
       >
-        <h2 className="text-[15px] font-medium text-hh-earth-dk">
-          Colis du lot ({shipment.parcels.length})
-        </h2>
-        <p className="mt-1 text-[13px] text-hh-muted">
-          Clique sur une ligne pour ouvrir la fiche complète (contenu, photos,
-          contacts, historique).
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-medium text-hh-earth-dk">
+              Colis du lot ({shipment.parcels.length})
+            </h2>
+            <p className="mt-1 text-[13px] text-hh-muted">
+              Clique sur une ligne pour ouvrir la fiche complète (contenu, photos,
+              contacts, historique).
+            </p>
+          </div>
+          <ForwarderAddParcelButton
+            shipmentId={shipment.id}
+            forwarderCode5={shipment.forwarder.code5}
+          />
+        </div>
         {shipment.parcels.length === 0 ? (
           <p className="mt-3 text-[14px] text-hh-muted">
             Aucun colis pour l’instant. Utilise la section ci-dessus pour en
