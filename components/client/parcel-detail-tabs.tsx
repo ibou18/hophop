@@ -24,7 +24,7 @@ export function ParcelDetailTabs({
     <Tabs defaultValue="tracking" className="w-full">
       <TabsList
         variant="line"
-        className="-mx-1 flex w-full justify-start overflow-x-auto rounded-none border-b border-hh-sand-dk/20 bg-transparent p-0"
+        className="flex w-full rounded-none border-b border-hh-sand-dk/20 bg-transparent p-0"
       >
         <TabTrigger value="tracking" icon={<Clock size={14} strokeWidth={1.8} />}>
           Suivi
@@ -79,12 +79,12 @@ function TabTrigger({
     <TabsTrigger
       value={value}
       className={cn(
-        "relative inline-flex h-10 items-center gap-1.5 rounded-none border-b-2 border-transparent px-3 text-[13px] font-medium text-hh-muted transition-colors hover:text-hh-earth-dk",
+        "relative flex h-11 flex-1 items-center justify-center gap-1.5 rounded-none border-b-2 border-transparent px-2 text-[13px] font-medium text-hh-muted transition-colors hover:text-hh-earth-dk",
         "data-[state=active]:border-hh-saffron data-[state=active]:text-hh-earth-dk data-[state=active]:bg-transparent data-[state=active]:shadow-none",
       )}
     >
-      <span className="text-hh-muted/80">{icon}</span>
-      {children}
+      <span className="text-hh-muted/80 data-[state=active]:text-hh-saffron-dk">{icon}</span>
+      <span className="hidden sm:inline">{children}</span>
     </TabsTrigger>
   );
 }
