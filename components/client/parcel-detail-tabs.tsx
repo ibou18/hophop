@@ -83,8 +83,8 @@ function TabTrigger({
         "data-[state=active]:border-hh-saffron data-[state=active]:text-hh-earth-dk data-[state=active]:bg-transparent data-[state=active]:shadow-none",
       )}
     >
-      <span className="text-hh-muted/80">{icon}</span>
-      {children}
+      <span className="text-hh-muted/80 data-[state=active]:text-hh-saffron-dk">{icon}</span>
+      <span className="hidden sm:inline">{children}</span>
     </TabsTrigger>
   );
 }
