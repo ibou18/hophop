@@ -237,6 +237,7 @@ model Forwarder {
   expoPushTokens ExpoPushToken[]
   members        ForwarderUser[]
   invitations    ForwarderInvitation[]
+  loginLogs      LoginLog[]
 
   @@map("forwarders")
 }
@@ -338,6 +339,7 @@ model Client {
   notifications    Notification[]
   shipmentRequests ShipmentRequest[]
   expoPushTokens   ExpoPushToken[]
+  loginLogs        LoginLog[]
 
   @@map("clients")
 }
@@ -724,4 +726,28 @@ model Notification {
 
   @@index([status, createdAt])
   @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// LOGIN LOG — Historique d'authentification
+// ─────────────────────────────────────────────
+
+model LoginLog {
+  id   String @id @default(uuid())
+
+  // Qui s'est connecté : soit un client, soit un forwarder
+  clientId    String?
+  forwarderId String?
+
+  loginAt   DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  // Relations
+  client    Client?    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  forwarder Forwarder? @relation(fields: [forwarderId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, loginAt])
+  @@index([forwarderId, loginAt])
+  @@map("login_logs")
 }
