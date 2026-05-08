@@ -1,26 +1,22 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock, FileText, Building2, QrCode, PlusCircle } from "lucide-react";
+import { Clock, FileText, User, QrCode } from "lucide-react";
 import {
   ParcelDetailTabsBase,
   type ParcelDetailTabItem,
 } from "@/components/shared/parcel-detail-tabs-base";
 
-export function ParcelDetailTabs({
-  hasJoinPanel,
+export function ForwarderParcelDetailTabs({
   trackingContent,
   detailsContent,
-  forwarderContent,
+  clientContent,
   qrContent,
-  joinContent,
 }: {
-  hasJoinPanel: boolean;
   trackingContent: ReactNode;
   detailsContent: ReactNode;
-  forwarderContent: ReactNode;
+  clientContent: ReactNode;
   qrContent: ReactNode;
-  joinContent: ReactNode;
 }) {
   const tabs: ParcelDetailTabItem[] = [
     {
@@ -36,10 +32,10 @@ export function ParcelDetailTabs({
       content: detailsContent,
     },
     {
-      value: "forwarder",
-      label: "Transitaire",
-      icon: <Building2 size={14} strokeWidth={1.8} />,
-      content: forwarderContent,
+      value: "client",
+      label: "Client",
+      icon: <User size={14} strokeWidth={1.8} />,
+      content: clientContent,
     },
     {
       value: "qr",
@@ -47,16 +43,6 @@ export function ParcelDetailTabs({
       icon: <QrCode size={14} strokeWidth={1.8} />,
       content: qrContent,
     },
-    ...(hasJoinPanel
-      ? [
-          {
-            value: "join",
-            label: "Rejoindre",
-            icon: <PlusCircle size={14} strokeWidth={1.8} />,
-            content: joinContent,
-          } satisfies ParcelDetailTabItem,
-        ]
-      : []),
   ];
 
   return (
