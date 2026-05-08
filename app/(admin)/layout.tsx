@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const metadata: Metadata = {
-  title: "Admin — Hophop",
+  title: "Admin — hOpOp",
 };
 
 export default async function AdminLayout({

@@ -22,24 +22,24 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(getAppBaseUrl()),
   title: {
-    default: "Hophop — Suivi de colis & transitaires",
-    template: "%s | Hophop",
+    default: "hOpOp — Suivi de colis & transitaires",
+    template: "%s | hOpOp",
   },
   description:
-    "Hophop relie transitaires et familles en Afrique et dans la diaspora. Suivez vos colis en temps réel, du départ à la livraison.",
-  applicationName: "Hophop",
-  authors: [{ name: "Hophop" }],
+    "hOpOp relie transitaires et familles en Afrique et dans la diaspora. Suivez vos colis en temps réel, du départ à la livraison.",
+  applicationName: "hOpOp",
+  authors: [{ name: "hOpOp" }],
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "Hophop",
-    title: "Hophop — Suivi de colis & transitaires",
+    siteName: "hOpOp",
+    title: "hOpOp — Suivi de colis & transitaires",
     description:
       "La plateforme de suivi pensée pour la diaspora ouest-africaine. Vos colis tracés à chaque étape.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hophop — Suivi de colis & transitaires",
+    title: "hOpOp — Suivi de colis & transitaires",
     description:
       "La plateforme de suivi pensée pour la diaspora ouest-africaine.",
   },
