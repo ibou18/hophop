@@ -733,7 +733,7 @@ model Notification {
 // ─────────────────────────────────────────────
 
 model LoginLog {
-  id   String @id @default(uuid())
+  id String @id @default(uuid())
 
   // Qui s'est connecté : soit un client, soit un forwarder
   clientId    String?
