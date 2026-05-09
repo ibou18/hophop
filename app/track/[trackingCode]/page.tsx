@@ -11,7 +11,32 @@ type Props = { params: Promise<{ trackingCode: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { trackingCode } = await params;
-  return { title: `Suivi ${decodeURIComponent(trackingCode)}` };
+  const code = decodeURIComponent(trackingCode).trim().toUpperCase();
+  const title = `Suivi du colis ${code}`;
+  const description = `Suivi en temps réel du colis ${code} sur hOpOp : prise en charge, départ, arrivée, livraison.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/track/${code}` },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      siteName: "hOpOp",
+      locale: "fr_FR",
+    },
+    twitter: { card: "summary_large_image", title, description },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+  };
 }
 
 export default async function PublicTrackingPage({ params }: Props) {

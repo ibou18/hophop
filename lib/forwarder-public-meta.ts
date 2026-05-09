@@ -46,7 +46,7 @@ export function uniqueCountries(
   };
 }
 
-/** Construit un JSON-LD LocalBusiness pour un transitaire */
+/** Construit un JSON-LD @graph (LocalBusiness + Breadcrumb) pour un transitaire */
 export function buildForwarderJsonLd(input: {
   name: string;
   code5: string;
@@ -62,15 +62,16 @@ export function buildForwarderJsonLd(input: {
   logoUrl: string | null;
   destinationCountries: Country[];
 }) {
-  const url = `${getAppBaseUrl()}/p/${input.code5}`;
+  const base = getAppBaseUrl();
+  const url = `${base}/p/${input.code5}`;
   const areaServed = input.destinationCountries.map((c) => ({
     "@type": "Country",
     name: countryLabelFr(c as Country),
   }));
 
-  const ld: Record<string, unknown> = {
-    "@context": "https://schema.org",
+  const business: Record<string, unknown> = {
     "@type": "MovingCompany",
+    "@id": `${url}#business`,
     name: input.name,
     url,
     email: input.email,
@@ -87,16 +88,44 @@ export function buildForwarderJsonLd(input: {
     sameAs: [url],
   };
 
-  if (input.phone) ld.telephone = input.phone;
-  if (input.logoUrl) ld.image = input.logoUrl;
+  if (input.phone) business.telephone = input.phone;
+  if (input.logoUrl) business.image = input.logoUrl;
   if (input.latitude != null && input.longitude != null) {
-    ld.geo = {
+    business.geo = {
       "@type": "GeoCoordinates",
       latitude: input.latitude,
       longitude: input.longitude,
     };
   }
-  if (areaServed.length > 0) ld.areaServed = areaServed;
+  if (areaServed.length > 0) business.areaServed = areaServed;
 
-  return ld;
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    "@id": `${url}#breadcrumb`,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Accueil",
+        item: `${base}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Transitaires",
+        item: `${base}/p`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: input.name,
+        item: url,
+      },
+    ],
+  };
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [business, breadcrumb],
+  };
 }
