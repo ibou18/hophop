@@ -23,6 +23,7 @@ export default function Image() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div
             style={{
+              display: "flex",
               fontSize: 64,
               fontWeight: 700,
               letterSpacing: "-0.04em",
