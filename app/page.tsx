@@ -7,10 +7,34 @@ import { ScrollSections } from "@/components/landing/scroll-section";
 import { Testimonials } from "@/components/landing/testimonials";
 import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
 import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
+import { getAppBaseUrl } from "@/lib/mail/app-url";
 
 const HOME_TITLE = "hOpOp | Envoi et suivi colis diaspora Afrique";
 const HOME_DESCRIPTION =
   "Envoie et suis tes colis entre diaspora et Afrique avec hOpOp. Suivi en temps reel, transitaires verifies, livraisons plus sereines.";
+
+const HOME_FAQ: Array<{ q: string; a: string }> = [
+  {
+    q: "Comment suivre un colis envoyé via hOpOp ?",
+    a: "Saisis le code de suivi (format HOP-…) qui figure sur ton étiquette ou dans le message de ton transitaire sur la page d'accueil ou via /track/{code}. Tu vois en temps réel chaque étape : prise en charge, départ, arrivée et livraison.",
+  },
+  {
+    q: "Quels pays sont desservis par hOpOp ?",
+    a: "hOpOp relie la diaspora (France, Belgique, Suisse, Canada, États-Unis) à l'Afrique de l'Ouest et centrale : Sénégal, Côte d'Ivoire, Mali, Guinée, Cameroun, Togo, Burkina Faso, Nigeria, Gambie.",
+  },
+  {
+    q: "Comment trouver un transitaire de confiance ?",
+    a: "Chaque transitaire dispose d'une page publique sur hOpOp (/p/{code5}) avec ses départs à venir, ses routes, ses tarifs et ses coordonnées. Les transitaires actifs sont vérifiés par notre équipe.",
+  },
+  {
+    q: "hOpOp est-il gratuit pour les expéditeurs ?",
+    a: "Oui. Créer un compte client et suivre ses colis est gratuit. Les frais d'envoi dépendent du transitaire que tu choisis (au kilo, au volume, au carton ou forfait).",
+  },
+  {
+    q: "Quels modes de transport sont disponibles ?",
+    a: "Aérien (rapide), maritime (économique) et routier selon les routes proposées par le transitaire.",
+  },
+];
 
 export const metadata: Metadata = {
   title: HOME_TITLE,
@@ -24,6 +48,9 @@ export const metadata: Metadata = {
     "transitaire Afrique",
     "expedition France Afrique",
     "livraison colis Afrique",
+    "groupage colis Sénégal",
+    "groupage colis Côte d'Ivoire",
+    "cargo diaspora",
     "hOpOp",
   ],
   openGraph: {
@@ -33,18 +60,11 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     title: HOME_TITLE,
     description: HOME_DESCRIPTION,
-    images: [
-      {
-        url: "/assets/logos/logo-b.png",
-        alt: "hOpOp - Envoi et suivi de colis",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: HOME_TITLE,
     description: HOME_DESCRIPTION,
-    images: ["/assets/logos/logo-b.png"],
   },
   robots: {
     index: true,
@@ -61,21 +81,83 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const upcomingShipments = await getPublicUpcomingShipments();
+  const base = getAppBaseUrl();
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Organization",
+        "@id": `${base}/#organization`,
         name: "hOpOp",
-        url: "/",
-        logo: "/assets/logos/logo-b.png",
+        url: base,
+        logo: `${base}/assets/logos/logo-b.png`,
+        description: HOME_DESCRIPTION,
+        areaServed: [
+          "FR",
+          "BE",
+          "CH",
+          "CA",
+          "US",
+          "SN",
+          "CI",
+          "ML",
+          "GN",
+          "CM",
+          "TG",
+          "BF",
+          "NG",
+          "GM",
+        ],
       },
       {
         "@type": "WebSite",
+        "@id": `${base}/#website`,
         name: "hOpOp",
-        url: "/",
+        url: base,
         inLanguage: "fr",
         description: HOME_DESCRIPTION,
+        publisher: { "@id": `${base}/#organization` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${base}/track/{search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Service",
+        "@id": `${base}/#service`,
+        name: "Suivi de colis et mise en relation transitaires",
+        serviceType: "Parcel forwarding & tracking",
+        provider: { "@id": `${base}/#organization` },
+        areaServed: [
+          { "@type": "Country", name: "Sénégal" },
+          { "@type": "Country", name: "Côte d'Ivoire" },
+          { "@type": "Country", name: "Mali" },
+          { "@type": "Country", name: "Guinée" },
+          { "@type": "Country", name: "Cameroun" },
+          { "@type": "Country", name: "Togo" },
+          { "@type": "Country", name: "Burkina Faso" },
+          { "@type": "Country", name: "Nigeria" },
+          { "@type": "Country", name: "Gambie" },
+        ],
+        audience: {
+          "@type": "Audience",
+          audienceType: "Diaspora ouest-africaine",
+        },
+        description: HOME_DESCRIPTION,
+        url: base,
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${base}/#faq`,
+        mainEntity: HOME_FAQ.map(({ q, a }) => ({
+          "@type": "Question",
+          name: q,
+          acceptedAnswer: { "@type": "Answer", text: a },
+        })),
       },
     ],
   };

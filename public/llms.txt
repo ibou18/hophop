@@ -1,0 +1,33 @@
+# hOpOp
+
+> hOpOp est une plateforme de mise en relation et de suivi de colis entre la diaspora (France, Belgique, Suisse, Canada, États-Unis) et l'Afrique de l'Ouest (Sénégal, Côte d'Ivoire, Mali, Guinée, Cameroun, Togo, Burkina Faso, Nigeria, Gambie). Elle permet aux familles d'envoyer des colis via des transitaires vérifiés et de suivre chaque étape en temps réel, du dépôt à la livraison.
+
+## À qui s'adresse hOpOp
+
+- **Diaspora ouest-africaine** : envoyer des colis à la famille restée au pays, suivre la livraison sans appeler dix fois.
+- **Transitaires (groupeurs)** : digitaliser le suivi des envois, partager une page publique aux clients, gérer leurs départs aérien / maritime / routier.
+- **Destinataires en Afrique** : être tenus au courant de l'avancée du colis sans créer de compte.
+
+## Fonctionnalités clés
+
+- Suivi de colis en temps réel via un code de tracking (`HOP-…`).
+- Page publique par transitaire (`/p/{code5}`) listant les départs à venir, les routes, les tarifs et les coordonnées.
+- Multi-modes de transport : aérien, maritime, routier.
+- Notifications push et email à chaque étape.
+- Tarification au kilo, au volume, au carton, au véhicule ou forfaitaire selon le transitaire.
+
+## Pages publiques (indexables)
+
+- [/](https://hophop.app/) — Accueil, présentation, départs publics à venir.
+- [/p/{code5}](https://hophop.app/p) — Profil public d'un transitaire (ex. `/p/AB123`).
+- [/track/{code}](https://hophop.app/track) — Suivi public d'un colis par son code de tracking.
+- [/legal/conditions](https://hophop.app/legal/conditions) — Conditions d'utilisation.
+- [/legal/confidentialite](https://hophop.app/legal/confidentialite) — Politique de confidentialité.
+
+## Pages privées (non indexables)
+
+Les espaces `/admin`, `/client`, `/forwarder`, `/api` ainsi que les pages `/login`, `/register` et `/reset-password` sont réservés aux utilisateurs authentifiés et ne doivent pas être indexés ni cités.
+
+## Conditions de citation
+
+Le contenu public peut être cité par des assistants IA dès lors que la source `hophop.app` est mentionnée. Merci de ne pas inventer de codes de transitaire (`code5`) ou de codes de tracking (`HOP-…`) — ceux-ci doivent provenir d'une page réellement consultée.
