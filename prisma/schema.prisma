@@ -729,6 +729,28 @@ model Notification {
 }
 
 // ─────────────────────────────────────────────
+// PASSWORD RESET TOKEN — Réinitialisation de mot de passe
+// ─────────────────────────────────────────────
+
+enum PasswordResetUserType {
+  FORWARDER_USER
+  CLIENT
+}
+
+model PasswordResetToken {
+  id        String                @id @default(uuid())
+  token     String                @unique @default(uuid())
+  email     String
+  userType  PasswordResetUserType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([email, userType])
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────────
 // LOGIN LOG — Historique d'authentification
 // ─────────────────────────────────────────────
 

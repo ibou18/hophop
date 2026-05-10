@@ -265,9 +265,18 @@ export function LoginForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-[13px] font-medium text-hh-muted">
-                  Mot de passe
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-[13px] font-medium text-hh-muted">
+                    Mot de passe
+                  </Label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-[12px] font-medium text-hh-saffron-dk underline-offset-4 transition hover:text-hh-earth-dk hover:underline"
+                    tabIndex={-1}
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   name="password"
@@ -315,9 +324,18 @@ export function LoginForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cpassword" className="text-[13px] font-medium text-hh-muted">
-                  Mot de passe
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="cpassword" className="text-[13px] font-medium text-hh-muted">
+                    Mot de passe
+                  </Label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-[12px] font-medium text-hh-saffron-dk underline-offset-4 transition hover:text-hh-earth-dk hover:underline"
+                    tabIndex={-1}
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
                 <Input
                   id="cpassword"
                   name="password"
