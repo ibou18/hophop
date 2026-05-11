@@ -15,6 +15,7 @@ import { DeclareVehicleForm } from "@/components/client/declare-vehicle-form";
 import { DeclareModeToggle } from "@/components/client/declare-mode-toggle";
 import { ShipmentsCatalog } from "@/components/client/shipments-catalog";
 import { Package } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Déclarer un colis" };
 
@@ -72,11 +73,35 @@ export default async function DeclarePage({ searchParams }: PageProps) {
               Aucun envoi ouvert pour le moment
             </p>
             <p className="mt-1 text-[13px] text-hh-muted">
-              Reviens plus tard ou contacte directement un transitaire.
+              Reviens plus tard ou fais une demande — un transitaire te contactera.
             </p>
+            <Link
+              href="/client/parcel-requests/new"
+              className="mt-5 inline-block rounded-xl bg-hh-saffron px-5 py-2.5 text-[13px] font-semibold text-white hover:opacity-90"
+            >
+              Faire une demande de colis
+            </Link>
           </div>
         ) : (
-          <ShipmentsCatalog rows={rows} filterCode5={forwarderParam || undefined} />
+          <>
+            <ShipmentsCatalog rows={rows} filterCode5={forwarderParam || undefined} />
+            <div className="mt-6 rounded-2xl border border-hh-sand-dk/20 bg-white px-6 py-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+              <div>
+                <p className="text-[14px] font-semibold text-hh-earth-dk">
+                  Aucun envoi ne vous convient ?
+                </p>
+                <p className="mt-0.5 text-[13px] text-hh-muted">
+                  Faites une demande de colis — les transitaires sur votre route vous enverront une offre.
+                </p>
+              </div>
+              <Link
+                href="/client/parcel-requests/new"
+                className="shrink-0 rounded-xl border border-hh-saffron px-5 py-2.5 text-[13px] font-semibold text-hh-saffron hover:bg-hh-saffron hover:text-white transition-colors"
+              >
+                Faire une demande
+              </Link>
+            </div>
+          </>
         )}
       </div>
     );

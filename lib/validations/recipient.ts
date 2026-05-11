@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-const country = z.enum(["CA", "FR", "GN", "SN", "CI", "CM"] as const);
+const country = z.enum([
+  "CA", "FR", "GN", "SN", "CI", "CM", "TG", "BF", "NG", "BE", "CH", "US", "GM", "ML",
+] as const);
 
 export const createRecipientSchema = z.object({
   firstName: z.string().min(1),
