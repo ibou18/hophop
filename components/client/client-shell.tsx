@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Inbox,
   LayoutDashboard,
   LifeBuoy,
   Package,
@@ -16,18 +17,22 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/client/dashboard",  label: "Accueil",    icon: LayoutDashboard },
-  { href: "/client/shipments",  label: "Envois",     icon: Truck },
-  { href: "/client/parcels",    label: "Mes colis",  icon: Package },
-  { href: "/client/declare",    label: "Déclarer",   icon: PlusCircle },
-  { href: "/client/recipients", label: "Proches",    icon: Users },
-  { href: "/client/settings",   label: "Paramètres", icon: Settings },
+  { href: "/client/dashboard", label: "Accueil", icon: LayoutDashboard },
+  { href: "/client/shipments", label: "Envois", icon: Truck },
+  { href: "/client/parcels", label: "Mes colis", icon: Package },
+  { href: "/client/parcel-requests", label: "Mes Demandes", icon: Inbox },
+  { href: "/client/declare", label: "Déclarer", icon: PlusCircle },
+  { href: "/client/recipients", label: "Proches", icon: Users },
+  { href: "/client/settings", label: "Paramètres", icon: Settings },
 ] as const;
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/client/dashboard") return pathname === "/client/dashboard";
   if (href === "/client/shipments") {
-    return pathname === "/client/shipments" || pathname.startsWith("/client/shipments/");
+    return (
+      pathname === "/client/shipments" ||
+      pathname.startsWith("/client/shipments/")
+    );
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -94,7 +99,7 @@ export function ClientShell({
                     "flex items-center gap-3 rounded-[var(--hh-radius-md)] px-3 py-2.5 text-[14px] font-normal transition-colors",
                     active
                       ? "bg-hh-saffron text-white"
-                      : "text-hh-earth-dk hover:bg-hh-saffron/10"
+                      : "text-hh-earth-dk hover:bg-hh-saffron/10",
                   )}
                 >
                   <item.icon
@@ -116,7 +121,9 @@ export function ClientShell({
               Contacter le support
             </a>
             <div className="rounded-[var(--hh-radius-md)] bg-hh-saffron-lt/50 px-3 py-3">
-              <p className="text-[13px] font-medium text-hh-earth-dk">{user.name}</p>
+              <p className="text-[13px] font-medium text-hh-earth-dk">
+                {user.name}
+              </p>
               <p className="mt-0.5 text-[11px] text-hh-muted">{user.email}</p>
             </div>
           </div>
@@ -146,7 +153,7 @@ export function ClientShell({
               <span
                 className={cn(
                   "text-[10px] font-medium",
-                  active ? "text-hh-saffron-dk" : "text-hh-muted"
+                  active ? "text-hh-saffron-dk" : "text-hh-muted",
                 )}
               >
                 {item.label}

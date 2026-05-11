@@ -8,7 +8,6 @@ import {
   Check,
   ImagePlus,
   Loader2,
-  Minus,
   Package,
   Plus,
   Search,
@@ -27,19 +26,13 @@ import {
 } from "@/lib/pricing";
 import type { Country, TransportMode } from "@/app/generated/prisma/enums";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
+import {
+  ParcelContentSelection,
+  type ParcelContentLine,
+} from "@/components/client/parcel-content-selection";
 import { toE164 } from "@/lib/phone-e164";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type Category =
-  | "CLOTHING"
-  | "ELECTRONICS"
-  | "FOOD"
-  | "COSMETICS"
-  | "DOCUMENTS"
-  | "OTHER";
-
-type ParcelItem = { name: string; quantity: number; category: Category };
 
 type FoundClient = {
   id: string;
@@ -72,7 +65,7 @@ type WizardState = {
     city: string;
     country: string;
   } | null;
-  items: ParcelItem[];
+  items: ParcelContentLine[];
   weightKg: string;
   lengthCm: string;
   widthCm: string;
@@ -83,15 +76,6 @@ type WizardState = {
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const CATEGORIES: { value: Category; icon: string; label: string }[] = [
-  { value: "CLOTHING", icon: "👕", label: "Vêtements" },
-  { value: "ELECTRONICS", icon: "📱", label: "Électronique" },
-  { value: "COSMETICS", icon: "🧴", label: "Cosmétiques" },
-  { value: "FOOD", icon: "🍱", label: "Alimentaire" },
-  { value: "DOCUMENTS", icon: "📄", label: "Documents" },
-  { value: "OTHER", icon: "📦", label: "Autre" },
-];
 
 const STEPS = ["Client", "Destinataire", "Contenu", "Dimensions", "Photos", "Récapitulatif"];
 
@@ -376,7 +360,10 @@ export function AddParcelWizard({
           />
         )}
         {step === 2 && (
-          <StepContent items={state.items} setItems={(items) => update({ items })} />
+          <ParcelContentSelection
+            items={state.items}
+            onItemsChange={(items) => update({ items })}
+          />
         )}
         {step === 3 && (
           <StepDimensions
@@ -865,105 +852,6 @@ function StepRecipient({
               placeholder="Conakry"
             />
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Step 2: Content ──────────────────────────────────────────────────────────
-
-function StepContent({
-  items,
-  setItems,
-}: {
-  items: ParcelItem[];
-  setItems: (items: ParcelItem[]) => void;
-}) {
-  function toggle(cat: Category) {
-    const existing = items.find((i) => i.category === cat);
-    if (existing) {
-      setItems(items.filter((i) => i.category !== cat));
-    } else {
-      setItems([
-        ...items,
-        { category: cat, name: CATEGORIES.find((c) => c.value === cat)!.label, quantity: 1 },
-      ]);
-    }
-  }
-
-  function updateQty(cat: Category, delta: number) {
-    setItems(
-      items.map((item) =>
-        item.category === cat ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
-      ),
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-[16px] font-medium text-hh-earth-dk">Contenu du colis</h2>
-        <p className="mt-0.5 text-[12px] text-hh-muted">Sélectionne les catégories.</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {CATEGORIES.map((cat) => {
-          const selected = items.find((i) => i.category === cat.value);
-          return (
-            <button
-              key={cat.value}
-              type="button"
-              onClick={() => toggle(cat.value)}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 transition-colors",
-                selected
-                  ? "border-hh-saffron bg-hh-saffron-lt"
-                  : "border-transparent bg-hh-sand hover:border-hh-sand-dk",
-              )}
-            >
-              <span style={{ fontSize: 22 }}>{cat.icon}</span>
-              <span
-                className={cn(
-                  "text-[11px]",
-                  selected ? "font-medium text-hh-saffron-dk" : "text-hh-muted",
-                )}
-              >
-                {cat.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {items.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-hh-sand-dk/15 pt-3">
-          <p className="text-[11px] font-medium text-hh-muted">Quantités</p>
-          {items.map((item) => (
-            <div
-              key={item.category}
-              className="flex items-center justify-between rounded-[var(--hh-radius-md)] bg-hh-sand px-3 py-2"
-            >
-              <span className="text-[13px] text-hh-earth-dk">{item.name}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateQty(item.category, -1)}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-hh-earth-dk hover:bg-hh-sand-dk/30"
-                >
-                  <Minus size={12} strokeWidth={2} />
-                </button>
-                <span className="w-5 text-center text-[13px] font-medium">{item.quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => updateQty(item.category, 1)}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-hh-earth-dk hover:bg-hh-sand-dk/30"
-                >
-                  <Plus size={12} strokeWidth={2} />
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </div>

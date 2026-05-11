@@ -30,7 +30,7 @@ function destinationLabel(p: ParcelLike): string {
 
 export function emailSubject(
   type: NotificationType,
-  trackingCode: string
+  trackingCode: string,
 ): string {
   const t = trackingCode;
   switch (type) {
@@ -60,7 +60,7 @@ export function emailSubject(
 export function buildHophopEmail(
   type: NotificationType,
   parcel: ParcelLike,
-  extra?: { shipmentReference?: string }
+  extra?: { shipmentReference?: string },
 ): HophopEmailProps {
   const base = getAppBaseUrl();
   const fwd = parcel.forwarder.name;
@@ -71,6 +71,7 @@ export function buildHophopEmail(
   const trackUrl = `${base}/track/${encodeURIComponent(tc)}`;
   const clientParcelUrl = `${base}/client/parcels/${parcel.id}`;
   const forwarderParcelUrl = `${base}/parcels/${parcel.id}`;
+  const parcelLabelUrl = `${base}/api/parcels/${parcel.id}/label`;
 
   switch (type) {
     case "PARCEL_REGISTERED":
@@ -82,9 +83,12 @@ export function buildHophopEmail(
           parcel.description
             ? `Description indiquée : ${parcel.description}`
             : "Vous pouvez suivre son avancement à tout moment.",
+          "Vous pouvez télécharger et imprimer votre étiquette d'expédition ci-dessous.",
         ].filter(Boolean) as string[],
         ctaText: "Voir mon colis",
         ctaUrl: clientParcelUrl,
+        secondaryCtaText: "Imprimer l'étiquette",
+        secondaryCtaUrl: parcelLabelUrl,
         forwarderName: fwd,
         logoUrl: logo,
         trackingCode: tc,
@@ -185,9 +189,7 @@ export function buildHophopEmail(
       return {
         preview: `Votre demande pour le colis ${tc} est acceptée.`,
         title: "Demande acceptée",
-        lines: [
-          `Votre colis ${tc} a été intégré à l'envoi ${ref}.`,
-        ],
+        lines: [`Votre colis ${tc} a été intégré à l'envoi ${ref}.`],
         ctaText: "Voir mon colis",
         ctaUrl: clientParcelUrl,
         forwarderName: fwd,

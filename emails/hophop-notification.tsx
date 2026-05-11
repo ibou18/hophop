@@ -19,6 +19,9 @@ export type HophopEmailProps = {
   lines: string[];
   ctaText?: string;
   ctaUrl?: string;
+  /** Bouton secondaire (ex. étiquette PDF) */
+  secondaryCtaText?: string;
+  secondaryCtaUrl?: string;
   forwarderName: string;
   logoUrl?: string | null;
   trackingCode: string;
@@ -30,6 +33,8 @@ export function HophopNotificationEmail({
   lines,
   ctaText,
   ctaUrl,
+  secondaryCtaText,
+  secondaryCtaUrl,
   forwarderName,
   logoUrl,
   trackingCode,
@@ -56,6 +61,13 @@ export function HophopNotificationEmail({
             <Section style={btnSection}>
               <Button href={ctaUrl} style={button}>
                 {ctaText}
+              </Button>
+            </Section>
+          ) : null}
+          {secondaryCtaText && secondaryCtaUrl ? (
+            <Section style={btnSectionSecondary}>
+              <Button href={secondaryCtaUrl} style={buttonOutline}>
+                {secondaryCtaText}
               </Button>
             </Section>
           ) : null}
@@ -108,7 +120,12 @@ const text = {
   margin: "0 0 12px",
 };
 
-const btnSection = { textAlign: "left" as const, margin: "24px 0" };
+const btnSection = { textAlign: "left" as const, margin: "24px 0 0" };
+
+const btnSectionSecondary = {
+  textAlign: "left" as const,
+  margin: "12px 0 0",
+};
 
 const button = {
   backgroundColor: "#18181b",
@@ -118,6 +135,18 @@ const button = {
   fontSize: "15px",
   fontWeight: "600",
   padding: "12px 20px",
+  textDecoration: "none",
+};
+
+const buttonOutline = {
+  backgroundColor: "#ffffff",
+  border: "2px solid #18181b",
+  borderRadius: "8px",
+  color: "#18181b",
+  display: "inline-block",
+  fontSize: "15px",
+  fontWeight: "600",
+  padding: "10px 18px",
   textDecoration: "none",
 };
 

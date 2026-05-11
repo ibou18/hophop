@@ -49,7 +49,7 @@ export function CountryMarquee() {
 
   return (
     <div
-      className="group relative overflow-hidden border-y border-hh-sand-dk/60 bg-gradient-to-r from-hh-sand via-white to-hh-sand py-5"
+      className="group relative overflow-hidden border-y border-hh-sand-dk/60 bg-gradient-to-r from-hh-sand via-white to-hh-sand py-5 max-w-6xl mx-auto"
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       aria-label="Pays desservis par Hophop"

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Country } from "@/app/generated/prisma/enums";
+import { PhoneCountryField } from "@/components/forms/phone-country-field";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
+import { toE164 } from "@/lib/phone-e164";
 
 const inputClass =
   "h-10 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 bg-white px-3 text-[15px] placeholder:text-hh-muted focus:border-hh-saffron focus:outline-none focus:ring-2 focus:ring-hh-saffron/20";
@@ -21,6 +24,12 @@ export function AddRecipientForm() {
     isDefault: false,
   });
 
+  const recipientCountry = form.country as Country;
+
+  const onPhoneNationalChange = useCallback((v: string) => {
+    setForm((f) => ({ ...f, phone: v }));
+  }, []);
+
   function update(patch: Partial<typeof form>) {
     setForm((f) => ({ ...f, ...patch }));
   }
@@ -28,8 +37,13 @@ export function AddRecipientForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.firstName || !form.lastName || !form.phone || !form.city) {
-      setError("Prénom, nom, téléphone et ville sont obligatoires.");
+    if (!form.firstName || !form.lastName || !form.city) {
+      setError("Prénom, nom et ville sont obligatoires.");
+      return;
+    }
+    const e164 = toE164(recipientCountry, form.phone);
+    if (!e164) {
+      setError("Numéro de téléphone invalide pour le pays choisi.");
       return;
     }
     setSubmitting(true);
@@ -39,7 +53,7 @@ export function AddRecipientForm() {
       body: JSON.stringify({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        phone: form.phone.trim(),
+        phone: e164,
         city: form.city.trim(),
         country: form.country,
         address: form.address.trim() || undefined,
@@ -62,12 +76,14 @@ export function AddRecipientForm() {
     >
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-hh-muted">Prénom *</label>
+          <label className="text-[12px] font-medium text-hh-muted">
+            Prénom *
+          </label>
           <input
             className={inputClass}
             value={form.firstName}
             onChange={(e) => update({ firstName: e.target.value })}
-            placeholder="Fatoumata"
+            placeholder=""
             required
           />
         </div>
@@ -77,47 +93,59 @@ export function AddRecipientForm() {
             className={inputClass}
             value={form.lastName}
             onChange={(e) => update({ lastName: e.target.value })}
-            placeholder="Bah"
+            placeholder=""
             required
           />
         </div>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-[12px] font-medium text-hh-muted">Téléphone *</label>
-        <input
+        <label className="text-[12px] font-medium text-hh-muted">Pays *</label>
+        <select
           className={inputClass}
-          type="tel"
-          value={form.phone}
-          onChange={(e) => update({ phone: e.target.value })}
-          placeholder="+224 6XX XXX XXX"
-          required
-        />
+          value={form.country}
+          onChange={(e) => update({ country: e.target.value })}
+        >
+          {COUNTRY_OPTIONS.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-[11px] text-hh-muted">
+          Indicatif du téléphone aligné sur ce pays.
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-hh-muted">Pays *</label>
-          <select
-            className={inputClass}
-            value={form.country}
-            onChange={(e) => update({ country: e.target.value })}
-          >
-            {COUNTRY_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[12px] font-medium text-hh-muted">Ville *</label>
-          <input
-            className={inputClass}
-            value={form.city}
-            onChange={(e) => update({ city: e.target.value })}
-            placeholder="Conakry"
-            required
-          />
-        </div>
+      <div className="flex flex-col gap-1">
+        <label
+          className="text-[12px] font-medium text-hh-muted"
+          htmlFor="recipient-phone"
+        >
+          Téléphone *
+        </label>
+        <PhoneCountryField
+          id="recipient-phone"
+          country={recipientCountry}
+          nationalFormatted={form.phone}
+          onNationalChange={onPhoneNationalChange}
+          disabled={submitting}
+          inputClassName={inputClass}
+        />
+        <p className="text-[11px] text-hh-muted">
+          Saisie limitée (14 chiffres côté numéro national, hors indicatif).
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-[12px] font-medium text-hh-muted">Ville *</label>
+        <input
+          className={inputClass}
+          value={form.city}
+          onChange={(e) => update({ city: e.target.value })}
+          placeholder="Conakry"
+          required
+        />
       </div>
 
       <div className="flex flex-col gap-1">
@@ -145,7 +173,9 @@ export function AddRecipientForm() {
       </label>
 
       {error && (
-        <p className="text-[13px] text-hh-kola" role="alert">{error}</p>
+        <p className="text-[13px] text-hh-kola" role="alert">
+          {error}
+        </p>
       )}
 
       <button
