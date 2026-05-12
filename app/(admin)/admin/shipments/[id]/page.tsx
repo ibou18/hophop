@@ -204,7 +204,7 @@ export default async function AdminShipmentDetailPage({
             </div>
 
             {/* Key info grid */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Départ</p>
                 <p className="mt-1 text-[14px] font-semibold text-white">{fmtShort(s.departureDate)}</p>
@@ -212,10 +212,6 @@ export default async function AdminShipmentDetailPage({
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Arrivée est.</p>
                 <p className="mt-1 text-[14px] font-semibold text-white">{fmtShort(s.arrivalDate)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Colis</p>
-                <p className="mt-1 text-[14px] font-semibold text-white">{s._count.parcels}</p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Tarif</p>

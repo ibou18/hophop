@@ -120,10 +120,9 @@ export function ShipmentPublicCard({ shipment: s }: { shipment: PublicShipmentDa
         </div>
 
         {/* Key facts */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-3">
           <Fact label="Départ" value={fmtShort(s.departureDate)} />
           <Fact label="Arrivée est." value={fmtShort(s.arrivalDate)} />
-          <Fact label="Colis" value={String(s._count.parcels)} />
           <Fact label="Tarif" value={pricingRate ?? "Sur devis"} amber={!!pricingRate} />
         </div>
 
