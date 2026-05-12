@@ -1,4 +1,8 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { nanoid } from "nanoid";
 
 function requireEnv(name: string): string {
@@ -29,6 +33,37 @@ export function publicUrlForKey(key: string): string {
 }
 
 /** Upload direct serveur → S3 (évite le CORS navigateur sur les PUT pré-signés). */
+/** Extrait la clé S3 depuis une URL publique stockée en base (path = clé). */
+export function objectKeyFromPublicUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.replace(/^\/+/, "");
+    return path || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteObjectByKey(key: string): Promise<void> {
+  const bucket = requireEnv("AWS_S3_BUCKET_NAME");
+  const client = getS3Client();
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }),
+  );
+}
+
+/** Supprime l’objet S3 si l’URL correspond à une clé sous `parcel-requests/`. */
+export async function deleteParcelRequestImageFromS3(storedUrl: string): Promise<void> {
+  const key = objectKeyFromPublicUrl(storedUrl);
+  if (!key || !key.startsWith("parcel-requests/")) {
+    throw new Error("URL d’image invalide ou hors périmètre");
+  }
+  await deleteObjectByKey(key);
+}
+
 export async function putObjectImage(params: {
   key: string;
   body: Buffer;
@@ -59,6 +94,18 @@ export function objectKeyForParcelImage(parcelId: string, contentType: string): 
           ? "gif"
           : "jpg";
   return `parcels/${parcelId}/${nanoid()}.${ext}`;
+}
+
+export function objectKeyForParcelRequestImage(requestId: string, contentType: string): string {
+  const ext =
+    contentType === "image/png"
+      ? "png"
+      : contentType === "image/webp"
+        ? "webp"
+        : contentType === "image/gif"
+          ? "gif"
+          : "jpg";
+  return `parcel-requests/${requestId}/${nanoid()}.${ext}`;
 }
 
 export function objectKeyForForwarderLogo(forwarderId: string, contentType: string): string {

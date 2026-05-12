@@ -126,9 +126,10 @@ export default async function AdminShipmentsPage({
             <p className="px-6 py-8 text-center text-[14px] text-slate-400">Aucun envoi.</p>
           )}
           {shipments.map((s) => (
-            <div
+            <Link
               key={s.id}
-              className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-3.5"
+              href={`/admin/shipments/${s.id}`}
+              className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50"
             >
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className={`size-2 shrink-0 rounded-full ${STATUS_DOT[s.status]}`} />
@@ -156,7 +157,7 @@ export default async function AdminShipmentsPage({
                 </span>
                 <span className="text-[11px] text-slate-400">{s._count.parcels} colis</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

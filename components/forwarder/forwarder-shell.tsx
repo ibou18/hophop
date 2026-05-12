@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Inbox,
   LayoutDashboard,
   LifeBuoy,
   Package,
@@ -42,6 +43,7 @@ const NAV: {
   { href: "/dashboard",        label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/shipments",        label: "Envois",           icon: Truck },
   { href: "/parcels",          label: "Colis",            icon: Package },
+  { href: "/parcel-requests",  label: "Demandes",         icon: Inbox },
   { href: "/scan",             label: "Scanner",          icon: ScanLine },
   { href: "/clients",          label: "Clients",          icon: UsersRound },
   { href: "/settings/team",    label: "Équipe",           icon: Users,    minRole: "ADMIN" },

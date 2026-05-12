@@ -277,6 +277,72 @@ export async function getAdminShipments(statusFilter?: ShipmentStatus): Promise<
 }
 
 // ─────────────────────────────────────────────
+// Détail d'un envoi (admin)
+// ─────────────────────────────────────────────
+
+const shipmentDetailSelect = {
+  id: true,
+  reference: true,
+  status: true,
+  transportMode: true,
+  originCountry: true,
+  destinationCountry: true,
+  originCity: true,
+  destinationCity: true,
+  departureDate: true,
+  arrivalDate: true,
+  isPublished: true,
+  acceptsVehicles: true,
+  notes: true,
+  pricingType: true,
+  ratePerKg: true,
+  ratePerBox: true,
+  flatRate: true,
+  ratePerVolume: true,
+  ratePerVehicle: true,
+  volumeDivisor: true,
+  minimumCharge: true,
+  currency: true,
+  createdAt: true,
+  updatedAt: true,
+  forwarder: {
+    select: {
+      id: true,
+      name: true,
+      code5: true,
+      city: true,
+      country: true,
+      logoUrl: true,
+    },
+  },
+  _count: { select: { parcels: true, requests: true } },
+  parcels: {
+    orderBy: { createdAt: "desc" as const },
+    take: 50,
+    select: {
+      id: true,
+      trackingCode: true,
+      status: true,
+      weightKg: true,
+      createdAt: true,
+      client: { select: { firstName: true, lastName: true } },
+      recipient: { select: { firstName: true, lastName: true, city: true, country: true } },
+    },
+  },
+} satisfies Prisma.ShipmentSelect;
+
+export type AdminShipmentDetail = Prisma.ShipmentGetPayload<{
+  select: typeof shipmentDetailSelect;
+}>;
+
+export async function getAdminShipmentById(id: string): Promise<AdminShipmentDetail | null> {
+  return prisma.shipment.findUnique({
+    where: { id },
+    select: shipmentDetailSelect,
+  });
+}
+
+// ─────────────────────────────────────────────
 // Helpers labels
 // ─────────────────────────────────────────────
 

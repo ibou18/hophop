@@ -230,14 +230,15 @@ model Forwarder {
   updatedAt DateTime @updatedAt
 
   // Relations
-  clients        ClientForwarder[]
-  shipments      Shipment[]
-  parcels        Parcel[]
-  notifications  Notification[]
-  expoPushTokens ExpoPushToken[]
-  members        ForwarderUser[]
-  invitations    ForwarderInvitation[]
-  loginLogs      LoginLog[]
+  clients              ClientForwarder[]
+  shipments            Shipment[]
+  parcels              Parcel[]
+  notifications        Notification[]
+  expoPushTokens       ExpoPushToken[]
+  members              ForwarderUser[]
+  invitations          ForwarderInvitation[]
+  loginLogs            LoginLog[]
+  quotedParcelRequests ParcelRequest[]       @relation("QuotedRequests")
 
   @@map("forwarders")
 }
@@ -340,6 +341,7 @@ model Client {
   shipmentRequests ShipmentRequest[]
   expoPushTokens   ExpoPushToken[]
   loginLogs        LoginLog[]
+  parcelRequests   ParcelRequest[]
 
   @@map("clients")
 }
@@ -382,8 +384,9 @@ model Recipient {
   updatedAt DateTime @updatedAt
 
   // Relations
-  client  Client   @relation(fields: [clientId], references: [id])
-  parcels Parcel[]
+  client         Client          @relation(fields: [clientId], references: [id])
+  parcels        Parcel[]
+  parcelRequests ParcelRequest[]
 
   @@map("recipients")
 }
@@ -445,6 +448,7 @@ model Shipment {
   trackingEvents TrackingEvent[]
   requests       ShipmentRequest[] @relation("RequestedShipment")
   movedRequests  ShipmentRequest[] @relation("MovedToShipment")
+  parcelRequests ParcelRequest[]   @relation("QuotedShipment")
 
   @@map("shipments")
 }
@@ -503,6 +507,7 @@ model Parcel {
   notifications   Notification[]
   shipmentRequest ShipmentRequest?
   vehicle         Vehicle? // Présent uniquement si le colis est un véhicule
+  parcelRequest   ParcelRequest?   @relation("MatchedParcel")
 
   @@map("parcels")
 }
@@ -726,6 +731,101 @@ model Notification {
 
   @@index([status, createdAt])
   @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// PARCEL REQUEST — Demande de colis sans transitaire
+// Le client exprime un besoin ; un forwarder fait une offre de prix ;
+// le client accepte → le vrai Parcel est créé et lié à l'envoi.
+// ─────────────────────────────────────────────
+
+enum ParcelRequestStatus {
+  PENDING // En attente d'offre d'un forwarder
+  QUOTED // Offre envoyée au client, en attente de sa réponse
+  MATCHED // Client a accepté — Parcel créé et lié à un envoi
+  EXPIRED // Date max de départ dépassée sans match
+  CANCELLED // Annulé par le client
+}
+
+model ParcelRequest {
+  id          String @id @default(uuid())
+  clientId    String
+  recipientId String
+
+  // Localisation d'origine (côté expéditeur)
+  originCountry   Country?
+  originCity      String?
+  originLatitude  Float?
+  originLongitude Float?
+
+  // Détails du colis
+  weightKg      Float?
+  lengthCm      Float?
+  widthCm       Float?
+  heightCm      Float?
+  description   String?
+  declaredValue Float?
+
+  // Contrainte temporelle du client
+  maxDepartureDate DateTime
+
+  // Offre du forwarder (remplie quand status = QUOTED)
+  quotedPrice       Float?
+  quotedCurrency    Currency?
+  quotedForwarderId String?
+  quotedShipmentId  String?
+  quotedAt          DateTime?
+  quoteExpiresAt    DateTime? // Durée de validité de l'offre (ex. 48h)
+  quoteToken        String?   @unique // Token pour accept/reject depuis l'email
+  quoteNote         String? // Message du forwarder au client
+
+  // Résultat
+  status          ParcelRequestStatus @default(PENDING)
+  matchedParcelId String?             @unique // Rempli après acceptation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client          Client               @relation(fields: [clientId], references: [id])
+  recipient       Recipient            @relation(fields: [recipientId], references: [id])
+  quotedForwarder Forwarder?           @relation("QuotedRequests", fields: [quotedForwarderId], references: [id])
+  quotedShipment  Shipment?            @relation("QuotedShipment", fields: [quotedShipmentId], references: [id])
+  matchedParcel   Parcel?              @relation("MatchedParcel", fields: [matchedParcelId], references: [id])
+  items           ParcelRequestItem[]
+  images          ParcelRequestImage[]
+
+  @@index([clientId])
+  @@index([status, maxDepartureDate])
+  @@map("parcel_requests")
+}
+
+model ParcelRequestImage {
+  id              String   @id @default(uuid())
+  parcelRequestId String
+  url             String
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  parcelRequest ParcelRequest @relation(fields: [parcelRequestId], references: [id], onDelete: Cascade)
+
+  @@map("parcel_request_images")
+}
+
+model ParcelRequestItem {
+  id              String       @id @default(uuid())
+  parcelRequestId String
+  name            String
+  quantity        Int          @default(1)
+  category        ItemCategory @default(OTHER)
+  weightKg        Float?
+  notes           String?
+
+  createdAt DateTime @default(now())
+
+  parcelRequest ParcelRequest @relation(fields: [parcelRequestId], references: [id], onDelete: Cascade)
+
+  @@map("parcel_request_items")
 }
 
 // ─────────────────────────────────────────────

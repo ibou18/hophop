@@ -62,15 +62,21 @@ function NavLink({
       isActive={active}
       tooltip={label}
       className={cn(
-        "text-[15px] font-normal text-slate-200 hover:bg-violet-500/15 hover:text-white",
-        active && "bg-violet-500/20 font-medium text-white data-active:bg-violet-500/20",
+        "text-[15px] font-normal text-slate-300 hover:bg-violet-500/15 hover:text-white",
+        active &&
+          "!bg-violet-500/25 !font-medium !text-white data-active:!bg-violet-500/25 data-active:!text-white hover:!bg-violet-500/30 hover:!text-white active:!text-white",
       )}
     >
       <Link
         href={href}
         onClick={() => { if (isMobile) setOpenMobile(false); }}
       >
-        <Icon className={cn("shrink-0", active ? "text-violet-400" : "text-slate-400")} />
+        <Icon
+          className={cn(
+            "shrink-0",
+            active ? "!text-white" : "text-slate-400 group-hover/menu-button:text-slate-200",
+          )}
+        />
         <span>{label}</span>
       </Link>
     </SidebarMenuButton>
