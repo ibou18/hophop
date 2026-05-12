@@ -265,7 +265,7 @@ export function DeclareVehicleForm({
       }
 
       if (targetShipmentId) {
-        setSubmitLabel("Demande pour l'envoi…");
+        setSubmitLabel("Intégration à l'envoi…");
         const reqRes = await fetch(
           `/api/shipments/${targetShipmentId}/requests`,
           {
@@ -277,7 +277,7 @@ export function DeclareVehicleForm({
         );
         if (!reqRes.ok) {
           setError(
-            "Dossier enregistré. La demande pour cet envoi n'a pas pu être envoyée — ouvre la fiche colis pour réessayer.",
+          "Dossier enregistré. L'affectation à cet envoi a échoué — ouvre la fiche colis pour réessayer.",
           );
         }
       }

@@ -20,7 +20,7 @@ type ShipmentRequestInfo = {
 
 const STATUS_LABELS: Record<ShipmentRequestStatus, string> = {
   PENDING: "En attente de validation",
-  ACCEPTED: "Demande acceptée",
+  ACCEPTED: "Colis affecté à l'envoi",
   REJECTED: "Demande refusée",
   MOVED: "Colis déplacé",
 };
@@ -84,7 +84,8 @@ export function JoinShipmentPanel({
         Rejoindre un envoi
       </h2>
       <p className="mt-1 text-[13px] text-hh-muted">
-        Associe ce colis à un départ publié par le transitaire qui gère déjà ce colis.
+        Choisis un départ publié : le colis est affecté tout de suite. Le transitaire peut le retirer de
+        l&apos;envoi plus tard si besoin.
       </p>
 
       {!isLinkedToForwarder &&
@@ -93,7 +94,7 @@ export function JoinShipmentPanel({
         forwarderName && (
           <div className="mt-4 rounded-[var(--hh-radius-md)] border border-amber-200/80 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
             <p>
-              Pour envoyer une demande, associe d&apos;abord ton compte à{" "}
+              Pour affecter ton colis à un envoi, associe d&apos;abord ton compte à{" "}
               <strong>{forwarderName}</strong> depuis sa page publique.
             </p>
             <Link
@@ -185,7 +186,7 @@ export function JoinShipmentPanel({
                 onClick={handleSubmit}
                 className="self-start bg-hh-saffron text-white hover:bg-hh-saffron-dk disabled:opacity-50"
               >
-                {pending ? "Envoi…" : "Envoyer la demande"}
+                {pending ? "Envoi…" : "Affecter à cet envoi"}
               </Button>
               {!isLinkedToForwarder && selectedId ? (
                 <p className="text-[12px] text-hh-muted">

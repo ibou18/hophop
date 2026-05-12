@@ -12,7 +12,9 @@ import {
   Loader2,
   Package,
   Plus,
+  Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import type { Recipient } from "@/app/generated/prisma/client";
 import type { Country, TransportMode } from "@/app/generated/prisma/enums";
@@ -36,6 +38,7 @@ import { TRANSPORT_MODE_LABEL } from "@/lib/transport-mode";
 import type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
 import {
   ParcelContentSelection,
+  parcelContentLinesFromAiCategories,
   type ParcelContentLine,
 } from "@/components/client/parcel-content-selection";
 
@@ -65,9 +68,9 @@ type WizardState = {
 
 const STEPS = [
   "Destinataire",
+  "Photos",
   "Contenu",
   "Dimensions",
-  "Photos",
   "Récapitulatif",
 ];
 
@@ -186,6 +189,9 @@ export function DeclareParcelWizard({
   const [submitting, setSubmitting] = useState(false);
   const [submitLabel, setSubmitLabel] = useState("Envoi…");
   const [addingNew, setAddingNew] = useState(recipients.length === 0);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggested, setAiSuggested] = useState(false);
+  const [aiAlert, setAiAlert] = useState<string | null>(null);
 
   const defaultRecipient = recipients.find((r) => r.isDefault);
 
@@ -307,6 +313,71 @@ export function DeclareParcelWizard({
     [],
   );
 
+  async function analyzePhotoWithAI(file: File) {
+    setAiLoading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = (reader.result as string).split(",")[1];
+          if (result) resolve(result);
+          else reject(new Error("empty"));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/ai/analyze-parcel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType: file.type || "image/jpeg",
+        }),
+      });
+      if (!res.ok) return;
+
+      const data = (await res.json()) as {
+        description?: string;
+        estimatedWeightKg?: number | null;
+        categories?: unknown;
+        customsAlert?: string | null;
+      };
+
+      let suggested = false;
+      setState((prev) => {
+        const patch: Partial<WizardState> = {};
+        if (data.description && !prev.description.trim()) {
+          patch.description = data.description;
+          suggested = true;
+        }
+        if (data.estimatedWeightKg != null && !prev.weightKg) {
+          patch.weightKg = String(data.estimatedWeightKg);
+          suggested = true;
+        }
+        if (
+          Array.isArray(data.categories) &&
+          data.categories.length > 0 &&
+          prev.items.length === 0
+        ) {
+          const newItems = parcelContentLinesFromAiCategories(data.categories);
+          if (newItems.length) {
+            patch.items = newItems;
+            suggested = true;
+          }
+        }
+        return { ...prev, ...patch };
+      });
+      if (data.customsAlert) setAiAlert(data.customsAlert);
+      if (suggested) setAiSuggested(true);
+    } catch {
+      // silent fail
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   function canAdvance(): boolean {
     if (step === 0) {
       if (!state.forwarderId) return false;
@@ -325,8 +396,9 @@ export function DeclareParcelWizard({
       }
       return !!state.recipientId;
     }
-    if (step === 1) return state.items.length > 0;
-    // Dimensions & photos : optionnel — comme le wizard transitaire
+    if (step === 1) return true; // Photos : optionnel
+    if (step === 2) return state.items.length > 0; // Contenu : requis
+    // Dimensions : optionnel
     return true;
   }
 
@@ -415,7 +487,7 @@ export function DeclareParcelWizard({
       }
 
       if (targetShipmentId) {
-        setSubmitLabel("Demande pour l'envoi…");
+        setSubmitLabel("Intégration à l'envoi…");
         const reqRes = await fetch(
           `/api/shipments/${targetShipmentId}/requests`,
           {
@@ -427,7 +499,7 @@ export function DeclareParcelWizard({
         );
         if (!reqRes.ok) {
           setError(
-            "Colis enregistré. La demande pour cet envoi n'a pas pu être envoyée — ouvrez la fiche colis pour réessayer.",
+          "Colis enregistré. L'affectation à cet envoi a échoué — ouvre la fiche colis pour réessayer.",
           );
         }
       }
@@ -542,12 +614,86 @@ export function DeclareParcelWizard({
           />
         )}
         {step === 1 && (
-          <ParcelContentSelection
-            items={state.items}
-            onItemsChange={(items) => update({ items })}
+          <StepPhotos
+            imageEntries={state.imageEntries}
+            update={update}
+            onFirstPhoto={(file) => void analyzePhotoWithAI(file)}
           />
         )}
         {step === 2 && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[16px] font-medium text-hh-earth-dk">
+                  Contenu du colis
+                </h2>
+                <p className="mt-0.5 text-[12px] text-hh-muted">
+                  Sélectionne une ou plusieurs catégories.
+                </p>
+              </div>
+              {aiLoading && (
+                <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-hh-saffron/10 px-3 py-1.5 text-[11px] font-medium text-hh-saffron-dk">
+                  <Loader2 size={11} className="animate-spin" />
+                  Analyse IA…
+                </div>
+              )}
+              {aiSuggested && !aiLoading && (
+                <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-700">
+                  <Sparkles size={11} />
+                  Pré-rempli par l&apos;IA
+                  <button
+                    type="button"
+                    onClick={() => setAiSuggested(false)}
+                    className="ml-0.5 opacity-60 hover:opacity-100"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {aiLoading && (
+              <div className="flex items-center gap-3 rounded-xl border border-hh-saffron/20 bg-hh-saffron/6 px-4 py-3">
+                <Loader2
+                  size={16}
+                  className="animate-spin shrink-0 text-hh-saffron"
+                />
+                <div>
+                  <p className="text-[13px] font-semibold text-hh-saffron-dk">
+                    Analyse en cours…
+                  </p>
+                  <p className="text-[11px] text-hh-saffron-dk/70">
+                    L&apos;IA lit votre photo et remplit le contenu
+                    automatiquement.
+                  </p>
+                </div>
+              </div>
+            )}
+            {aiAlert && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <span className="mt-0.5 text-[14px]">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-[12px] font-semibold text-amber-800">
+                    Alerte douanière
+                  </p>
+                  <p className="text-[12px] text-amber-700">{aiAlert}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiAlert(null)}
+                  className="text-amber-500 hover:text-amber-700"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+            <ParcelContentSelection
+              items={state.items}
+              onItemsChange={(items) => update({ items })}
+              showIntro={false}
+            />
+          </div>
+        )}
+        {step === 3 && (
           <StepDimensions
             weightKg={state.weightKg}
             lengthCm={state.lengthCm}
@@ -558,9 +704,6 @@ export function DeclareParcelWizard({
             priceEstimateView={priceEstimateView}
             transportModeLabel={transportModeLabel}
           />
-        )}
-        {step === 3 && (
-          <StepPhotos imageEntries={state.imageEntries} update={update} />
         )}
         {step === 4 && (
           <StepSummary
@@ -887,7 +1030,7 @@ function StepDimensions({
           Poids & dimensions
         </h2>
         <p className="mt-0.5 text-[12px] text-hh-muted">
-          Optionnel — utile pour la tarification et le transitaire.
+          Siaisir les dimensions et le poids du colis approximatifs.
         </p>
       </div>
 
@@ -977,9 +1120,11 @@ function StepDimensions({
 function StepPhotos({
   imageEntries,
   update,
+  onFirstPhoto,
 }: {
   imageEntries: { file: File; previewUrl: string }[];
   update: (p: Partial<WizardState>) => void;
+  onFirstPhoto?: (file: File) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -1008,7 +1153,9 @@ function StepPhotos({
       valid.push({ file: f, previewUrl: URL.createObjectURL(f) });
     }
     if (valid.length) {
+      const isFirst = imageEntries.length === 0;
       update({ imageEntries: [...imageEntries, ...valid] });
+      if (isFirst && valid[0] && onFirstPhoto) onFirstPhoto(valid[0].file);
       setLocalError(null);
     }
     if (inputRef.current) inputRef.current.value = "";
@@ -1022,15 +1169,20 @@ function StepPhotos({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-[16px] font-medium text-hh-earth-dk">
-          Photos du colis
-        </h2>
-        <p className="mt-0.5 text-[12px] text-hh-muted">
-          Optionnel — jusqu&apos;à {PARCEL_PHOTOS_MAX} photos (JPEG, PNG, WebP ·
-          max {Math.round(PARCEL_IMAGE_MAX_BYTES / 1024 / 1024)} Mo chacune).
-          Envoyées automatiquement après la déclaration.
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-[16px] font-medium text-hh-earth-dk">
+            Photos du colis
+          </h2>
+          <p className="mt-0.5 text-[12px] text-hh-muted">
+            Optionnel · jusqu&apos;à {PARCEL_PHOTOS_MAX} photos (JPEG, PNG, WebP
+            · max {Math.round(PARCEL_IMAGE_MAX_BYTES / 1024 / 1024)} Mo).
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 rounded-full bg-hh-saffron/8 px-2.5 py-1 text-[10px] font-semibold text-hh-saffron-dk">
+          <Sparkles size={10} />
+          Analyse IA
+        </div>
       </div>
 
       {imageEntries.length > 0 && (
@@ -1084,8 +1236,8 @@ function StepPhotos({
             <p className="text-[14px] font-medium text-hh-earth-dk/70">
               Ajouter des photos
             </p>
-            <p className="text-[11px] text-hh-muted">
-              Appuyez pour sélectionner
+            <p className="mt-0.5 text-[11px] text-hh-muted">
+              L&apos;IA analysera le contenu automatiquement ✨
             </p>
           </div>
         </button>
@@ -1186,7 +1338,6 @@ function StepSummary({
                 key={item.category}
                 className="rounded-full bg-white px-2.5 py-0.5 text-[12px] text-hh-earth-dk ring-1 ring-hh-sand-dk/30"
               >
-                {item.quantity > 1 ? `${item.quantity}× ` : ""}
                 {item.name}
               </span>
             ))}

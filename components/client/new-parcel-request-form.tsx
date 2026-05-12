@@ -22,9 +22,10 @@ import type { Recipient } from "@/app/generated/prisma/client";
 import type { Country, ParcelRequestStatus } from "@/app/generated/prisma/enums";
 import {
   ParcelContentSelection,
+  parcelContentLinesFromAiCategories,
   type ParcelContentLine,
 } from "@/components/client/parcel-content-selection";
-import { ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import {
   normalizeImageContentType,
   PARCEL_IMAGE_MAX_BYTES,
@@ -80,6 +81,9 @@ export function NewParcelRequestForm({
   const [removingImageId, setRemovingImageId] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggested, setAiSuggested] = useState(false);
+  const [aiAlert, setAiAlert] = useState<string | null>(null);
   const [localRecipients, setLocalRecipients] = useState<Recipient[]>(recipients);
   const [showAddRecipient, setShowAddRecipient] = useState(false);
 
@@ -113,6 +117,58 @@ export function NewParcelRequestForm({
   const totalPhotos = existingImages.length + imageEntries.length;
   const isEdit = Boolean(edit);
 
+  async function analyzePhotoWithAI(file: File) {
+    setAiLoading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = (reader.result as string).split(",")[1];
+          if (result) resolve(result);
+          else reject(new Error("empty"));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const mimeType = file.type || "image/jpeg";
+      const res = await fetch("/api/ai/analyze-parcel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
+      });
+      if (!res.ok) return;
+
+      const data = await res.json() as {
+        description?: string;
+        estimatedWeightKg?: number | null;
+        categories?: unknown;
+        customsAlert?: string | null;
+      };
+
+      let suggested = false;
+      if (data.description && !description.trim()) {
+        setDescription(data.description);
+        suggested = true;
+      }
+      if (data.estimatedWeightKg != null && !weightKg) {
+        setWeightKg(String(data.estimatedWeightKg));
+        suggested = true;
+      }
+      if (Array.isArray(data.categories) && data.categories.length > 0 && items.length === 0) {
+        const newItems = parcelContentLinesFromAiCategories(data.categories);
+        if (newItems.length) { setItems(newItems); suggested = true; }
+      }
+      if (data.customsAlert) setAiAlert(data.customsAlert);
+      if (suggested) setAiSuggested(true);
+    } catch {
+      // silent fail — AI is optional
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   function handlePhotoFiles(list: FileList | null) {
     if (!list?.length) return;
     setPhotoError(null);
@@ -133,7 +189,11 @@ export function NewParcelRequestForm({
       }
       valid.push({ file: f, previewUrl: URL.createObjectURL(f) });
     }
-    if (valid.length) setImageEntries((prev) => [...prev, ...valid]);
+    if (valid.length) {
+      const isFirstPhoto = existingImages.length === 0 && imageEntries.length === 0;
+      setImageEntries((prev) => [...prev, ...valid]);
+      if (isFirstPhoto && valid[0]) void analyzePhotoWithAI(valid[0].file);
+    }
     if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
@@ -435,13 +495,152 @@ export function NewParcelRequestForm({
         />
       </div>
 
+      {/* ── Photos — AVANT contenu pour que l'IA remplisse en avance ── */}
       <div className="rounded-2xl border border-hh-sand-dk/20 bg-white p-6 shadow-sm">
-        <h2 className="mb-1 text-[14px] font-semibold text-hh-earth-dk">
-          Contenu du colis
-        </h2>
-        <p className="mb-4 text-[12px] text-hh-muted">
-          Sélectionne les catégories, puis ajuste les quantités.
-        </p>
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <div>
+            <h2 className="text-[14px] font-semibold text-hh-earth-dk">Photos du colis</h2>
+            <p className="mt-0.5 text-[12px] text-hh-muted">
+              Optionnel · jusqu&apos;à {PHOTOS_MAX} photos (JPEG, PNG, WebP · max{" "}
+              {Math.round(PARCEL_IMAGE_MAX_BYTES / 1024 / 1024)} Mo).
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 rounded-full bg-hh-saffron/8 px-2.5 py-1 text-[10px] font-semibold text-hh-saffron-dk">
+            <Sparkles size={10} />
+            Analyse IA
+          </div>
+        </div>
+
+        {totalPhotos > 0 && (
+          <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {existingImages.map((img) => (
+              <div
+                key={img.id}
+                className="group relative aspect-square overflow-hidden rounded-xl"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.url} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeExistingImage(img.id)}
+                  disabled={removingImageId === img.id}
+                  className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
+                  aria-label="Supprimer la photo"
+                >
+                  {removingImageId === img.id ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <Trash2 size={12} />
+                  )}
+                </button>
+              </div>
+            ))}
+            {imageEntries.map((entry, i) => (
+              <div
+                key={entry.previewUrl}
+                className="group relative aspect-square overflow-hidden rounded-xl"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={entry.previewUrl} alt={entry.file.name} className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label="Retirer"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            {totalPhotos < PHOTOS_MAX && (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-hh-sand-dk/50 text-hh-muted transition-colors hover:border-hh-saffron/50 hover:text-hh-saffron-dk"
+              >
+                <ImagePlus size={20} strokeWidth={1.5} />
+                <span className="text-[10px]">Ajouter</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {totalPhotos === 0 && (
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-hh-sand-dk/50 py-10 transition-colors hover:border-hh-saffron/50 hover:bg-hh-saffron/5"
+          >
+            <ImagePlus size={28} strokeWidth={1.2} className="text-hh-saffron/70" />
+            <div className="text-center">
+              <p className="text-[14px] font-medium text-hh-earth-dk/70">Ajouter des photos</p>
+              <p className="mt-0.5 text-[11px] text-hh-muted">
+                L&apos;IA analysera le contenu automatiquement ✨
+              </p>
+            </div>
+          </button>
+        )}
+
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          className="sr-only"
+          onChange={(e) => handlePhotoFiles(e.target.files)}
+        />
+
+        {photoError && (
+          <p className="mt-2 text-[12px] text-red-600" role="alert">
+            {photoError}
+          </p>
+        )}
+      </div>
+
+      {/* ── Contenu du colis ── */}
+      <div className="rounded-2xl border border-hh-sand-dk/20 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[14px] font-semibold text-hh-earth-dk">Contenu du colis</h2>
+            <p className="mt-0.5 text-[12px] text-hh-muted">Sélectionne une ou plusieurs catégories.</p>
+          </div>
+          {aiLoading && (
+            <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-hh-saffron/10 px-3 py-1.5 text-[11px] font-medium text-hh-saffron-dk">
+              <Loader2 size={11} className="animate-spin" />
+              Analyse IA…
+            </div>
+          )}
+          {aiSuggested && !aiLoading && (
+            <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-700">
+              <Sparkles size={11} />
+              Pré-rempli par l&apos;IA
+              <button type="button" onClick={() => setAiSuggested(false)} className="ml-0.5 opacity-60 hover:opacity-100">
+                <X size={11} />
+              </button>
+            </div>
+          )}
+        </div>
+        {aiLoading && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-hh-saffron/20 bg-hh-saffron/6 px-4 py-3">
+            <Loader2 size={16} className="animate-spin shrink-0 text-hh-saffron" />
+            <div>
+              <p className="text-[13px] font-semibold text-hh-saffron-dk">Analyse en cours…</p>
+              <p className="text-[11px] text-hh-saffron-dk/70">L&apos;IA lit votre photo et remplit le contenu automatiquement.</p>
+            </div>
+          </div>
+        )}
+        {aiAlert && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <span className="mt-0.5 text-[14px]">⚠️</span>
+            <div className="flex-1">
+              <p className="text-[12px] font-semibold text-amber-800">Alerte douanière</p>
+              <p className="text-[12px] text-amber-700">{aiAlert}</p>
+            </div>
+            <button type="button" onClick={() => setAiAlert(null)} className="text-amber-500 hover:text-amber-700">
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <div className="flex flex-col gap-4">
           <ParcelContentSelection
             items={items}
@@ -489,109 +688,6 @@ export function NewParcelRequestForm({
             />
           </div>
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-hh-sand-dk/20 bg-white p-6 shadow-sm">
-        <h2 className="mb-1 text-[14px] font-semibold text-hh-earth-dk">
-          Photos du colis
-        </h2>
-        <p className="mb-4 text-[12px] text-hh-muted">
-          Optionnel — jusqu&apos;à {PHOTOS_MAX} photos au total (JPEG, PNG, WebP · max{" "}
-          {Math.round(PARCEL_IMAGE_MAX_BYTES / 1024 / 1024)} Mo chacune).
-        </p>
-
-        {totalPhotos > 0 && (
-          <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {existingImages.map((img) => (
-              <div
-                key={img.id}
-                className="group relative aspect-square overflow-hidden rounded-xl"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeExistingImage(img.id)}
-                  disabled={removingImageId === img.id}
-                  className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
-                  aria-label="Supprimer la photo"
-                >
-                  {removingImageId === img.id ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    <Trash2 size={12} />
-                  )}
-                </button>
-              </div>
-            ))}
-            {imageEntries.map((entry, i) => (
-              <div
-                key={entry.previewUrl}
-                className="group relative aspect-square overflow-hidden rounded-xl"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={entry.previewUrl}
-                  alt={entry.file.name}
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(i)}
-                  className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                  aria-label="Retirer"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            ))}
-            {totalPhotos < PHOTOS_MAX && (
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-hh-sand-dk/50 text-hh-muted transition-colors hover:border-hh-saffron/50 hover:text-hh-saffron-dk"
-              >
-                <ImagePlus size={20} strokeWidth={1.5} />
-                <span className="text-[10px]">Ajouter</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {totalPhotos === 0 && (
-          <button
-            type="button"
-            onClick={() => photoInputRef.current?.click()}
-            className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-hh-sand-dk/50 py-10 transition-colors hover:border-hh-saffron/50 hover:bg-hh-saffron/5"
-          >
-            <ImagePlus size={28} strokeWidth={1.2} className="text-hh-saffron/70" />
-            <div className="text-center">
-              <p className="text-[14px] font-medium text-hh-earth-dk/70">
-                Ajouter des photos
-              </p>
-              <p className="text-[11px] text-hh-muted">Appuyez pour sélectionner</p>
-            </div>
-          </button>
-        )}
-
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          className="sr-only"
-          onChange={(e) => handlePhotoFiles(e.target.files)}
-        />
-
-        {photoError && (
-          <p className="mt-2 text-[12px] text-red-600" role="alert">
-            {photoError}
-          </p>
-        )}
       </div>
 
       {error && (

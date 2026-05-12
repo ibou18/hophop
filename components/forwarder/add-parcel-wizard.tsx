@@ -1105,7 +1105,6 @@ function StepSummary({
                 key={item.category}
                 className="rounded-full bg-white px-2.5 py-0.5 text-[12px] text-hh-earth-dk ring-1 ring-hh-sand-dk/30"
               >
-                {item.quantity > 1 ? `${item.quantity}× ` : ""}
                 {item.name}
               </span>
             ))}
