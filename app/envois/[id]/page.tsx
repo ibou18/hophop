@@ -85,23 +85,24 @@ export async function generateMetadata({
     .filter(Boolean)
     .join(" ");
 
-  const imageUrl = `${base}/envois/${id}/opengraph-image`;
-
   return {
     title,
     description,
+    alternates: { canonical: `${base}/envois/${id}` },
     openGraph: {
       title,
       description,
       url: `${base}/envois/${id}`,
       type: "website",
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+      locale: "fr_FR",
+      siteName: "Hophop",
+      // images: auto-renseigné par Next.js depuis opengraph-image.tsx
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [imageUrl],
+      // images: auto-renseigné par Next.js depuis twitter-image.tsx
     },
   };
 }
