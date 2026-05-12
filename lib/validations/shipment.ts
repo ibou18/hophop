@@ -4,8 +4,16 @@ import { Country } from "@/app/generated/prisma/enums";
 /** Aligné sur l’enum Prisma `Country` (évite les listes en dur incomplètes). */
 const country = z.nativeEnum(Country);
 const transportMode = z.enum(["AIR", "SEA", "ROAD", "CONTAINER", "RORO"] as const);
-const pricingType = z.enum(["WEIGHT_KG", "PER_BOX", "VOLUMETRIC", "FLAT", "PER_VEHICLE"] as const);
-const currency = z.enum(["EUR", "CAD", "XOF", "XAF", "GNF"] as const);
+const pricingType = z.enum([
+  "WEIGHT_KG",
+  "PER_BOX",
+  "VOLUMETRIC",
+  "FLAT",
+  "PER_VEHICLE",
+  "PER_DRUM",
+  "PER_SIZED_CARTON",
+] as const);
+const currency = z.enum(["EUR", "CAD", "XOF", "XAF", "GNF", "NGN"] as const);
 
 /** Champs communs de tarification d'un envoi (optionnels). */
 const shipmentPricingFields = {
@@ -15,6 +23,12 @@ const shipmentPricingFields = {
   flatRate: z.number().positive().nullable().optional(),
   ratePerVolume: z.number().positive().nullable().optional(),
   ratePerVehicle: z.number().positive().nullable().optional(),
+  rateDrumSmall: z.number().positive().nullable().optional(),
+  rateDrumMedium: z.number().positive().nullable().optional(),
+  rateDrumLarge: z.number().positive().nullable().optional(),
+  rateCartonSmall: z.number().positive().nullable().optional(),
+  rateCartonMedium: z.number().positive().nullable().optional(),
+  rateCartonLarge: z.number().positive().nullable().optional(),
   volumeDivisor: z.number().positive().optional(),
   minimumCharge: z.number().nonnegative().optional(),
   currency: currency.optional(),
@@ -40,6 +54,8 @@ export const createShipmentSchema = z
     arrivalDate: z.coerce.date().optional(),
     notes: z.string().optional(),
     acceptsVehicles: z.boolean().optional(),
+    acceptsDrums: z.boolean().optional(),
+    acceptsSizedCartons: z.boolean().optional(),
     ...shipmentPricingFields,
   })
   .refine(
@@ -104,6 +120,8 @@ export const patchShipmentSchema = z.object({
   notes: z.string().nullable().optional(),
   isPublished: z.boolean().optional(),
   acceptsVehicles: z.boolean().optional(),
+  acceptsDrums: z.boolean().optional(),
+  acceptsSizedCartons: z.boolean().optional(),
   ...shipmentPricingFields,
 });
 

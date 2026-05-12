@@ -40,6 +40,12 @@ export default async function AddParcelPage({ params }: Props) {
         currency: shipment.currency,
         destinationCountry: shipment.destinationCountry,
         transportMode: shipment.transportMode,
+        rateDrumSmall: shipment.rateDrumSmall,
+        rateDrumMedium: shipment.rateDrumMedium,
+        rateDrumLarge: shipment.rateDrumLarge,
+        rateCartonSmall: shipment.rateCartonSmall,
+        rateCartonMedium: shipment.rateCartonMedium,
+        rateCartonLarge: shipment.rateCartonLarge,
       }
     : null;
 

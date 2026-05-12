@@ -12,7 +12,11 @@ import {
   getResendClient,
   isEmailConfigured,
 } from "@/lib/mail/resend";
-import { isTwilioConfigured, sendTwilioSms } from "@/lib/sms/twilio";
+import {
+  isSmsSendingEnabled,
+  isTwilioConfigured,
+  sendTwilioSms,
+} from "@/lib/sms/twilio";
 import { NotificationStatus } from "@/app/generated/prisma/enums";
 import { pushMessage } from "@/lib/notifications/push-payload";
 import { sendExpoPushToTokens } from "@/lib/push/expo";
@@ -127,6 +131,10 @@ export async function dispatchNotificationById(id: string): Promise<void> {
   if (n.channel === "SMS") {
     if (!targetPhone) {
       await markFailed(id, "Aucun numéro de téléphone pour ce destinataire");
+      return;
+    }
+    if (!isSmsSendingEnabled()) {
+      await markSent(id, "sms_disabled_by_config");
       return;
     }
     if (!isTwilioConfigured()) {

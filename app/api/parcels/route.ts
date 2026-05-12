@@ -18,6 +18,10 @@ import { scheduleNotificationDispatch } from "@/lib/notifications/schedule";
 import { clientJoinableShipmentWhere } from "@/lib/shipment-public-visibility";
 import {
   vehicleTariffFromShipment,
+  drumTariffFromShipment,
+  sizedCartonTariffFromShipment,
+  DRUM_SIZE_LABEL_FR,
+  CARTON_SIZE_LABEL_FR,
   type PricingResult,
 } from "@/lib/pricing";
 
@@ -77,6 +81,8 @@ export async function POST(req: Request) {
     recipientId: data.recipientId,
     itemsCount: data.items?.length ?? 0,
     isVehicle: !!data.vehicle,
+    isDrum: !!data.drum,
+    isSizedCarton: !!data.sizedCarton,
     shipmentId: data.shipmentId,
   });
 
@@ -109,8 +115,8 @@ export async function POST(req: Request) {
     return jsonError("Destinataire invalide", 400);
   }
 
-  let vehiclePricing: PricingResult | null = null;
-  if (data.shipmentId && data.vehicle) {
+  let declaredPricing: PricingResult | null = null;
+  if (data.shipmentId && (data.vehicle || data.drum || data.sizedCarton)) {
     const shipment = await prisma.shipment.findFirst({
       where: {
         id: data.shipmentId,
@@ -119,11 +125,19 @@ export async function POST(req: Request) {
       },
       select: {
         acceptsVehicles: true,
+        acceptsDrums: true,
+        acceptsSizedCartons: true,
         ratePerKg: true,
         ratePerBox: true,
         flatRate: true,
         ratePerVolume: true,
         ratePerVehicle: true,
+        rateDrumSmall: true,
+        rateDrumMedium: true,
+        rateDrumLarge: true,
+        rateCartonSmall: true,
+        rateCartonMedium: true,
+        rateCartonLarge: true,
         volumeDivisor: true,
         minimumCharge: true,
         currency: true,
@@ -137,22 +151,37 @@ export async function POST(req: Request) {
         400,
       );
     }
-    if (!shipment.acceptsVehicles) {
-      return jsonError("Cet envoi n'accepte pas les véhicules.", 422);
+    if (data.vehicle) {
+      if (!shipment.acceptsVehicles) {
+        return jsonError("Cet envoi n'accepte pas les véhicules.", 422);
+      }
+      declaredPricing = vehicleTariffFromShipment(shipment);
+    } else if (data.drum) {
+      if (!shipment.acceptsDrums) {
+        return jsonError("Cet envoi n'accepte pas les fûts.", 422);
+      }
+      declaredPricing = drumTariffFromShipment(shipment, data.drum.size);
+    } else if (data.sizedCarton) {
+      if (!shipment.acceptsSizedCartons) {
+        return jsonError("Cet envoi n'accepte pas les cartons par taille.", 422);
+      }
+      declaredPricing = sizedCartonTariffFromShipment(
+        shipment,
+        data.sizedCarton.size,
+      );
     }
-    vehiclePricing = vehicleTariffFromShipment(shipment);
   }
 
-  const resolvedPrice = vehiclePricing
-    ? vehiclePricing.calculatedPrice
+  const resolvedPrice = declaredPricing
+    ? declaredPricing.calculatedPrice
     : data.price ?? null;
-  const resolvedCalculatedPrice = vehiclePricing
-    ? vehiclePricing.calculatedPrice
+  const resolvedCalculatedPrice = declaredPricing
+    ? declaredPricing.calculatedPrice
     : null;
-  const resolvedPricingType = vehiclePricing
-    ? vehiclePricing.pricingType
+  const resolvedPricingType = declaredPricing
+    ? declaredPricing.pricingType
     : null;
-  const resolvedCurrency = vehiclePricing ? vehiclePricing.currency : undefined;
+  const resolvedCurrency = declaredPricing ? declaredPricing.currency : undefined;
 
   let trackingCode = generateTrackingCode();
   for (let i = 0; i < 15; i++) {
@@ -174,7 +203,15 @@ export async function POST(req: Request) {
           lengthCm: data.lengthCm ?? null,
           widthCm: data.widthCm ?? null,
           heightCm: data.heightCm ?? null,
-          description: data.description ?? (data.vehicle ? `${data.vehicle.year} ${data.vehicle.make} ${data.vehicle.model}` : null),
+          description:
+            data.description ??
+            (data.vehicle
+              ? `${data.vehicle.year} ${data.vehicle.make} ${data.vehicle.model}`
+              : data.drum
+                ? `${DRUM_SIZE_LABEL_FR[data.drum.size]}${data.drum.contentHint ? ` — ${data.drum.contentHint}` : ""}`
+                : data.sizedCarton
+                  ? `${CARTON_SIZE_LABEL_FR[data.sizedCarton.size]}${data.sizedCarton.contentHint ? ` — ${data.sizedCarton.contentHint}` : ""}`
+                  : null),
           declaredValue: data.declaredValue ?? null,
           price: resolvedPrice,
           ...(resolvedCalculatedPrice !== null
@@ -193,22 +230,49 @@ export async function POST(req: Request) {
               notes: it.notes ?? null,
             })),
           } : undefined,
-          vehicle: data.vehicle ? {
-            create: {
-              make:           data.vehicle.make,
-              model:          data.vehicle.model,
-              year:           data.vehicle.year,
-              color:          data.vehicle.color ?? null,
-              vin:            data.vehicle.vin ?? null,
-              plate:          data.vehicle.plate ?? null,
-              fuelType:       data.vehicle.fuelType,
-              condition:      data.vehicle.condition,
-              hasKeys:        data.vehicle.hasKeys,
-              inspectionNote: data.vehicle.inspectionNote ?? null,
-            },
-          } : undefined,
+          vehicle: data.vehicle
+            ? {
+                create: {
+                  make: data.vehicle.make,
+                  model: data.vehicle.model,
+                  year: data.vehicle.year,
+                  color: data.vehicle.color ?? null,
+                  vin: data.vehicle.vin ?? null,
+                  plate: data.vehicle.plate ?? null,
+                  fuelType: data.vehicle.fuelType,
+                  condition: data.vehicle.condition,
+                  hasKeys: data.vehicle.hasKeys,
+                  inspectionNote: data.vehicle.inspectionNote ?? null,
+                },
+              }
+            : undefined,
+          drum: data.drum
+            ? {
+                create: {
+                  size: data.drum.size,
+                  contentHint: data.drum.contentHint ?? null,
+                  notes: data.drum.notes ?? null,
+                },
+              }
+            : undefined,
+          sizedCarton: data.sizedCarton
+            ? {
+                create: {
+                  size: data.sizedCarton.size,
+                  contentHint: data.sizedCarton.contentHint ?? null,
+                  notes: data.sizedCarton.notes ?? null,
+                },
+              }
+            : undefined,
         },
-        include: { items: true, vehicle: true, recipient: true, images: true },
+        include: {
+          items: true,
+          vehicle: true,
+          drum: true,
+          sizedCarton: true,
+          recipient: true,
+          images: true,
+        },
       });
       await tx.trackingEvent.create({
         data: {

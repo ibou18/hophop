@@ -18,16 +18,30 @@ const parcelItem = z.object({
 });
 
 export const vehicleSchema = z.object({
-  make:          z.string().min(1, "Marque requise"),
-  model:         z.string().min(1, "Modèle requis"),
-  year:          z.number().int().min(1900).max(new Date().getFullYear() + 1),
-  color:         z.string().optional(),
-  vin:           z.string().optional(),
-  plate:         z.string().optional(),
-  fuelType:      z.enum(["GASOLINE", "DIESEL", "ELECTRIC", "HYBRID", "OTHER"]).default("GASOLINE"),
-  condition:     z.enum(["RUNNING", "NON_RUNNING"]).default("RUNNING"),
-  hasKeys:       z.boolean().default(true),
+  make: z.string().min(1, "Marque requise"),
+  model: z.string().min(1, "Modèle requis"),
+  year: z.number().int().min(1900).max(new Date().getFullYear() + 1),
+  color: z.string().optional(),
+  vin: z.string().optional(),
+  plate: z.string().optional(),
+  fuelType: z
+    .enum(["GASOLINE", "DIESEL", "ELECTRIC", "HYBRID", "OTHER"])
+    .default("GASOLINE"),
+  condition: z.enum(["RUNNING", "NON_RUNNING"]).default("RUNNING"),
+  hasKeys: z.boolean().default(true),
   inspectionNote: z.string().optional(),
+});
+
+export const drumSchema = z.object({
+  size: z.enum(["SMALL", "MEDIUM", "LARGE"]),
+  contentHint: z.string().max(200).optional(),
+  notes: z.string().max(500).optional(),
+});
+
+export const sizedCartonSchema = z.object({
+  size: z.enum(["SMALL", "MEDIUM", "LARGE"]),
+  contentHint: z.string().max(200).optional(),
+  notes: z.string().max(500).optional(),
 });
 
 export const createParcelSchema = z
@@ -42,19 +56,40 @@ export const createParcelSchema = z
     declaredValue: z.number().nonnegative().optional(),
     price: z.number().nonnegative().optional(),
     items: z.array(parcelItem).min(1).optional(),
-    /** Envoi publié (lien déclaration) — sert au calcul tarif véhicule côté serveur uniquement. */
+    /** Envoi publié (lien déclaration) — sert au calcul tarif véhicule / fût / carton côté serveur uniquement. */
     shipmentId: z.string().uuid().optional(),
-    // Présent uniquement pour les déclarations véhicule
     vehicle: vehicleSchema.optional(),
+    drum: drumSchema.optional(),
+    sizedCarton: sizedCartonSchema.optional(),
   })
   .refine(
-    (d) => d.items && d.items.length > 0 || d.vehicle !== undefined,
-    { message: "Fournir au moins un article ou un véhicule", path: ["items"] },
+    (d) =>
+      (d.items && d.items.length > 0) ||
+      d.vehicle !== undefined ||
+      d.drum !== undefined ||
+      d.sizedCarton !== undefined,
+    { message: "Fournir au moins un article, un véhicule, un fût ou un carton par taille", path: ["items"] },
   )
-  .refine((d) => !d.shipmentId || d.vehicle !== undefined, {
-    message: "Référence d'envoi réservée à la déclaration véhicule.",
-    path: ["shipmentId"],
-  });
+  .refine(
+    (d) =>
+      [d.vehicle, d.drum, d.sizedCarton].filter((x) => x !== undefined).length <= 1,
+    {
+      message: "Un seul type spécial par colis : véhicule, fût ou carton standard.",
+      path: ["sizedCarton"],
+    },
+  )
+  .refine(
+    (d) =>
+      !d.shipmentId ||
+      d.vehicle !== undefined ||
+      d.drum !== undefined ||
+      d.sizedCarton !== undefined,
+    {
+      message:
+        "Référence d'envoi réservée à la déclaration véhicule, fût ou carton standard sur cet envoi.",
+      path: ["shipmentId"],
+    },
+  );
 
 /** Après création du colis : enregistrer les URLs S3 (upload déjà effectué). */
 export const attachParcelImagesSchema = z.object({

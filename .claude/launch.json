@@ -2,8 +2,8 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "hophop",
-      "runtimeExecutable": "npm",
+      "name": "hophop-client",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true

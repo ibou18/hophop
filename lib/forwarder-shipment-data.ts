@@ -29,6 +29,8 @@ const shipmentDetailInclude = {
       vehicle: {
         select: { id: true, make: true, model: true, year: true },
       },
+      drum: { select: { id: true, size: true } },
+      sizedCarton: { select: { id: true, size: true } },
     },
   },
   _count: { select: { requests: true } },
@@ -51,6 +53,8 @@ const assignableParcelInclude = {
   vehicle: {
     select: { id: true, make: true, model: true, year: true },
   },
+  drum: { select: { id: true, size: true } },
+  sizedCarton: { select: { id: true, size: true } },
 } satisfies Prisma.ParcelInclude;
 
 export type AssignableParcelRow = Prisma.ParcelGetPayload<{
@@ -60,7 +64,7 @@ export type AssignableParcelRow = Prisma.ParcelGetPayload<{
 /** Données minimales pour l’UI d’affectation (liste « ajouter » / « retirer »). */
 export type ParcelAssignmentListRow = Pick<
   AssignableParcelRow,
-  "id" | "trackingCode" | "client" | "recipient" | "vehicle"
+  "id" | "trackingCode" | "client" | "recipient" | "vehicle" | "drum" | "sizedCarton"
 >;
 
 export async function getForwarderShipments(
@@ -101,11 +105,13 @@ export type ShipmentRouteMatch = {
   originCountry: Country;
   destinationCountry: Country;
   acceptsVehicles: boolean;
+  acceptsDrums: boolean;
+  acceptsSizedCartons: boolean;
 };
 
 /**
  * Colis collectés, non affectés, dont le pays client → pays destinataire correspond
- * à la route de l’envoi. Les dossiers véhicule sont exclus si l’envoi n’accepte pas les véhicules.
+ * à la route de l’envoi. Les dossiers véhicule / fût / carton taille sont exclus si l’envoi ne les accepte pas.
  */
 export async function getAssignableParcels(
   forwarderId: string,
@@ -119,6 +125,8 @@ export async function getAssignableParcels(
       client: { country: route.originCountry },
       recipient: { country: route.destinationCountry },
       ...(route.acceptsVehicles ? {} : { vehicle: null }),
+      ...(route.acceptsDrums ? {} : { drum: null }),
+      ...(route.acceptsSizedCartons ? {} : { sizedCarton: null }),
     },
     orderBy: { createdAt: "desc" },
     take: 150,

@@ -6,6 +6,17 @@ export function isTwilioConfigured(): boolean {
   );
 }
 
+/**
+ * Active l’envoi réel des SMS (Twilio). Variable `SMS_SENDING_ENABLED`.
+ * - Absent, vide, `true`, `1`, `yes`, `on` → activé (soumis à {@link isTwilioConfigured}).
+ * - `false`, `0`, `no`, `off` → aucun SMS : le dispatch marque la notification comme traitée sans appeler Twilio.
+ */
+export function isSmsSendingEnabled(): boolean {
+  const v = process.env.SMS_SENDING_ENABLED?.trim().toLowerCase();
+  if (!v) return true;
+  return !["false", "0", "no", "off"].includes(v);
+}
+
 export async function sendTwilioSms(
   to: string,
   body: string

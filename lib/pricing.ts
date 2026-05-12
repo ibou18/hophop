@@ -1,7 +1,9 @@
 import type {
+  CartonSize,
   Country,
-  PricingType,
   Currency,
+  DrumSize,
+  PricingType,
   TransportMode,
 } from "@/app/generated/prisma/enums";
 
@@ -14,6 +16,12 @@ export interface ShipmentPricingFields {
   flatRate: number | null;
   ratePerVolume: number | null;
   ratePerVehicle: number | null;
+  rateDrumSmall: number | null;
+  rateDrumMedium: number | null;
+  rateDrumLarge: number | null;
+  rateCartonSmall: number | null;
+  rateCartonMedium: number | null;
+  rateCartonLarge: number | null;
   volumeDivisor: number;
   minimumCharge: number;
   currency: Currency;
@@ -24,6 +32,10 @@ export interface PricingInput {
   lengthCm?: number | null;
   widthCm?: number | null;
   heightCm?: number | null;
+  /** Pour `PER_DRUM` — palier petit / moyen / grand fût */
+  drumSize?: DrumSize | null;
+  /** Pour `PER_SIZED_CARTON` — palier petit / moyen / grand carton */
+  cartonSize?: CartonSize | null;
   destinationCountry: Country;
   transportMode: TransportMode;
 }
@@ -101,6 +113,32 @@ export function calculatePrice(
       raw = pricing.ratePerVehicle;
       break;
     }
+    case "PER_DRUM": {
+      const size = input.drumSize;
+      if (!size) return null;
+      const rate =
+        size === "SMALL"
+          ? pricing.rateDrumSmall
+          : size === "MEDIUM"
+            ? pricing.rateDrumMedium
+            : pricing.rateDrumLarge;
+      if (rate == null || !Number.isFinite(rate)) return null;
+      raw = rate;
+      break;
+    }
+    case "PER_SIZED_CARTON": {
+      const size = input.cartonSize;
+      if (!size) return null;
+      const rate =
+        size === "SMALL"
+          ? pricing.rateCartonSmall
+          : size === "MEDIUM"
+            ? pricing.rateCartonMedium
+            : pricing.rateCartonLarge;
+      if (rate == null || !Number.isFinite(rate)) return null;
+      raw = rate;
+      break;
+    }
   }
 
   if (raw === null) return null;
@@ -143,11 +181,101 @@ export function vehicleTariffFromShipment(
     flatRate: shipment.flatRate,
     ratePerVolume: shipment.ratePerVolume,
     ratePerVehicle: shipment.ratePerVehicle,
+    rateDrumSmall: null,
+    rateDrumMedium: null,
+    rateDrumLarge: null,
+    rateCartonSmall: null,
+    rateCartonMedium: null,
+    rateCartonLarge: null,
     volumeDivisor: shipment.volumeDivisor,
     minimumCharge: shipment.minimumCharge,
     currency: shipment.currency,
   };
   return calculatePrice(pricing, {
+    destinationCountry: shipment.destinationCountry,
+    transportMode: shipment.transportMode,
+  });
+}
+
+/** Champs envoi pour tarif fût (3 paliers). */
+export type ShipmentDrumTariffInput = {
+  acceptsDrums: boolean;
+  rateDrumSmall: number | null;
+  rateDrumMedium: number | null;
+  rateDrumLarge: number | null;
+  minimumCharge: number;
+  currency: Currency;
+  destinationCountry: Country;
+  transportMode: TransportMode;
+};
+
+/** Prix transport fût selon la taille déclarée. Null si envoi sans fûts ou tarif manquant. */
+export function drumTariffFromShipment(
+  shipment: ShipmentDrumTariffInput,
+  size: DrumSize,
+): PricingResult | null {
+  if (!shipment.acceptsDrums) return null;
+  const pricing: ShipmentPricingFields = {
+    pricingType: "PER_DRUM",
+    ratePerKg: null,
+    ratePerBox: null,
+    flatRate: null,
+    ratePerVolume: null,
+    ratePerVehicle: null,
+    rateDrumSmall: shipment.rateDrumSmall,
+    rateDrumMedium: shipment.rateDrumMedium,
+    rateDrumLarge: shipment.rateDrumLarge,
+    rateCartonSmall: null,
+    rateCartonMedium: null,
+    rateCartonLarge: null,
+    volumeDivisor: 5000,
+    minimumCharge: shipment.minimumCharge,
+    currency: shipment.currency,
+  };
+  return calculatePrice(pricing, {
+    drumSize: size,
+    destinationCountry: shipment.destinationCountry,
+    transportMode: shipment.transportMode,
+  });
+}
+
+/** Champs envoi pour tarif carton par taille (3 paliers). */
+export type ShipmentSizedCartonTariffInput = {
+  acceptsSizedCartons: boolean;
+  rateCartonSmall: number | null;
+  rateCartonMedium: number | null;
+  rateCartonLarge: number | null;
+  minimumCharge: number;
+  currency: Currency;
+  destinationCountry: Country;
+  transportMode: TransportMode;
+};
+
+/** Prix transport carton standard selon la taille déclarée. */
+export function sizedCartonTariffFromShipment(
+  shipment: ShipmentSizedCartonTariffInput,
+  size: CartonSize,
+): PricingResult | null {
+  if (!shipment.acceptsSizedCartons) return null;
+  const pricing: ShipmentPricingFields = {
+    pricingType: "PER_SIZED_CARTON",
+    ratePerKg: null,
+    ratePerBox: null,
+    flatRate: null,
+    ratePerVolume: null,
+    ratePerVehicle: null,
+    rateDrumSmall: null,
+    rateDrumMedium: null,
+    rateDrumLarge: null,
+    rateCartonSmall: shipment.rateCartonSmall,
+    rateCartonMedium: shipment.rateCartonMedium,
+    rateCartonLarge: shipment.rateCartonLarge,
+    volumeDivisor: 5000,
+    minimumCharge: shipment.minimumCharge,
+    currency: shipment.currency,
+  };
+  return calculatePrice(pricing, {
+    cartonSize: size,
     destinationCountry: shipment.destinationCountry,
     transportMode: shipment.transportMode,
   });
@@ -160,6 +288,20 @@ export const PRICING_TYPE_LABEL: Record<PricingType, string> = {
   VOLUMETRIC: "Volumétrique",
   FLAT: "Prix fixe",
   PER_VEHICLE: "Par véhicule",
+  PER_DRUM: "Par fût (taille)",
+  PER_SIZED_CARTON: "Par carton (taille)",
+};
+
+export const DRUM_SIZE_LABEL_FR: Record<DrumSize, string> = {
+  SMALL: "Petit fût",
+  MEDIUM: "Fût moyen",
+  LARGE: "Grand fût",
+};
+
+export const CARTON_SIZE_LABEL_FR: Record<CartonSize, string> = {
+  SMALL: "Petit carton",
+  MEDIUM: "Carton moyen",
+  LARGE: "Grand carton",
 };
 
 export const CURRENCY_LABEL: Record<Currency, string> = {

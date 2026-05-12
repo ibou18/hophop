@@ -1,6 +1,5 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ItemCategory } from "@/app/generated/prisma/enums";
 
@@ -8,6 +7,7 @@ import type { ItemCategory } from "@/app/generated/prisma/enums";
 export type ParcelContentLine = {
   category: ItemCategory;
   name: string;
+  /** Toujours 1 côté UI — conservé pour les APIs / Prisma. */
   quantity: number;
 };
 
@@ -24,6 +24,32 @@ export const PARCEL_CONTENT_CATEGORIES: {
   { value: "OTHER", icon: "📦", label: "Autre" },
 ];
 
+/** Réponse IA : tableau de codes ou `{ category, quantity? }` (quantité ignorée). */
+export function parcelContentLinesFromAiCategories(
+  categories: unknown,
+): ParcelContentLine[] {
+  if (!Array.isArray(categories) || categories.length === 0) return [];
+  const out: ParcelContentLine[] = [];
+  const seen = new Set<ItemCategory>();
+  for (const entry of categories) {
+    const code =
+      typeof entry === "string"
+        ? entry
+        : entry &&
+            typeof entry === "object" &&
+            "category" in entry &&
+            typeof (entry as { category: unknown }).category === "string"
+          ? (entry as { category: string }).category
+          : null;
+    if (!code) continue;
+    const cat = PARCEL_CONTENT_CATEGORIES.find((pc) => pc.value === code);
+    if (!cat || seen.has(cat.value)) continue;
+    seen.add(cat.value);
+    out.push({ category: cat.value, name: cat.label, quantity: 1 });
+  }
+  return out;
+}
+
 type Props = {
   items: ParcelContentLine[];
   onItemsChange: (items: ParcelContentLine[]) => void;
@@ -33,7 +59,7 @@ type Props = {
 };
 
 /**
- * Sélection multi-catégories + quantités — même UX que l’étape « Contenu » du wizard déclaration colis.
+ * Sélection multi-catégories (une ligne par catégorie, quantity = 1 pour l’API).
  */
 export function ParcelContentSelection({
   items,
@@ -55,16 +81,6 @@ export function ParcelContentSelection({
     }
   }
 
-  function updateQuantity(cat: ItemCategory, delta: number) {
-    onItemsChange(
-      items.map((item) =>
-        item.category === cat
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item,
-      ),
-    );
-  }
-
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {showIntro ? (
@@ -73,7 +89,7 @@ export function ParcelContentSelection({
             Contenu du colis
           </h2>
           <p className="mt-0.5 text-[12px] text-hh-muted">
-            Sélectionne les catégories (plusieurs possibles).
+            Sélectionne une ou plusieurs catégories.
           </p>
         </div>
       ) : null}
@@ -106,39 +122,6 @@ export function ParcelContentSelection({
           );
         })}
       </div>
-
-      {items.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-hh-sand-dk/15 pt-3">
-          <p className="text-[11px] font-medium text-hh-muted">Quantités</p>
-          {items.map((item) => (
-            <div
-              key={item.category}
-              className="flex items-center justify-between rounded-[var(--hh-radius-md)] bg-hh-sand px-3 py-2"
-            >
-              <span className="text-[13px] text-hh-earth-dk">{item.name}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateQuantity(item.category, -1)}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-hh-earth-dk hover:bg-hh-sand-dk/30"
-                >
-                  <Minus size={12} strokeWidth={2} />
-                </button>
-                <span className="w-5 text-center text-[13px] font-medium">
-                  {item.quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => updateQuantity(item.category, 1)}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-hh-earth-dk hover:bg-hh-sand-dk/30"
-                >
-                  <Plus size={12} strokeWidth={2} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -6,9 +6,11 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Banknote,
+  Box,
   Car,
   Check,
   CheckCircle2,
+  Cylinder,
   ExternalLink,
   Loader2,
   Package,
@@ -18,6 +20,7 @@ import {
 import type { Country, ParcelStatus } from "@/app/generated/prisma/enums";
 import { parcelStatusLabelFr } from "@/lib/parcel-status-fr";
 import { ALL_PARCEL_STATUSES_ORDERED, staffMayTransition } from "@/lib/parcel-status-workflow";
+import { CARTON_SIZE_LABEL_FR, DRUM_SIZE_LABEL_FR } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 export type RichParcelRow = {
@@ -37,6 +40,8 @@ export type RichParcelRow = {
   };
   recipient: { city: string; country: Country };
   vehicle: { id: string; make: string; model: string; year: number } | null;
+  drum: { id: string; size: "SMALL" | "MEDIUM" | "LARGE" } | null;
+  sizedCarton: { id: string; size: "SMALL" | "MEDIUM" | "LARGE" } | null;
 };
 
 type PaymentFilter = "all" | "paid" | "unpaid";
@@ -346,6 +351,10 @@ function ParcelRow({
         <div className="flex shrink-0 items-center gap-1.5 sm:w-24">
           {p.vehicle ? (
             <Car size={13} className="shrink-0 text-indigo-600" strokeWidth={2} />
+          ) : p.drum ? (
+            <Cylinder size={13} className="shrink-0 text-amber-700" strokeWidth={2} />
+          ) : p.sizedCarton ? (
+            <Box size={13} className="shrink-0 text-violet-700" strokeWidth={2} />
           ) : (
             <Package size={13} className="shrink-0 text-hh-muted" strokeWidth={2} />
           )}
@@ -371,6 +380,14 @@ function ParcelRow({
           {p.vehicle ? (
             <p className="truncate text-[11px] text-indigo-700/80">
               {p.vehicle.year} {p.vehicle.make} {p.vehicle.model}
+            </p>
+          ) : p.drum ? (
+            <p className="truncate text-[11px] text-amber-800/90">
+              {DRUM_SIZE_LABEL_FR[p.drum.size]}
+            </p>
+          ) : p.sizedCarton ? (
+            <p className="truncate text-[11px] text-violet-800/90">
+              {CARTON_SIZE_LABEL_FR[p.sizedCarton.size]}
             </p>
           ) : null}
         </div>
