@@ -71,7 +71,11 @@ export function ShipmentDetailTabs({
       <TabsContent value="pricing" className="mt-5">
         {pricingContent}
       </TabsContent>
-      <TabsContent value="share" className="mt-5 flex flex-col gap-5">
+      <TabsContent
+        value="share"
+        id="tab-share"
+        className="mt-5 scroll-mt-24 flex flex-col gap-5"
+      >
         {shareContent}
       </TabsContent>
       <TabsContent value="info" className="mt-5">

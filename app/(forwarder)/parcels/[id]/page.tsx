@@ -72,12 +72,19 @@ export default async function ForwarderParcelDetailPage({
   searchParams,
 }: Props) {
   const session = await auth();
-  const forwarderId = session?.user?.forwarderId;
-  if (!session?.user || session.user.role !== "FORWARDER" || !forwarderId) {
-    redirect("/login");
+  const { id } = await params;
+
+  // `/parcels/[id]` est l’URL espace transitaire ; les clients ont `/client/parcels/[id]`.
+  // Les liens partagés ou anciens mails peuvent pointer ici — on renvoie vers la bonne fiche.
+  if (session?.user?.role === "CLIENT" && session.user.clientId) {
+    redirect(`/client/parcels/${id}`);
   }
 
-  const { id } = await params;
+  const forwarderId = session?.user?.forwarderId;
+  if (!session?.user || session.user.role !== "FORWARDER" || !forwarderId) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/parcels/${id}`)}`);
+  }
+
   const sp = await searchParams;
   const fromShipmentParam =
     typeof sp.fromShipment === "string" ? sp.fromShipment.trim() : "";

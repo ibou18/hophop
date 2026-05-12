@@ -102,6 +102,22 @@ function formatPricing(s: PublicUpcomingShipment): string | null {
       return s.ratePerVolume != null ? `${s.ratePerVolume} ${sym} / u.vol` : null;
     case "PER_VEHICLE":
       return s.ratePerVehicle != null ? `${s.ratePerVehicle} ${sym} / véhicule` : null;
+    case "PER_DRUM": {
+      const parts = [
+        s.rateDrumSmall != null ? `petit ${s.rateDrumSmall}` : null,
+        s.rateDrumMedium != null ? `moyen ${s.rateDrumMedium}` : null,
+        s.rateDrumLarge != null ? `grand ${s.rateDrumLarge}` : null,
+      ].filter(Boolean);
+      return parts.length > 0 ? `${parts.join(" · ")} ${sym}` : null;
+    }
+    case "PER_SIZED_CARTON": {
+      const parts = [
+        s.rateCartonSmall != null ? `petit ${s.rateCartonSmall}` : null,
+        s.rateCartonMedium != null ? `moyen ${s.rateCartonMedium}` : null,
+        s.rateCartonLarge != null ? `grand ${s.rateCartonLarge}` : null,
+      ].filter(Boolean);
+      return parts.length > 0 ? `${parts.join(" · ")} ${sym}` : null;
+    }
   }
 }
 

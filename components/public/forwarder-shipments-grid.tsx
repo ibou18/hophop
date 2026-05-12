@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, useInView } from "motion/react";
 import { Calendar, Container, Package, Plane, Ship, Truck, ArrowRight, Tag } from "lucide-react";
 import { countryLabelFr } from "@/lib/country-label-fr";
-import { CURRENCY_SYMBOL } from "@/lib/pricing";
+import { CURRENCY_SYMBOL, DRUM_SIZE_LABEL_FR, CARTON_SIZE_LABEL_FR } from "@/lib/pricing";
 import type { Country, Currency, PricingType, ShipmentStatus, TransportMode } from "@/app/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +118,12 @@ export interface ShipmentCardData {
   flatRate: number | null;
   ratePerVolume: number | null;
   ratePerVehicle: number | null;
+  rateDrumSmall: number | null;
+  rateDrumMedium: number | null;
+  rateDrumLarge: number | null;
+  rateCartonSmall: number | null;
+  rateCartonMedium: number | null;
+  rateCartonLarge: number | null;
   volumeDivisor: number;
   minimumCharge: number;
   currency: Currency;
@@ -156,6 +162,26 @@ function formatPricing(s: ShipmentCardData): { label: string; value: string } | 
       return s.ratePerVehicle != null
         ? { label: "Par véhicule", value: `${s.ratePerVehicle} ${sym} / véhicule` }
         : null;
+    case "PER_DRUM": {
+      const bits = [
+        s.rateDrumSmall != null ? `${DRUM_SIZE_LABEL_FR.SMALL} ${s.rateDrumSmall}` : null,
+        s.rateDrumMedium != null ? `${DRUM_SIZE_LABEL_FR.MEDIUM} ${s.rateDrumMedium}` : null,
+        s.rateDrumLarge != null ? `${DRUM_SIZE_LABEL_FR.LARGE} ${s.rateDrumLarge}` : null,
+      ].filter(Boolean);
+      return bits.length > 0
+        ? { label: "Par fût", value: `${bits.join(" · ")} ${sym}` }
+        : null;
+    }
+    case "PER_SIZED_CARTON": {
+      const bits = [
+        s.rateCartonSmall != null ? `${CARTON_SIZE_LABEL_FR.SMALL} ${s.rateCartonSmall}` : null,
+        s.rateCartonMedium != null ? `${CARTON_SIZE_LABEL_FR.MEDIUM} ${s.rateCartonMedium}` : null,
+        s.rateCartonLarge != null ? `${CARTON_SIZE_LABEL_FR.LARGE} ${s.rateCartonLarge}` : null,
+      ].filter(Boolean);
+      return bits.length > 0
+        ? { label: "Par carton (taille)", value: `${bits.join(" · ")} ${sym}` }
+        : null;
+    }
   }
 }
 

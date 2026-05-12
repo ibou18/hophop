@@ -11,12 +11,20 @@ export type TargetShipmentSummary = {
   transportMode?: TransportMode;
   /** Envoi conteneur / RORO acceptant les véhicules */
   acceptsVehicles?: boolean;
+  acceptsDrums?: boolean;
+  acceptsSizedCartons?: boolean;
   pricingType?: PricingType | null;
   ratePerKg?: number | null;
   ratePerBox?: number | null;
   flatRate?: number | null;
   ratePerVolume?: number | null;
   ratePerVehicle?: number | null;
+  rateDrumSmall?: number | null;
+  rateDrumMedium?: number | null;
+  rateDrumLarge?: number | null;
+  rateCartonSmall?: number | null;
+  rateCartonMedium?: number | null;
+  rateCartonLarge?: number | null;
   volumeDivisor?: number;
   minimumCharge?: number;
   currency?: Currency;

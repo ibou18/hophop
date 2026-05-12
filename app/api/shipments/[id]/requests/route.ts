@@ -101,12 +101,20 @@ export async function POST(req: Request, ctx: Ctx) {
       originCountry: true,
       transportMode: true,
       acceptsVehicles: true,
+      acceptsDrums: true,
+      acceptsSizedCartons: true,
       pricingType: true,
       ratePerKg: true,
       ratePerBox: true,
       flatRate: true,
       ratePerVolume: true,
       ratePerVehicle: true,
+      rateDrumSmall: true,
+      rateDrumMedium: true,
+      rateDrumLarge: true,
+      rateCartonSmall: true,
+      rateCartonMedium: true,
+      rateCartonLarge: true,
       volumeDivisor: true,
       minimumCharge: true,
       currency: true,
@@ -120,6 +128,8 @@ export async function POST(req: Request, ctx: Ctx) {
       client: { select: { country: true, email: true, phone: true } },
       recipient: { select: { country: true } },
       vehicle: { select: { id: true } },
+      drum: { select: { id: true, size: true } },
+      sizedCarton: { select: { id: true, size: true } },
     },
   });
   if (!parcel) return jsonError("Colis introuvable", 404);
@@ -147,6 +157,18 @@ export async function POST(req: Request, ctx: Ctx) {
       422,
     );
   }
+  if (parcel.drum && !shipment.acceptsDrums) {
+    return jsonError(
+      "Cet envoi n'accepte pas les fûts : impossible d'affecter ce dossier.",
+      422,
+    );
+  }
+  if (parcel.sizedCarton && !shipment.acceptsSizedCartons) {
+    return jsonError(
+      "Cet envoi n'accepte pas les cartons par taille : impossible d'affecter ce dossier.",
+      422,
+    );
+  }
 
   const existing = await prisma.shipmentRequest.findUnique({
     where: { parcelId },
@@ -162,6 +184,12 @@ export async function POST(req: Request, ctx: Ctx) {
     flatRate: shipment.flatRate,
     ratePerVolume: shipment.ratePerVolume,
     ratePerVehicle: shipment.ratePerVehicle,
+    rateDrumSmall: shipment.rateDrumSmall,
+    rateDrumMedium: shipment.rateDrumMedium,
+    rateDrumLarge: shipment.rateDrumLarge,
+    rateCartonSmall: shipment.rateCartonSmall,
+    rateCartonMedium: shipment.rateCartonMedium,
+    rateCartonLarge: shipment.rateCartonLarge,
     volumeDivisor: shipment.volumeDivisor,
     minimumCharge: shipment.minimumCharge,
     currency: shipment.currency,
@@ -172,6 +200,8 @@ export async function POST(req: Request, ctx: Ctx) {
     lengthCm: parcel.lengthCm,
     widthCm: parcel.widthCm,
     heightCm: parcel.heightCm,
+    drumSize: parcel.drum?.size ?? null,
+    cartonSize: parcel.sizedCarton?.size ?? null,
     destinationCountry: shipment.destinationCountry,
     transportMode: shipment.transportMode,
   });

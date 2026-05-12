@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { Car, Link2, MessageCircle, Package } from "lucide-react";
+import { Car, Cylinder, Link2, MessageCircle, Package, Box } from "lucide-react";
 import type {
   AssignableParcelRow,
   ParcelAssignmentListRow,
 } from "@/lib/forwarder-shipment-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
+import { CARTON_SIZE_LABEL_FR, DRUM_SIZE_LABEL_FR } from "@/lib/pricing";
 import type { Country } from "@/app/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,16 @@ function ParcelRouteLines({ row }: { row: ParcelAssignmentListRow }) {
           <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-800 ring-1 ring-indigo-200">
             <Car className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
             Véhicule · {row.vehicle.year} {row.vehicle.make} {row.vehicle.model}
+          </span>
+        ) : row.drum ? (
+          <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
+            <Cylinder className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+            Fût · {DRUM_SIZE_LABEL_FR[row.drum.size]}
+          </span>
+        ) : row.sizedCarton ? (
+          <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-900 ring-1 ring-violet-200">
+            <Box className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+            Carton · {CARTON_SIZE_LABEL_FR[row.sizedCarton.size]}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-[var(--hh-radius-md)] bg-hh-sand/80 px-2 py-0.5 text-[11px] font-medium text-hh-earth-dk ring-1 ring-hh-sand-dk/25">

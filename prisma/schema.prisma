@@ -173,12 +173,28 @@ enum VehicleCondition {
   NON_RUNNING // En panne (ne démarre pas)
 }
 
+/// Taille de fût / baril (tarif forfaitaire par palier sur l’envoi).
+enum DrumSize {
+  SMALL // Petit fût
+  MEDIUM // Moyen
+  LARGE // Grand
+}
+
+/// Taille de carton standard (tarif par palier sur l’envoi, sans dimensions).
+enum CartonSize {
+  SMALL // Petit carton
+  MEDIUM // Moyen
+  LARGE // Grand
+}
+
 enum PricingType {
   WEIGHT_KG // Tarif au kilo
   PER_BOX // Tarif forfaitaire par carton
   VOLUMETRIC // Poids volumétrique (L×l×H ÷ diviseur)
   FLAT // Prix fixe par colis
   PER_VEHICLE // Prix fixe par véhicule (CONTAINER / RORO)
+  PER_DRUM // Prix selon taille de fût (SMALL / MEDIUM / LARGE)
+  PER_SIZED_CARTON // Prix selon taille de carton (SMALL / MEDIUM / LARGE)
 }
 
 enum Currency {
@@ -428,16 +444,30 @@ model Shipment {
   // Envoi maritime acceptant les véhicules (conteneur) — ouvre l'option véhicule côté client
   acceptsVehicles Boolean @default(false)
 
+  /// Fûts / barils (souvent maritime) — 3 paliers de prix sur l’envoi
+  acceptsDrums Boolean @default(false)
+
+  /// Colis « carton standard » facturés par taille (S/M/L), sans saisie L×l×H
+  acceptsSizedCartons Boolean @default(false)
+
   // ── Tarification spécifique à cet envoi ──────────────────────────────────
-  pricingType    PricingType? // null = utilise la grille globale
-  ratePerKg      Float? // WEIGHT_KG  : prix par kilo
-  ratePerBox     Float? // PER_BOX    : prix par carton
-  flatRate       Float? // FLAT       : prix fixe par colis
-  ratePerVolume  Float? // VOLUMETRIC : prix par unité volumétrique
-  ratePerVehicle Float? // prix fixe par véhicule (quand acceptsVehicles = true)
-  volumeDivisor  Float        @default(5000)
-  minimumCharge  Float        @default(0)
-  currency       Currency     @default(CAD)
+  pricingType      PricingType? // null = utilise la grille globale
+  ratePerKg        Float? // WEIGHT_KG  : prix par kilo
+  ratePerBox       Float? // PER_BOX    : prix par carton
+  flatRate         Float? // FLAT       : prix fixe par colis
+  ratePerVolume    Float? // VOLUMETRIC : prix par unité volumétrique
+  ratePerVehicle   Float? // prix fixe par véhicule (quand acceptsVehicles = true)
+  /// Tarifs fût par palier (quand `acceptsDrums` + tarification PER_DRUM ou calcul dédié)
+  rateDrumSmall    Float?
+  rateDrumMedium   Float?
+  rateDrumLarge    Float?
+  /// Tarifs carton par palier (quand `acceptsSizedCartons` + PER_SIZED_CARTON ou calcul dédié)
+  rateCartonSmall  Float?
+  rateCartonMedium Float?
+  rateCartonLarge  Float?
+  volumeDivisor    Float        @default(5000)
+  minimumCharge    Float        @default(0)
+  currency         Currency     @default(CAD)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -507,9 +537,52 @@ model Parcel {
   notifications   Notification[]
   shipmentRequest ShipmentRequest?
   vehicle         Vehicle? // Présent uniquement si le colis est un véhicule
+  drum            Drum? // Fût / baril (exclusif avec `vehicle` côté métier)
+  sizedCarton     SizedCarton? // Carton standard S/M/L (exclusif véhicule / fût)
   parcelRequest   ParcelRequest?   @relation("MatchedParcel")
 
   @@map("parcels")
+}
+
+// ─────────────────────────────────────────────
+// DRUM — Fût / baril rattaché à un colis (1 colis = 1 fût)
+// ─────────────────────────────────────────────
+
+model Drum {
+  id       String   @id @default(uuid())
+  parcelId String   @unique
+  size     DrumSize
+
+  /// Contenu déclaré (ex. huile, produit chimique) — optionnel
+  contentHint String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+
+  @@map("drums")
+}
+
+// ─────────────────────────────────────────────
+// SIZED CARTON — Colis déclaré comme carton standard (1 colis = 1 taille)
+// ─────────────────────────────────────────────
+
+model SizedCarton {
+  id       String     @id @default(uuid())
+  parcelId String     @unique
+  size     CartonSize
+
+  contentHint String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+
+  @@map("sized_cartons")
 }
 
 // ─────────────────────────────────────────────

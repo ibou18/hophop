@@ -10,6 +10,7 @@ import { ShipmentStatus as ShipmentSt } from "@/app/generated/prisma/enums";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { shipmentStatusLabelFr } from "@/lib/shipment-status-fr";
 import { TransportModeBadge } from "@/components/transport-mode-selector";
+import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
 import { cn } from "@/lib/utils";
 
 type StatusVisual = {
@@ -57,6 +58,7 @@ export function ShipmentHero({
   currency,
   kpis,
   updatedAtIso,
+  isPublished,
 }: {
   shipmentId: string;
   reference: string;
@@ -70,6 +72,8 @@ export function ShipmentHero({
   currency: string;
   kpis: ShipmentHeroKpis;
   updatedAtIso: string;
+  /** Visible sur la vitrine / page transitaire pour les demandes clients. */
+  isPublished: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -175,6 +179,19 @@ export function ShipmentHero({
             </span>
           ) : null}
         </p>
+
+        <div className="mt-4 rounded-[var(--hh-radius-md)] border border-hh-sand-dk/20 bg-hh-sand/40 px-3 py-3 sm:px-4">
+          <ShipmentPublishToggle shipmentId={shipmentId} isPublished={isPublished} />
+          <p className="mt-2 text-[11px] text-hh-muted">
+            <span className="font-medium text-hh-earth-dk">Public</span> : vitrine Hophop et
+            demandes clients. <span className="font-medium text-hh-earth-dk">Privé</span> :
+            pas listé publiquement (lien direct, affectation manuelle).
+          </p>
+          <p className="mt-1.5 text-[11px] text-hh-muted">
+            Lien de partage et QR code : onglet{" "}
+            <span className="font-medium text-hh-earth-dk">Partage</span> sous cette fiche.
+          </p>
+        </div>
       </div>
 
       {/* Timeline stepper */}

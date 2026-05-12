@@ -12,15 +12,107 @@ import { clientJoinableShipmentWhere } from "@/lib/shipment-public-visibility";
 import { DeclareParcelWizard } from "@/components/client/declare-parcel-wizard";
 import type { TargetShipmentSummary } from "@/components/client/declare-target-shipment";
 import { DeclareVehicleForm } from "@/components/client/declare-vehicle-form";
-import { DeclareModeToggle } from "@/components/client/declare-mode-toggle";
+import { DeclareModeToggle, type DeclareFlowMode } from "@/components/client/declare-mode-toggle";
+import { DeclareTieredParcelForm } from "@/components/client/declare-tiered-parcel-form";
 import { ShipmentsCatalog } from "@/components/client/shipments-catalog";
 import { Package } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Déclarer un colis" };
 
+/** UUID v1–v5 (évite les faux négatifs d’un filtre trop strict). */
 const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const SHIPMENT_DECLARE_SELECT = {
+  id: true,
+  forwarderId: true,
+  reference: true,
+  originCountry: true,
+  destinationCountry: true,
+  destinationCity: true,
+  departureDate: true,
+  arrivalDate: true,
+  transportMode: true,
+  pricingType: true,
+  ratePerKg: true,
+  ratePerBox: true,
+  flatRate: true,
+  ratePerVolume: true,
+  volumeDivisor: true,
+  minimumCharge: true,
+  currency: true,
+  ratePerVehicle: true,
+  acceptsVehicles: true,
+  acceptsDrums: true,
+  rateDrumSmall: true,
+  rateDrumMedium: true,
+  rateDrumLarge: true,
+  acceptsSizedCartons: true,
+  rateCartonSmall: true,
+  rateCartonMedium: true,
+  rateCartonLarge: true,
+} as const;
+
+type ShipmentDeclareRow = {
+  id: string;
+  forwarderId: string;
+  reference: string;
+  originCountry: TargetShipmentSummary["originCountry"];
+  destinationCountry: TargetShipmentSummary["destinationCountry"];
+  destinationCity: string | null;
+  departureDate: Date | null;
+  arrivalDate: Date | null;
+  transportMode: NonNullable<TargetShipmentSummary["transportMode"]>;
+  pricingType: TargetShipmentSummary["pricingType"];
+  ratePerKg: number | null;
+  ratePerBox: number | null;
+  flatRate: number | null;
+  ratePerVolume: number | null;
+  volumeDivisor: number;
+  minimumCharge: number;
+  currency: NonNullable<TargetShipmentSummary["currency"]>;
+  ratePerVehicle: number | null;
+  acceptsVehicles: boolean;
+  acceptsDrums: boolean;
+  rateDrumSmall: number | null;
+  rateDrumMedium: number | null;
+  rateDrumLarge: number | null;
+  acceptsSizedCartons: boolean;
+  rateCartonSmall: number | null;
+  rateCartonMedium: number | null;
+  rateCartonLarge: number | null;
+};
+
+function shipmentRowToSummary(shipment: ShipmentDeclareRow): TargetShipmentSummary {
+  return {
+    reference: shipment.reference,
+    originCountry: shipment.originCountry,
+    destinationCountry: shipment.destinationCountry,
+    destinationCity: shipment.destinationCity,
+    departureDate: shipment.departureDate?.toISOString() ?? null,
+    arrivalDate: shipment.arrivalDate?.toISOString() ?? null,
+    transportMode: shipment.transportMode,
+    pricingType: shipment.pricingType,
+    ratePerKg: shipment.ratePerKg,
+    ratePerBox: shipment.ratePerBox,
+    flatRate: shipment.flatRate,
+    ratePerVolume: shipment.ratePerVolume,
+    ratePerVehicle: shipment.ratePerVehicle,
+    volumeDivisor: shipment.volumeDivisor,
+    minimumCharge: shipment.minimumCharge,
+    currency: shipment.currency,
+    acceptsVehicles: shipment.acceptsVehicles,
+    acceptsDrums: shipment.acceptsDrums,
+    rateDrumSmall: shipment.rateDrumSmall,
+    rateDrumMedium: shipment.rateDrumMedium,
+    rateDrumLarge: shipment.rateDrumLarge,
+    acceptsSizedCartons: shipment.acceptsSizedCartons,
+    rateCartonSmall: shipment.rateCartonSmall,
+    rateCartonMedium: shipment.rateCartonMedium,
+    rateCartonLarge: shipment.rateCartonLarge,
+  };
+}
 
 type PageProps = {
   searchParams: Promise<{ forwarder?: string; envoi?: string; mode?: string }>;
@@ -38,13 +130,16 @@ export default async function DeclarePage({ searchParams }: PageProps) {
     if (typeof sp.envoi === "string" && sp.envoi.trim()) {
       q.set("envoi", sp.envoi.trim());
     }
+    if (typeof sp.mode === "string" && sp.mode.trim()) {
+      q.set("mode", sp.mode.trim());
+    }
     const declarePath = q.toString() ? `/client/declare?${q.toString()}` : "/client/declare";
     redirect(`/login?callbackUrl=${encodeURIComponent(declarePath)}`);
   }
   const forwarderParam =
     typeof sp.forwarder === "string" ? sp.forwarder.trim() : "";
   const envoiParam = typeof sp.envoi === "string" ? sp.envoi.trim() : "";
-  const modeParam = typeof sp.mode === "string" ? sp.mode.trim() : "";
+  const modeParam = typeof sp.mode === "string" ? sp.mode.trim().toLowerCase() : "";
 
   // Pas d'envoi ciblé → afficher le catalogue pour choisir d'abord
   if (!envoiParam) {
@@ -59,8 +154,8 @@ export default async function DeclarePage({ searchParams }: PageProps) {
             Choisir un envoi
           </h1>
           <p className="mt-1.5 text-[15px] text-hh-muted">
-            Sélectionne l&apos;envoi sur lequel tu souhaites embarquer ton colis
-            ou ton véhicule. Tu rempliras les détails à l&apos;étape suivante.
+            Sélectionne l&apos;envoi : colis par palier (carton ou fût maritime), ou véhicule si
+            proposé. Les détails se remplissent à l&apos;étape suivante.
           </p>
         </div>
         {rows.length === 0 ? (
@@ -121,66 +216,84 @@ export default async function DeclarePage({ searchParams }: PageProps) {
   let targetShipmentId: string | undefined;
   let targetShipmentSummary: TargetShipmentSummary | undefined;
 
-  if (UUID_RE.test(envoiParam) && initialForwarderId) {
-    const shipment = await prisma.shipment.findFirst({
-      where: {
-        id: envoiParam,
-        forwarderId: initialForwarderId,
-        isPublished: true,
-      },
-      select: {
-        id: true,
-        reference: true,
-        originCountry: true,
-        destinationCountry: true,
-        destinationCity: true,
-        departureDate: true,
-        arrivalDate: true,
-        transportMode: true,
-        // Tarification propre au shipment
-        pricingType: true,
-        ratePerKg: true,
-        ratePerBox: true,
-        flatRate: true,
-        ratePerVolume: true,
-        volumeDivisor: true,
-        minimumCharge: true,
-        currency: true,
-        ratePerVehicle: true,
-        acceptsVehicles: true,
-      },
-    });
-    if (shipment) {
-      targetShipmentSummary = {
-        reference: shipment.reference,
-        originCountry: shipment.originCountry,
-        destinationCountry: shipment.destinationCountry,
-        destinationCity: shipment.destinationCity,
-        departureDate: shipment.departureDate?.toISOString() ?? null,
-        arrivalDate: shipment.arrivalDate?.toISOString() ?? null,
-        transportMode: shipment.transportMode,
-        pricingType: shipment.pricingType,
-        ratePerKg: shipment.ratePerKg,
-        ratePerBox: shipment.ratePerBox,
-        flatRate: shipment.flatRate,
-        ratePerVolume: shipment.ratePerVolume,
-        ratePerVehicle: shipment.ratePerVehicle,
-        volumeDivisor: shipment.volumeDivisor,
-        minimumCharge: shipment.minimumCharge,
-        currency: shipment.currency,
-        acceptsVehicles: shipment.acceptsVehicles,
-      };
-      const stillJoinable = await prisma.shipment.findFirst({
+  if (UUID_RE.test(envoiParam)) {
+    let row: ShipmentDeclareRow | null = null;
+
+    if (initialForwarderId) {
+      row = await prisma.shipment.findFirst({
         where: {
           id: envoiParam,
           forwarderId: initialForwarderId,
+          isPublished: true,
+        },
+        select: SHIPMENT_DECLARE_SELECT,
+      });
+    }
+
+    if (!row) {
+      const fallback = await prisma.shipment.findFirst({
+        where: {
+          id: envoiParam,
+          isPublished: true,
+          forwarder: {
+            isActive: true,
+            clients: { some: { clientId } },
+          },
+        },
+        select: SHIPMENT_DECLARE_SELECT,
+      });
+      if (fallback) {
+        row = fallback as ShipmentDeclareRow;
+        initialForwarderId = fallback.forwarderId;
+      }
+    }
+
+    if (row) {
+      targetShipmentSummary = shipmentRowToSummary(row);
+      const stillJoinable = await prisma.shipment.findFirst({
+        where: {
+          id: envoiParam,
+          forwarderId: row.forwarderId,
           ...clientJoinableShipmentWhere(),
         },
         select: { id: true },
       });
-      if (stillJoinable) targetShipmentId = shipment.id;
+      if (stillJoinable) targetShipmentId = row.id;
     }
   }
+
+  const acceptsTiered =
+    !!targetShipmentId &&
+    ((targetShipmentSummary?.acceptsSizedCartons ?? false) ||
+      ((targetShipmentSummary?.acceptsDrums ?? false) &&
+        targetShipmentSummary?.transportMode === "SEA"));
+
+  /** Colis « dimensions / contenu détaillé » uniquement si l’envoi ne propose pas le palier. */
+  const showClassicParcelTab = !acceptsTiered;
+  const showTieredParcelTab = acceptsTiered;
+  const showVehicleTab = targetShipmentSummary?.acceptsVehicles ?? true;
+
+  let initialDeclareMode: DeclareFlowMode = "parcel";
+  if (modeParam === "vehicle" && showVehicleTab) {
+    initialDeclareMode = "vehicle";
+  } else if (
+    (modeParam === "carton" ||
+      modeParam === "drum" ||
+      modeParam === "tiered" ||
+      modeParam === "palier") &&
+    showTieredParcelTab
+  ) {
+    initialDeclareMode = "tiered";
+  } else if (showTieredParcelTab) {
+    initialDeclareMode = "tiered";
+  }
+
+  const tieredInitialKind =
+    modeParam === "drum" &&
+    targetShipmentSummary?.acceptsDrums &&
+    targetShipmentSummary.transportMode === "SEA"
+      ? ("drum" as const)
+      : ("carton" as const);
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -191,17 +304,24 @@ export default async function DeclarePage({ searchParams }: PageProps) {
         Déclarer un envoi
       </h1>
       <p className="mb-5 text-[15px] text-hh-muted">
-        {targetShipmentSummary?.acceptsVehicles
-          ? "Colis classique ou véhicule — sélectionne le type ci-dessous."
-          : "Remplis les informations de ton colis ci-dessous."}
+        {(() => {
+          if (showTieredParcelTab && showVehicleTab) {
+            return "Colis par palier (carton ou fût selon l’envoi) ou véhicule — choisis le mode ci-dessous.";
+          }
+          if (showTieredParcelTab) {
+            return "Indique la taille de palier (petit, moyen, grand) et le type carton ou fût si les deux sont proposés.";
+          }
+          if (showVehicleTab) {
+            return "Colis classique ou véhicule — sélectionne le type ci-dessous.";
+          }
+          return "Remplis les informations de ton colis ci-dessous.";
+        })()}
       </p>
       <DeclareModeToggle
-        showVehicleTab={targetShipmentSummary?.acceptsVehicles ?? true}
-        initialMode={
-          modeParam === "vehicle" && targetShipmentSummary?.acceptsVehicles
-            ? "vehicle"
-            : "parcel"
-        }
+        showClassicParcelTab={showClassicParcelTab}
+        showVehicleTab={showVehicleTab}
+        showTieredParcelTab={showTieredParcelTab}
+        initialMode={initialDeclareMode}
         parcelContent={
           <DeclareParcelWizard
             recipients={recipients}
@@ -209,6 +329,16 @@ export default async function DeclarePage({ searchParams }: PageProps) {
             initialForwarderId={initialForwarderId}
             targetShipmentId={targetShipmentId}
             targetShipmentSummary={targetShipmentSummary}
+          />
+        }
+        tieredParcelContent={
+          <DeclareTieredParcelForm
+            recipients={recipients}
+            forwarders={forwarders}
+            initialForwarderId={initialForwarderId}
+            targetShipmentId={targetShipmentId}
+            targetShipmentSummary={targetShipmentSummary}
+            initialKind={tieredInitialKind}
           />
         }
         vehicleContent={

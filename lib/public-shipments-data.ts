@@ -11,12 +11,18 @@ export type PublicUpcomingShipment = {
   destinationCity: string | null;
   departureDate: Date;
   // Tarification de l'envoi (null = non définie publiquement)
-  pricingType: "WEIGHT_KG" | "PER_BOX" | "VOLUMETRIC" | "FLAT" | "PER_VEHICLE" | null;
+  pricingType: "WEIGHT_KG" | "PER_BOX" | "VOLUMETRIC" | "FLAT" | "PER_VEHICLE" | "PER_DRUM" | "PER_SIZED_CARTON" | null;
   ratePerKg: number | null;
   ratePerBox: number | null;
   flatRate: number | null;
   ratePerVolume: number | null;
   ratePerVehicle: number | null;
+  rateDrumSmall: number | null;
+  rateDrumMedium: number | null;
+  rateDrumLarge: number | null;
+  rateCartonSmall: number | null;
+  rateCartonMedium: number | null;
+  rateCartonLarge: number | null;
   currency: string;
   forwarder: {
     code5: string;
@@ -46,6 +52,12 @@ export async function getPublicUpcomingShipments(
       flatRate: true,
       ratePerVolume: true,
       ratePerVehicle: true,
+      rateDrumSmall: true,
+      rateDrumMedium: true,
+      rateDrumLarge: true,
+      rateCartonSmall: true,
+      rateCartonMedium: true,
+      rateCartonLarge: true,
       currency: true,
       forwarder: {
         select: { code5: true, name: true, city: true },
@@ -69,6 +81,12 @@ export async function getPublicUpcomingShipments(
       flatRate: r.flatRate,
       ratePerVolume: r.ratePerVolume,
       ratePerVehicle: r.ratePerVehicle,
+      rateDrumSmall: r.rateDrumSmall,
+      rateDrumMedium: r.rateDrumMedium,
+      rateDrumLarge: r.rateDrumLarge,
+      rateCartonSmall: r.rateCartonSmall,
+      rateCartonMedium: r.rateCartonMedium,
+      rateCartonLarge: r.rateCartonLarge,
       currency: r.currency,
       forwarder: r.forwarder,
     }));

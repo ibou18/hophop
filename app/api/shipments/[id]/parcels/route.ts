@@ -47,6 +47,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       },
       include: {
         vehicle: { select: { id: true } },
+        drum: { select: { id: true, size: true } },
+        sizedCarton: { select: { id: true, size: true } },
         client: { select: { country: true } },
         recipient: { select: { country: true } },
       },
@@ -74,6 +76,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
           422,
         );
       }
+      if (p.drum && !shipment.acceptsDrums) {
+        return jsonError(
+          "Cet envoi n’accepte pas les fûts : impossible d’affecter ce dossier.",
+          422,
+        );
+      }
+      if (p.sizedCarton && !shipment.acceptsSizedCartons) {
+        return jsonError(
+          "Cet envoi n’accepte pas les cartons par taille : impossible d’affecter ce dossier.",
+          422,
+        );
+      }
     }
 
     // ── Résolution du prix par colis via la tarification du shipment ─────────
@@ -84,6 +98,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
       flatRate: shipment.flatRate,
       ratePerVolume: shipment.ratePerVolume,
       ratePerVehicle: shipment.ratePerVehicle,
+      rateDrumSmall: shipment.rateDrumSmall,
+      rateDrumMedium: shipment.rateDrumMedium,
+      rateDrumLarge: shipment.rateDrumLarge,
+      rateCartonSmall: shipment.rateCartonSmall,
+      rateCartonMedium: shipment.rateCartonMedium,
+      rateCartonLarge: shipment.rateCartonLarge,
       volumeDivisor: shipment.volumeDivisor,
       minimumCharge: shipment.minimumCharge,
       currency: shipment.currency,
@@ -96,6 +116,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
           lengthCm: parcel.lengthCm,
           widthCm: parcel.widthCm,
           heightCm: parcel.heightCm,
+          drumSize: parcel.drum?.size ?? null,
+          cartonSize: parcel.sizedCarton?.size ?? null,
           destinationCountry: shipment.destinationCountry,
           transportMode: shipment.transportMode,
         };

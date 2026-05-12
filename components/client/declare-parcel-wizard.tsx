@@ -23,6 +23,7 @@ import { countryLabelFr } from "@/lib/country-label-fr";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
 import { toE164 } from "@/lib/phone-e164";
 import { uploadParcelImagesViaApi } from "@/lib/client/parcel-image-upload";
+import { analyzeParcelPhotoWithAi } from "@/lib/client/parcel-photo-ai";
 import {
   normalizeImageContentType,
   PARCEL_IMAGE_MAX_BYTES,
@@ -246,6 +247,12 @@ export function DeclareParcelWizard({
       flatRate: s.flatRate ?? null,
       ratePerVolume: s.ratePerVolume ?? null,
       ratePerVehicle: s.ratePerVehicle ?? null,
+      rateDrumSmall: s.rateDrumSmall ?? null,
+      rateDrumMedium: s.rateDrumMedium ?? null,
+      rateDrumLarge: s.rateDrumLarge ?? null,
+      rateCartonSmall: s.rateCartonSmall ?? null,
+      rateCartonMedium: s.rateCartonMedium ?? null,
+      rateCartonLarge: s.rateCartonLarge ?? null,
       volumeDivisor: s.volumeDivisor ?? 5000,
       minimumCharge: s.minimumCharge ?? 0,
       currency: s.currency ?? "EUR",
@@ -279,6 +286,18 @@ export function DeclareParcelWizard({
         missingHint =
           "Indiquez longueur, largeur et hauteur (cm) pour une estimation volumétrique.";
         break;
+      case "PER_DRUM":
+        missingHint =
+          s.acceptsDrums && targetShipmentId && s.transportMode === "SEA"
+            ? "Cette grille concerne les fûts : utilise le mode « Palier S / M / L » (même formulaire que le carton par taille)."
+            : "Cette grille s’applique aux fûts sur l’envoi.";
+        break;
+      case "PER_SIZED_CARTON":
+        missingHint =
+          s.acceptsSizedCartons && targetShipmentId
+            ? "Cette grille concerne les cartons par taille : utilise le mode « Palier S / M / L » ci-dessus."
+            : "Cette grille s’applique aux cartons par taille sur l’envoi.";
+        break;
       default:
         missingHint =
           "Les données de tarification sont incomplètes — contactez le transitaire.";
@@ -286,6 +305,7 @@ export function DeclareParcelWizard({
     return { hasPricing: true, result: null, missingHint };
   }, [
     targetShipmentSummary,
+    targetShipmentId,
     state.weightKg,
     state.lengthCm,
     state.widthCm,
@@ -316,34 +336,8 @@ export function DeclareParcelWizard({
   async function analyzePhotoWithAI(file: File) {
     setAiLoading(true);
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = (reader.result as string).split(",")[1];
-          if (result) resolve(result);
-          else reject(new Error("empty"));
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const res = await fetch("/api/ai/analyze-parcel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          imageBase64: base64,
-          mimeType: file.type || "image/jpeg",
-        }),
-      });
-      if (!res.ok) return;
-
-      const data = (await res.json()) as {
-        description?: string;
-        estimatedWeightKg?: number | null;
-        categories?: unknown;
-        customsAlert?: string | null;
-      };
+      const data = await analyzeParcelPhotoWithAi(file);
+      if (!data) return;
 
       let suggested = false;
       setState((prev) => {

@@ -25,7 +25,7 @@ import {
   pricingStateToPayload,
   type ShipmentPricingState,
 } from "@/components/forwarder/shipment-pricing-section";
-import { Car, Link2, MessageCircle } from "lucide-react";
+import { Box, Car, Cylinder, Link2, MessageCircle } from "lucide-react";
 import { CURRENCY_LABEL } from "@/lib/pricing";
 import type { Currency } from "@/app/generated/prisma/enums";
 
@@ -122,6 +122,16 @@ export function NewShipmentForm({
   const [vehiclePrice, setVehiclePrice] = useState("");
   const [vehicleCurrency, setVehicleCurrency] = useState<Currency>("CAD");
 
+  const [acceptsDrums, setAcceptsDrums] = useState(false);
+  const [drumSmall, setDrumSmall] = useState("");
+  const [drumMedium, setDrumMedium] = useState("");
+  const [drumLarge, setDrumLarge] = useState("");
+
+  const [acceptsSizedCartons, setAcceptsSizedCartons] = useState(false);
+  const [cartonSmall, setCartonSmall] = useState("");
+  const [cartonMedium, setCartonMedium] = useState("");
+  const [cartonLarge, setCartonLarge] = useState("");
+
   const isMaritime = transportMode === "SEA";
 
   function handleModeChange(m: TransportMode) {
@@ -130,6 +140,10 @@ export function NewShipmentForm({
     if (m !== "SEA") {
       setAcceptsVehicles(false);
       setVehiclePrice("");
+      setAcceptsDrums(false);
+      setDrumSmall("");
+      setDrumMedium("");
+      setDrumLarge("");
     }
   }
 
@@ -192,12 +206,30 @@ export function NewShipmentForm({
       arrivalDate: arrivalDate || undefined,
       notes: notes.trim() || undefined,
       acceptsVehicles: isMaritime ? acceptsVehicles : false,
+      acceptsDrums: isMaritime ? acceptsDrums : false,
+      acceptsSizedCartons,
       ...pricingPayload,
       // Vehicle price overrides ratePerVehicle when maritime + acceptsVehicles
       ...(isMaritime && acceptsVehicles && vehiclePrice
         ? {
             ratePerVehicle: parseFloat(vehiclePrice),
             currency: vehicleCurrency,
+          }
+        : {}),
+      ...(isMaritime && acceptsDrums
+        ? {
+            rateDrumSmall: drumSmall.trim() ? parseFloat(drumSmall) : null,
+            rateDrumMedium: drumMedium.trim() ? parseFloat(drumMedium) : null,
+            rateDrumLarge: drumLarge.trim() ? parseFloat(drumLarge) : null,
+            currency: pricing.currency,
+          }
+        : {}),
+      ...(acceptsSizedCartons
+        ? {
+            rateCartonSmall: cartonSmall.trim() ? parseFloat(cartonSmall) : null,
+            rateCartonMedium: cartonMedium.trim() ? parseFloat(cartonMedium) : null,
+            rateCartonLarge: cartonLarge.trim() ? parseFloat(cartonLarge) : null,
+            currency: pricing.currency,
           }
         : {}),
     };
@@ -554,6 +586,242 @@ export function NewShipmentForm({
           onChange={setPricing}
           disabled={pending}
         />
+
+        {/* ── Palier S/M/L : carton + fût (même logique côté client) ─────────── */}
+        <div className="space-y-5 rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-hh-sand/30 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="flex shrink-0 items-center gap-1 text-hh-earth-dk" aria-hidden>
+              <Box className="size-5 text-violet-700" />
+              <Cylinder className="size-5 text-amber-700" />
+            </span>
+            <div>
+              <p className="text-[14px] font-semibold text-hh-earth-dk">
+                Colis par palier (fût ou carton)
+              </p>
+              <p className="mt-1 text-[12px] text-hh-muted">
+                Côté client, un seul formulaire : taille S/M/L, contenu optionnel. Les tarifs
+                carton et fût sont indépendants ; choisis la{' '}
+                <strong>devise</strong> des montants palier dès que tu actives au moins une des deux
+                options (elle est aussi celle de la grille tarifaire principale).
+              </p>
+            </div>
+          </div>
+
+          {(acceptsSizedCartons || (isMaritime && acceptsDrums)) && (
+            <div className="max-w-md space-y-1.5 rounded-xl border border-hh-saffron/30 bg-white px-3 py-3">
+              <label
+                htmlFor="tier-currency"
+                className="text-[11px] font-semibold uppercase tracking-wide text-hh-muted"
+              >
+                Devise des tarifs petit / moyen / grand
+              </label>
+              <select
+                id="tier-currency"
+                value={pricing.currency}
+                onChange={(e) =>
+                  setPricing((p) => ({
+                    ...p,
+                    currency: e.target.value as Currency,
+                  }))
+                }
+                disabled={pending}
+                className={selectClass}
+              >
+                {(Object.keys(CURRENCY_LABEL) as Currency[]).map((k) => (
+                  <option key={k} value={k}>
+                    {CURRENCY_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="space-y-3 rounded-[var(--hh-radius-md)] border border-violet-200 bg-violet-50/50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Box size={16} className="shrink-0 text-violet-800" />
+                <div>
+                  <p className="text-[13px] font-medium text-violet-950">Cartons par taille</p>
+                  <p className="mt-0.5 text-[12px] text-violet-900/80">
+                    Tous modes de transport — pas de dimensions obligatoires.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={acceptsSizedCartons}
+                disabled={pending}
+                onClick={() => {
+                  const next = !acceptsSizedCartons;
+                  setAcceptsSizedCartons(next);
+                  if (!next) {
+                    setCartonSmall("");
+                    setCartonMedium("");
+                    setCartonLarge("");
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 disabled:opacity-50 ${
+                  acceptsSizedCartons ? "bg-violet-600" : "bg-hh-sand-dk/40"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                    acceptsSizedCartons ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {acceptsSizedCartons && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium uppercase tracking-wide text-violet-900">
+                    Petit carton
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={cartonSmall}
+                    onChange={(e) => setCartonSmall(e.target.value)}
+                    disabled={pending}
+                    placeholder="Prix"
+                    className={numInputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium uppercase tracking-wide text-violet-900">
+                    Carton moyen
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={cartonMedium}
+                    onChange={(e) => setCartonMedium(e.target.value)}
+                    disabled={pending}
+                    placeholder="Prix"
+                    className={numInputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium uppercase tracking-wide text-violet-900">
+                    Grand carton
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={cartonLarge}
+                    onChange={(e) => setCartonLarge(e.target.value)}
+                    disabled={pending}
+                    placeholder="Prix"
+                    className={numInputClass}
+                  />
+                </div>
+                <p className="sm:col-span-3 text-[11px] text-violet-900/70">
+                  Montants dans la devise « tarifs palier » ci-dessus. Laisse vide si négociation au
+                  cas par cas.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {isMaritime && (
+            <div className="space-y-3 rounded-[var(--hh-radius-md)] border border-amber-200 bg-amber-50/50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Cylinder size={16} className="shrink-0 text-amber-800" />
+                  <div>
+                    <p className="text-[13px] font-medium text-amber-950">Fûts (maritime)</p>
+                    <p className="mt-0.5 text-[12px] text-amber-900/80">
+                      Même principe S/M/L que les cartons, avec des prix propres aux fûts.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={acceptsDrums}
+                  disabled={pending}
+                  onClick={() => {
+                    const next = !acceptsDrums;
+                    setAcceptsDrums(next);
+                    if (!next) {
+                      setDrumSmall("");
+                      setDrumMedium("");
+                      setDrumLarge("");
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 disabled:opacity-50 ${
+                    acceptsDrums ? "bg-amber-600" : "bg-hh-sand-dk/40"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                      acceptsDrums ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {acceptsDrums && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase tracking-wide text-amber-900">
+                      Petit fût
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={drumSmall}
+                      onChange={(e) => setDrumSmall(e.target.value)}
+                      disabled={pending}
+                      placeholder="Prix"
+                      className={numInputClass}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase tracking-wide text-amber-900">
+                      Fût moyen
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={drumMedium}
+                      onChange={(e) => setDrumMedium(e.target.value)}
+                      disabled={pending}
+                      placeholder="Prix"
+                      className={numInputClass}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium uppercase tracking-wide text-amber-900">
+                      Grand fût
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={drumLarge}
+                      onChange={(e) => setDrumLarge(e.target.value)}
+                      disabled={pending}
+                      placeholder="Prix"
+                      className={numInputClass}
+                    />
+                  </div>
+                  <p className="sm:col-span-3 text-[11px] text-amber-900/70">
+                    Même devise que les paliers ci-dessus ({CURRENCY_LABEL[pricing.currency]}). Laisse
+                    vide si négociation au cas par cas.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── Section véhicule (maritime uniquement) ─────────────────────── */}
         {isMaritime && (

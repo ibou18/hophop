@@ -172,6 +172,8 @@ const parcelDetailInclude = {
   items: true,
   recipient: true,
   vehicle: true,
+  drum: true,
+  sizedCarton: true,
   client: {
     select: {
       id: true,

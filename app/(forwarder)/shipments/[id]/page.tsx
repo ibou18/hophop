@@ -11,7 +11,6 @@ import {
 } from "@/lib/forwarder-shipment-data";
 import { countryLabelFr } from "@/lib/country-label-fr";
 import { ShipmentParcelsAssignment } from "@/components/forwarder/shipment-parcels-assignment";
-import { ShipmentPublishToggle } from "@/components/forwarder/shipment-publish-toggle";
 import { ShipmentRequestsPanel } from "@/components/forwarder/shipment-requests-panel";
 import { ShipmentShareBlock } from "@/components/forwarder/shipment-share-block";
 import { ShipmentPricingEditor } from "@/components/forwarder/shipment-pricing-editor";
@@ -49,6 +48,8 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
       originCountry: shipment.originCountry,
       destinationCountry: shipment.destinationCountry,
       acceptsVehicles: shipment.acceptsVehicles,
+      acceptsDrums: shipment.acceptsDrums,
+      acceptsSizedCartons: shipment.acceptsSizedCartons,
     }),
     getShipmentRequests(forwarderId, id),
     getOtherShipments(forwarderId, id),
@@ -66,6 +67,8 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
     },
     recipient: p.recipient,
     vehicle: p.vehicle,
+    drum: p.drum,
+    sizedCarton: p.sizedCarton,
   }));
 
   const richParcelRows: RichParcelRow[] = shipment.parcels.map((p) => ({
@@ -85,6 +88,8 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
     },
     recipient: { city: p.recipient.city, country: p.recipient.country },
     vehicle: p.vehicle,
+    drum: p.drum,
+    sizedCarton: p.sizedCarton,
   }));
 
   const canCorrectAnyStatus =
@@ -137,6 +142,7 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         currency={shipment.currency}
         kpis={kpis}
         updatedAtIso={shipment.updatedAt.toISOString()}
+        isPublished={shipment.isPublished}
       />
 
       <ShipmentDetailTabs
@@ -217,12 +223,20 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
               editable={editable}
               isMaritime={shipment.transportMode === "SEA"}
               acceptsVehicles={shipment.acceptsVehicles}
+              acceptsDrums={shipment.acceptsDrums}
+              acceptsSizedCartons={shipment.acceptsSizedCartons}
               pricingType={shipment.pricingType}
               ratePerKg={shipment.ratePerKg}
               ratePerBox={shipment.ratePerBox}
               flatRate={shipment.flatRate}
               ratePerVolume={shipment.ratePerVolume}
               ratePerVehicle={shipment.ratePerVehicle}
+              rateDrumSmall={shipment.rateDrumSmall}
+              rateDrumMedium={shipment.rateDrumMedium}
+              rateDrumLarge={shipment.rateDrumLarge}
+              rateCartonSmall={shipment.rateCartonSmall}
+              rateCartonMedium={shipment.rateCartonMedium}
+              rateCartonLarge={shipment.rateCartonLarge}
               volumeDivisor={shipment.volumeDivisor}
               minimumCharge={shipment.minimumCharge}
               currency={shipment.currency}
@@ -232,15 +246,9 @@ export default async function ForwarderShipmentDetailPage({ params }: Props) {
         }
         shareContent={
           <>
-            <section className="rounded-[var(--hh-radius-lg)] border border-hh-sand-dk/25 bg-white p-5 shadow-sm">
-              <ShipmentPublishToggle
-                shipmentId={shipment.id}
-                isPublished={shipment.isPublished}
-              />
-            </section>
             <CollapsibleSection
               title="Partager cet envoi"
-              description="Lien public, QR code, suppression du brouillon."
+              description="Lien public, QR code, suppression du brouillon. La visibilité public / privé se règle dans l’en-tête de la page."
               defaultOpen
             >
               <ShipmentShareBlock

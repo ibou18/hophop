@@ -20,6 +20,8 @@ const parcelInclude = {
   shipment: { select: { id: true, reference: true, status: true, destinationCountry: true } },
   items: { select: { id: true, name: true, quantity: true, category: true } },
   vehicle: true,
+  drum: true,
+  sizedCarton: true,
   images: {
     orderBy: { sortOrder: "asc" as const },
     select: { id: true, url: true, sortOrder: true },
