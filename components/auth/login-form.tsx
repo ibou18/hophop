@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -175,10 +176,9 @@ export function LoginForm() {
               <Label htmlFor="admin-secret" className="text-[13px] font-medium text-hh-muted">
                 Code secret
               </Label>
-              <Input
+              <PasswordInput
                 id="admin-secret"
                 name="secret"
-                type="password"
                 autoComplete="off"
                 required
                 className={cn(authInputClass)}
@@ -277,10 +277,9 @@ export function LoginForm() {
                     Mot de passe oublié ?
                   </Link>
                 </div>
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   autoComplete="current-password"
                   required
                   className={cn(authInputClass)}
@@ -336,10 +335,9 @@ export function LoginForm() {
                     Mot de passe oublié ?
                   </Link>
                 </div>
-                <Input
+                <PasswordInput
                   id="cpassword"
                   name="password"
-                  type="password"
                   autoComplete="current-password"
                   required
                   className={cn(authInputClass)}

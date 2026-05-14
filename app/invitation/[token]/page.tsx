@@ -6,8 +6,12 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Building2, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { HopLogo } from "@/components/auth/hop-logo";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const ROLE_LABEL = { OWNER: "Propriétaire", ADMIN: "Administrateur", STAFF: "Collaborateur" };
+
+const invitationPasswordFieldClass =
+  "h-11 w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 bg-white px-3 py-2.5 text-[14px] outline-none focus-visible:border-hh-saffron/60 focus-visible:ring-2 focus-visible:ring-hh-saffron/15";
 
 type InvitationData = {
   id: string;
@@ -206,14 +210,13 @@ export default function AcceptInvitationPage() {
             <label className="mb-1.5 block text-[13px] font-medium text-hh-earth-dk">
               Mot de passe
             </label>
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Au moins 8 caractères"
-              className="w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 px-3 py-2.5 text-[14px] outline-none focus:border-hh-saffron/60 focus:ring-2 focus:ring-hh-saffron/15"
+              className={invitationPasswordFieldClass}
             />
           </div>
 
@@ -221,13 +224,12 @@ export default function AcceptInvitationPage() {
             <label className="mb-1.5 block text-[13px] font-medium text-hh-earth-dk">
               Confirmer le mot de passe
             </label>
-            <input
-              type="password"
+            <PasswordInput
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Répétez le mot de passe"
-              className="w-full rounded-[var(--hh-radius-md)] border border-hh-sand-dk/40 px-3 py-2.5 text-[14px] outline-none focus:border-hh-saffron/60 focus:ring-2 focus:ring-hh-saffron/15"
+              className={invitationPasswordFieldClass}
             />
           </div>
 

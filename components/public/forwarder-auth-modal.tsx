@@ -13,6 +13,7 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import type { Country } from "@/app/generated/prisma/enums";
 import { createClientSchema } from "@/lib/validations/client";
 import { PhoneCountryField } from "@/components/forms/phone-country-field";
+import { PasswordInput } from "@/components/ui/password-input";
 
 type Tab = "login" | "register";
 
@@ -184,9 +185,8 @@ export function ForwarderAuthModal({
               </div>
               <div>
                 <label className={labelClass}>Mot de passe</label>
-                <input
+                <PasswordInput
                   name="password"
-                  type="password"
                   autoComplete="current-password"
                   placeholder="••••••••"
                   className={inputClass}
@@ -257,9 +257,8 @@ export function ForwarderAuthModal({
               </div>
               <div>
                 <label className={labelClass}>Mot de passe</label>
-                <input
+                <PasswordInput
                   name="password"
-                  type="password"
                   autoComplete="new-password"
                   placeholder="Min. 8 caractères"
                   className={inputClass}

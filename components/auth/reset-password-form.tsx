@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -193,10 +193,9 @@ export function ResetPasswordForm() {
             <Label htmlFor="password" className="text-[13px] font-medium text-hh-muted">
               Nouveau mot de passe
             </Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="new-password"
               required
               minLength={8}
@@ -207,10 +206,9 @@ export function ResetPasswordForm() {
             <Label htmlFor="confirm" className="text-[13px] font-medium text-hh-muted">
               Confirmer le mot de passe
             </Label>
-            <Input
+            <PasswordInput
               id="confirm"
               name="confirm"
-              type="password"
               autoComplete="new-password"
               required
               minLength={8}
