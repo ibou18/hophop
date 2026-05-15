@@ -90,7 +90,9 @@ export function LoginForm() {
     setError(null);
     setNotClaimedEmail(null);
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "").trim().toLowerCase();
+    const email = String(fd.get("email") ?? "")
+      .trim()
+      .toLowerCase();
     const phone = String(fd.get("phone") ?? "").trim();
     const password = String(fd.get("password") ?? "");
     if (!password || (!email && !phone)) {
@@ -121,7 +123,9 @@ export function LoginForm() {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "").trim().toLowerCase();
+    const email = String(fd.get("email") ?? "")
+      .trim()
+      .toLowerCase();
     const secret = String(fd.get("secret") ?? "");
     if (!email || !secret) {
       setError("Email et code secret requis.");
@@ -154,13 +158,16 @@ export function LoginForm() {
             Administration
           </CardTitle>
           <CardDescription className="text-[14px] leading-relaxed text-hh-muted">
-            Réservé à l'équipe plateforme
+            Réservé à l&apos;équipe plateforme
           </CardDescription>
         </CardHeader>
         <CardContent className="pb-8">
           <form onSubmit={onAdminSubmit} className="flex flex-col gap-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-email" className="text-[13px] font-medium text-hh-muted">
+              <Label
+                htmlFor="admin-email"
+                className="text-[13px] font-medium text-hh-muted"
+              >
                 Adresse email
               </Label>
               <Input
@@ -173,7 +180,10 @@ export function LoginForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="admin-secret" className="text-[13px] font-medium text-hh-muted">
+              <Label
+                htmlFor="admin-secret"
+                className="text-[13px] font-medium text-hh-muted"
+              >
                 Code secret
               </Label>
               <PasswordInput
@@ -200,7 +210,10 @@ export function LoginForm() {
 
           <button
             type="button"
-            onClick={() => { setAdminMode(false); setError(null); }}
+            onClick={() => {
+              setAdminMode(false);
+              setError(null);
+            }}
             className="mt-6 w-full text-center text-[13px] text-hh-muted hover:text-hh-earth-dk"
           >
             ← Retour à la connexion
@@ -252,7 +265,10 @@ export function LoginForm() {
           <TabsContent value="forwarder" className="mt-0">
             <form onSubmit={onForwarderSubmit} className="flex flex-col gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-[13px] font-medium text-hh-muted">
+                <Label
+                  htmlFor="email"
+                  className="text-[13px] font-medium text-hh-muted"
+                >
                   Email pro
                 </Label>
                 <Input
@@ -266,7 +282,10 @@ export function LoginForm() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-[13px] font-medium text-hh-muted">
+                  <Label
+                    htmlFor="password"
+                    className="text-[13px] font-medium text-hh-muted"
+                  >
                     Mot de passe
                   </Label>
                   <Link
@@ -290,7 +309,11 @@ export function LoginForm() {
                   {error}
                 </p>
               ) : null}
-              <Button type="submit" disabled={loading} className={authSubmitButtonClass}>
+              <Button
+                type="submit"
+                disabled={loading}
+                className={authSubmitButtonClass}
+              >
                 {loading ? "Connexion…" : "Se connecter"}
               </Button>
             </form>
@@ -299,7 +322,10 @@ export function LoginForm() {
           <TabsContent value="client" className="mt-0">
             <form onSubmit={onClientSubmit} className="flex flex-col gap-4">
               <div className="space-y-2">
-                <Label htmlFor="cemail" className="text-[13px] font-medium text-hh-muted">
+                <Label
+                  htmlFor="cemail"
+                  className="text-[13px] font-medium text-hh-muted"
+                >
                   Email
                 </Label>
                 <Input
@@ -311,8 +337,11 @@ export function LoginForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-[13px] font-medium text-hh-muted">
-                  Téléphone (si pas d'email)
+                <Label
+                  htmlFor="phone"
+                  className="text-[13px] font-medium text-hh-muted"
+                >
+                  Téléphone (si pas &apos;email)
                 </Label>
                 <Input
                   id="phone"
@@ -324,7 +353,10 @@ export function LoginForm() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="cpassword" className="text-[13px] font-medium text-hh-muted">
+                  <Label
+                    htmlFor="cpassword"
+                    className="text-[13px] font-medium text-hh-muted"
+                  >
                     Mot de passe
                   </Label>
                   <Link
@@ -364,7 +396,11 @@ export function LoginForm() {
                   {error}
                 </p>
               ) : null}
-              <Button type="submit" disabled={loading} className={authSubmitButtonClass}>
+              <Button
+                type="submit"
+                disabled={loading}
+                className={authSubmitButtonClass}
+              >
                 {loading ? "Connexion…" : "Se connecter"}
               </Button>
             </form>
