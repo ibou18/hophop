@@ -9,6 +9,8 @@ import { UpcomingDepartures } from "@/components/landing/upcoming-departures";
 import { getPublicUpcomingShipments } from "@/lib/public-shipments-data";
 import { getAppBaseUrl } from "@/lib/mail/app-url";
 
+export const dynamic = "force-dynamic";
+
 const HOME_TITLE = "hOpOp | Envoi et suivi colis diaspora Afrique";
 const HOME_DESCRIPTION =
   "Envoie et suis tes colis entre diaspora et Afrique avec hOpOp. Suivi en temps reel, transitaires verifies, livraisons plus sereines.";
